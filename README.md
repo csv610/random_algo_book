@@ -2,54 +2,46 @@
 
 ![Front Page](frontpage.png)
 
-C++ implementation of randomized algorithms and techniques presented in "Randomized Algorithms". Each algorithm includes complete, compilable code alongside theoretical analysis.
+C++ implementations of randomized algorithms and probabilistic techniques. Complete, compilable source code with empirical validation of theoretical results.
+
+## Overview
+
+This repository provides working implementations of randomized algorithms across key domains: graph algorithms, computational geometry, selection, and complexity theory. Each implementation accompanies theoretical analysis with practical demonstration.
 
 ## Chapter 1: Introduction
 
-### Source Structure
-
-```
-src/chapter1/
-├── random_utils.h           # Random number generation utilities
-├── min_cut.h                # Karger's Min-Cut Algorithm
-├── las_vegas_monte_carlo.h  # Las Vegas and Monte Carlo paradigms
-├── binary_planar_partition.h # Binary Planar Partitions
-├── probabilistic_recurrence.h # Find algorithm and analysis
-└── main.cpp                 # Main driver with all demonstrations
-```
-
-### Implemented Algorithms
+### Algorithms and Techniques
 
 #### 1.1 Min-Cut Algorithm (Karger)
-- **Source**: `min_cut.h`
+- **Implementation**: `src/chapter1/min_cut.h`
 - **Method**: Randomized edge contraction
-- **Complexity**: Probability of success ≥ 2/n² per trial
-- **Validation**: Single trial versus repeated trials with failure probability analysis
+- **Analysis**: Success probability ≥ 2/n² per trial; failure probability decreases exponentially with repetition
 
-#### 1.2 Las Vegas and Monte Carlo Algorithms
-- **Source**: `las_vegas_monte_carlo.h`
-- **Las Vegas**: Randomized QuickSort (correct result, stochastic runtime)
-- **Monte Carlo**: Pi estimation (two-sided error), randomized min-cut (one-sided error)
+#### 1.2 Las Vegas and Monte Carlo Paradigms
+- **Implementation**: `src/chapter1/las_vegas_monte_carlo.h`
+- **Las Vegas**: Randomized QuickSort — deterministic correctness, stochastic runtime
+- **Monte Carlo**: Pi estimation (two-sided error), min-cut (one-sided error)
 - **Conversion**: Monte Carlo to Las Vegas via verification
 
 #### 1.3 Binary Planar Partitions
-- **Source**: `binary_planar_partition.h`
+- **Implementation**: `src/chapter1/binary_planar_partition.h`
 - **Application**: Hidden line elimination in computer graphics
-- **Method**: RandAuto randomized auto-partition
+- **Method**: RandAuto — randomized auto-partition algorithm
 - **Complexity**: Expected size O(n log n) via linearity of expectation
-- **Example**: Sailor problem demonstrating indicator variable analysis
 
 #### 1.4 Probabilistic Recurrence
-- **Source**: `probabilistic_recurrence.h`
+- **Implementation**: `src/chapter1/probabilistic_recurrence.h`
 - **Algorithm**: Randomized selection (kth smallest element)
 - **Complexity**: Expected O(n) time, O(log n) recursion depth
-- **Analysis**: Theorem 1.3 bounds expected steps via integral formula
-- **Distribution**: Geometric distribution (expected attempts = 1/p)
+- **Distribution**: Geometric distribution analysis
 
 #### 1.5 Computational Complexity Classes
-- **Content**: Theoretical discussion (no implementation)
-- **Classes**: P, NP, RP, co-RP, ZPP, BPP, PP
+- **Content**: Theoretical discussion (P, NP, RP, co-RP, ZPP, BPP, PP)
 - **Hierarchy**: P ⊆ RP ⊆ NP ⊆ PSPACE ⊆ EXP ⊆ NEXP
+
+### Utilities
+
+- **Random Number Generation**: `src/chapter1/random_utils.h` — seeded PRNG for reproducible experiments
 
 ## Build Instructions
 
@@ -75,32 +67,23 @@ g++ -std=c++17 -O2 -o chapter1 src/chapter1/main.cpp -Isrc/chapter1
 
 ## Output
 
-The program validates each algorithm empirically:
+Each algorithm includes empirical validation comparing theoretical predictions with measured results:
 
-```
-Section 1.1: Min-Cut Algorithm
-- Karger's algorithm on 5-vertex graph
-- Single run vs n²/2 trials
-- Theoretical vs empirical failure probability
-
-Section 1.2: Las Vegas vs Monte Carlo
-- QuickSort: Always correct, O(n log n) expected
-- Pi estimation: Error decreases with samples
-- Monte Carlo to Las Vegas conversion
-
-Section 1.3: Binary Planar Partitions
-- RandAuto on 3 line segments
-- Sailor problem: Expected 1 sailor in own cabin
-
-Section 1.4: Probabilistic Recurrence
-- Find algorithm: ~12 recursive calls for n=1000
-- Geometric distribution validation
-```
+| Section | Algorithm | Validation |
+|---------|-----------|------------|
+| 1.1 | Karger's Min-Cut | Single trial vs. n²/2 trials; failure probability analysis |
+| 1.2 | QuickSort / Pi Estimation | Correctness guarantee; error convergence |
+| 1.3 | RandAuto | 3-segment partition; sailor problem (indicator variables) |
+| 1.4 | Randomized Selection | Recursive call count; geometric distribution fit |
 
 ## Key Concepts
 
-1. **Randomization as algorithmic tool** — Simplifies problems (min-cut vs. network flow)
-2. **Error probability reduction** — Independent repetition reduces failure rate
-3. **Linearity of expectation** — Applies without independence requirement
-4. **Geometric distribution** — Fundamental to randomized algorithm analysis
-5. **Probabilistic method** — Proves existence of solutions constructively
+1. **Randomization** — Simplifies algorithm design (min-cut vs. network flow)
+2. **Error Reduction** — Independent repetition reduces failure probability exponentially
+3. **Linearity of Expectation** — Applies without independence requirement
+4. **Geometric Distribution** — Foundation of randomized algorithm analysis
+5. **Probabilistic Method** — Constructive existence proofs
+
+## License
+
+See repository for license details.
