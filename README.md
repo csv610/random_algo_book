@@ -1,5 +1,7 @@
 # Randomized Algorithms - C++ Implementation
 
+![Front Page](frontpage.png)
+
 C++ implementation of examples and algorithms from "Randomized Algorithms" by Rajeev Motwani and Prabhakar Raghavan, with working code instead of pseudocode.
 
 ## Chapter 1: Introduction
