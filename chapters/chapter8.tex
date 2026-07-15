@@ -1,0 +1,529 @@
+\documentclass[twoside,12pt]{book}
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage{mathpazo}
+\usepackage{amsmath,amssymb,amsthm}
+\usepackage{graphicx}
+\usepackage{listings}
+\usepackage{xcolor}
+\usepackage{hyperref}
+\usepackage{enumitem}
+\usepackage{tikz}
+\usepackage{algorithm}
+\usepackage{algpseudocode}
+\usepackage{booktabs}
+\usepackage{geometry}
+\usepackage{fancyhdr}
+\usepackage{titlesec}
+\geometry{papersize={6in,9in},margin=0.75in,top=0.75in,bottom=0.75in,inner=0.9in,outer=0.65in,headheight=14pt}
+\pagestyle{fancy}
+\fancyhf{}
+\fancyhead[LE]{\small\textit{8. Data Structures}}
+\fancyhead[RO]{\small\textit{Randomized Algorithms}}
+\fancyfoot[C]{\thepage}
+\renewcommand{\headrulewidth}{0.4pt}
+\definecolor{codegray}{rgb}{0.45,0.45,0.45}
+\lstdefinestyle{cppstyle}{basicstyle=\ttfamily\scriptsize,keywordstyle=\bfseries,commentstyle=\itshape\color{codegray},numbers=left,numberstyle=\tiny\color{codegray},numbersep=8pt,frame=single,framerule=0.4pt,rulecolor=\color{codegray},backgroundcolor=\color{gray!5},breaklines=true,tabsize=4,showstringspaces=false,language=C++}
+\lstset{style=cppstyle}
+\theoremstyle{plain}
+\newtheorem{theorem}{Theorem}[chapter]
+\newtheorem{lemma}[theorem]{Lemma}
+\newtheorem{corollary}[theorem]{Corollary}
+\newtheorem{proposition}[theorem]{Proposition}
+\theoremstyle{definition}
+\newtheorem{definition}[theorem]{Definition}
+\newtheorem{example}[theorem]{Example}
+\newtheorem{remark}[theorem]{Remark}
+\theoremstyle{remark}
+\newtheorem{exercise}[theorem]{Exercise}
+\newtheorem{problem}[theorem]{Problem}
+\newenvironment{cpplisting}{\begin{center}\small}{\end{center}}
+\begin{document}
+
+\chapter*{8 Data Structures}
+\addcontentsline{toc}{chapter}{8 Data Structures}
+\markboth{8 Data Structures}{Randomized Algorithms}
+
+Data structures are the backbone of efficient computation. The ability to maintain a dynamically changing collection of elements while supporting fast search, insertion, and deletion is fundamental to nearly every area of computer science. In this chapter we study how randomization can be used to design data structures that are both simple and provably efficient, often matching or surpassing the performance of their deterministic counterparts while requiring far less structural bookkeeping.
+
+The key insight is that random choices, made independently at insert time, can replace the complex rebalancing logic required by deterministic balanced trees. We study three major paradigms: \emph{randomized balanced search trees} (treaps), \emph{randomized balanced lists} (skip lists), and \emph{hashing} (both universal and perfect). Each paradigm trades different resources---pointer overhead, space, or preprocessing---for expected constant or logarithmic time per operation.
+
+%% ============================================================
+\section{The Fundamental Data-structuring Problem}
+\label{sec:fundamental-data-structuring}
+%% ============================================================
+
+A \emph{dictionary} (also called a \emph{dynamic set}) is a data structure that maintains a set $S$ of elements drawn from some universe $\mathcal{U}$, supporting the following operations:
+
+\begin{itemize}[nosep]
+    \item \textbf{Insert}$(x)$: Add element $x$ to $S$ (if not already present).
+    \item \textbf{Delete}$(x)$: Remove element $x$ from $S$ (if present).
+    \item \textbf{Search}$(x)$: Return a pointer to the element $x$ in $S$, or report that $x \notin S$.
+\end{itemize}
+
+When elements carry keys from a totally ordered universe, the dictionary problem becomes the \emph{dynamic dictionary with ordered keys}, and we additionally support \emph{successor} and \emph{predecessor} queries.
+
+\begin{theorem}[Comparison-based lower bound]
+Any dictionary data structure that supports insert, delete, and search on $n$ elements using only comparisons between keys must perform $\Omega(\log n)$ comparisons per operation in the worst case, in any comparison tree model.
+\end{theorem}
+
+This lower bound is tight: \emph{balanced binary search trees} (such as AVL trees, red--black trees, or B-trees) achieve $O(\log n)$ worst-case time per operation by maintaining explicit balance information through rotations and augmentations. However, the engineering complexity of maintaining perfect balance deterministically is substantial.
+
+\subsection{The randomized approach}
+
+Randomized data structures achieve the same $O(\log n)$ \emph{expected} time per operation by making random decisions that ``happen to'' maintain balance with high probability, without any explicit balancing mechanism.
+
+\begin{definition}[High probability]
+An event $E_n$ holds \emph{with high probability} (w.h.p.) if for every constant $c > 0$, there exists a constant $n_0$ such that $\Pr[E_n] \geq 1 - n^{-c}$ for all $n \geq n_0$.
+\end{definition}
+
+The randomization approach has several advantages:
+\begin{enumerate}[nosep]
+    \item \textbf{Simplicity:} No complex rebalancing logic is needed.
+    \item \textbf{No worst-case input:} No adversary can consistently force $\Omega(n)$ time on every operation, since the random choices are made at runtime and are hidden from the input.
+    \item \textbf{Worst-case avoidance:} Randomization ``smooths out'' the input distribution, ensuring expected logarithmic performance regardless of the sequence of operations.
+\end{enumerate}
+
+The following three sections develop randomized data structures for the dictionary problem: treaps (Section~\ref{sec:treaps}), skip lists (Section~\ref{sec:skip-lists}), and hash tables (Sections~\ref{sec:hash-tables}--\ref{sec:perfect-hashing}).
+
+%% ============================================================
+\section{Random Treaps}
+\label{sec:treaps}
+%% ============================================================
+
+A \emph{treap} (tree + heap) is a randomized binary search tree that combines the binary search tree property on keys with the heap property on randomly assigned priorities. The treap was introduced by Aragon and Seidel~\cite{aron1989}.
+
+\begin{definition}[Treap]
+A \emph{treap} on $n$ elements is a binary tree $T$ where each node $v$ stores a key $k(v)$ and a priority $p(v)$. The tree satisfies:
+\begin{enumerate}[nosep]
+    \item \textbf{BST property:} For every node $v$, all keys in the left subtree of $v$ are less than $k(v)$, and all keys in the right subtree are greater than $k(v)$.
+    \item \textbf{Heap property:} For every node $v$ (other than the root), $p(v) < p(\text{parent}(v))$. That is, priorities form a min-heap.
+\end{enumerate}
+\end{definition}
+
+The key observation is that once the keys are fixed, there is exactly one binary tree shape that satisfies both the BST property and the heap property simultaneously. Since the priorities are assigned uniformly at random from a sufficiently large range, every permutation of priorities is equally likely, and hence every valid tree shape is equally likely.
+
+\begin{example}
+Consider the keys $\{1, 2, 3, 4, 5\}$ with random priorities. If the priorities assigned are $(1: 5, 2: 3, 3: 1, 4: 4, 5: 2)$, the treap has node 3 as root (priority 1, the minimum), with left subtree $\{1, 2\}$ and right subtree $\{4, 5\}$. Within the left subtree, node 2 (priority 2) is the root, with 1 as its left child.
+\end{example}
+
+\subsection{Search}
+
+Searching in a treap is identical to searching in a standard BST: compare the search key with the current node's key, go left if smaller, right if larger, and stop when the key is found or a null pointer is reached.
+
+\begin{algorithm}[H]
+\caption{Treap Search}
+\begin{algorithmic}[1]
+\Function{TreapSearch}{$v, k$}
+    \If{$v = \text{null}$}
+        \State \Return{null}
+    \EndIf
+    \If{$k = k(v)$}
+        \State \Return{$v$}
+    \ElsIf{$k < k(v)$}
+        \State \Return{TreapSearch($v.\text{left}, k$)}
+    \Else
+        \State \Return{TreapSearch($v.\text{right}, k$)}
+    \EndIf
+\EndFunction
+\end{algorithmic}
+\end{algorithm}
+
+\subsection{Insertion}
+
+To insert a new element with key $k$ and a freshly generated random priority $p$, we perform a standard BST insertion to find the correct leaf position for $k$, then \emph{rotate} upward whenever the new node's priority is smaller than its parent's priority.
+
+\begin{algorithm}[H]
+\caption{Treap Insertion}
+\begin{algorithmic}[1]
+\Function{TreapInsert}{$T, k$}
+    \State $p \gets$ random priority
+    \State $T \gets$ BST-Insert($T, k, p$)
+    \State $v \gets$ node containing $k$
+    \While{$v \neq \text{root}$ \textbf{and} $p(v) < p(v.\text{parent})$}
+        \If{$v = v.\text{parent}.\text{left}$}
+            \State Right-Rotate($v.\text{parent}$)
+        \Else
+            \State Left-Rotate($v.\text{parent}$)
+        \EndIf
+    \EndWhile
+    \State \Return{$T$}
+\EndFunction
+\end{algorithmic}
+\end{algorithm}
+
+Each rotation takes $O(1)$ time and maintains the BST property. The total number of rotations is at most the depth of the inserted node in the BST, which is $O(n)$ in the worst case but $O(\log n)$ in expectation.
+
+\subsection{Deletion}
+
+Deletion in a treap uses rotations to push the target node down to a leaf, then removes it. Specifically, if we wish to delete node $v$:
+\begin{enumerate}[nosep]
+    \item While $v$ has two children, rotate it with the child that has the smaller priority.
+    \item When $v$ has at most one child, splice $v$ out of the tree.
+\end{enumerate}
+
+\subsection{Join and Split}
+
+Treaps support two additional operations that are useful for more complex data structures:
+
+\begin{definition}[Join and Split]
+\begin{itemize}[nosep]
+    \item \textbf{Join}$(T_1, T_2)$: Given two treaps $T_1$ and $T_2$ where all keys in $T_1$ are less than all keys in $T_2$, merge them into a single treap.
+    \item \textbf{Split}$(T, k)$: Given a treap $T$ and a key $k$, split $T$ into two treaps $T_1$ and $T_2$ where all keys in $T_1$ are $\leq k$ and all keys in $T_2$ are $> k$.
+\end{itemize}
+\end{definition}
+
+\textbf{Join} is implemented by comparing the priorities of the two roots. If the root of $T_1$ has the smaller priority, its right subtree is recursively joined with $T_2$; otherwise, the root of $T_2$'s left subtree is recursively joined with $T_1$. This process follows a single root-to-leaf path, taking $O(\log n)$ expected time.
+
+\textbf{Split} is implemented by descending through the tree: at each node, if $k$ is less than the node's key, the node and its left subtree go to $T_1$, and we split the right subtree; otherwise, the node and its right subtree go to $T_2$, and we split the left subtree. Split takes $O(\log n)$ expected time.
+
+\subsection{Analysis}
+
+The efficiency of treaps hinges on the following observation: the treap is structurally identical to a BST built by inserting elements in order of increasing priority.
+
+\begin{theorem}\label{thm:treap}
+The expected height of a treap on $n$ nodes is $O(\log n)$. Furthermore, the expected cost of each treap operation (insert, delete, search) is $O(\log n)$.
+\end{theorem}
+
+\begin{proof}
+Consider a fixed set of $n$ keys with priorities drawn uniformly at random from $\{1, 2, \ldots, N\}$ for $N \gg n$. The treap shape is the same as the BST obtained by inserting the keys in priority order. The depth of any node $v$ in the treap is exactly the number of elements that are ancestors of $v$, which equals the number of elements whose priority is smaller than $p(v)$ among those in $v$'s subtree. This is a standard property of random BSTs.
+
+By the well-known analysis of random BSTs (see~\cite{devroye1988}), the expected depth of any node is at most $2 \ln n + O(1)$, and the expected height is $O(\log n)$. Specifically, the probability that the height exceeds $c \log n$ is at most $n^{1-c}$, so the height is $O(\log n)$ with high probability for any constant $c > 1$.
+
+Each operation traverses a single root-to-leaf path (for search, split) or performs at most as many rotations as the depth of the affected node (for insert, delete). Therefore, each operation costs $O(\log n)$ in expectation.
+\end{proof}
+
+\begin{cpplisting}
+\textbf{C++ implementation:} See \texttt{src/chapter8/treap.h} for a complete implementation
+of a treap supporting insert, search, remove, and height measurement.
+\end{cpplisting}
+
+%% ============================================================
+\section{Skip Lists}
+\label{sec:skip-lists}
+%% ============================================================
+
+A \emph{skip list} is a randomized data structure invented by Pugh~\cite{pugh1990} that achieves $O(\log n)$ expected search time using a layered system of linked lists. Skip lists can be viewed as a probabilistic alternative to balanced trees, trading worst-case guarantees for simplicity and excellent practical performance.
+
+\begin{definition}[Skip list]
+A \emph{skip list} for a set $S = \{s_1 < s_2 < \cdots < s_n\}$ of $n$ sorted elements is a collection of linked lists $L_0, L_1, \ldots, L_h$, where:
+\begin{enumerate}[nosep]
+    \item $L_0$ contains all $n$ elements of $S$ in sorted order (the ``base'' list).
+    \item $L_i$ is a random subset of $L_{i-1}$ for each $i \geq 1$.
+    \item Each element in $L_i$ (for $i \geq 1$) is independently promoted to $L_{i+1}$ with probability $1/2$.
+    \item A sentinel $-\infty$ is the first element of every list, and $+\infty$ is the last.
+\end{enumerate}
+\end{definition}
+
+Each node in the skip list contains:
+\begin{itemize}[nosep]
+    \item A \emph{key} (the element value).
+    \item An array of \emph{forward pointers}, one per level, pointing to the next element at that level.
+    \item The \emph{level} of the node: the highest level at which it appears.
+\end{itemize}
+
+\subsection{Search}
+
+Search in a skip list starts at the topmost level of the sentinel and proceeds rightward and downward:
+
+\begin{algorithm}[H]
+\caption{Skip List Search}
+\begin{algorithmic}[1]
+\Function{SkipSearch}{$\text{head}, k$}
+    \State $v \gets \text{head}$
+    \State $i \gets \text{top level}$
+    \While{$i \geq 0$}
+        \While{$v.\text{forward}[i].\text{key} < k$}
+            \State $v \gets v.\text{forward}[i]$
+        \EndWhile
+        \State $i \gets i - 1$
+    \EndWhile
+    \State $v \gets v.\text{forward}[0]$
+    \If{$v.\text{key} = k$}
+        \State \Return{$v$}
+    \Else
+        \State \Return{null}
+    \EndIf
+\EndFunction
+\end{algorithmic}
+\end{algorithm}
+
+The key insight is that at level $i$, each step ``skips'' over approximately $2^i$ elements. The expected number of steps at level $i$ is $O(1)$ (since each forward pointer skips an expected 2 elements at the next level down). Summing over $O(\log n)$ levels gives $O(\log n)$ expected search time.
+
+\subsection{Insertion and Deletion}
+
+Insertion and deletion follow the same pattern as search: we locate the correct position using the same search procedure, maintaining an update vector of the last node seen at each level. We then splice in (or remove) the new (or deleted) node at each level, adjusting forward pointers.
+
+The level of a new node is determined by \emph{coin flips}: flip a fair coin until it comes up tails; the number of heads plus one is the node's level. This gives a geometric distribution with parameter $1/2$:
+\[
+\Pr[\text{level} = i] = 2^{-i}, \quad i \geq 1.
+\]
+
+\subsection{Analysis}
+
+\begin{theorem}\label{thm:skip-list}
+The expected search time in a skip list of $n$ elements is $O(\log n)$, and the expected space is $O(n)$.
+\end{theorem}
+
+\begin{proof}
+Let $N_i$ denote the expected number of elements examined at level $i$ during a search. At level $i$, each step moves to the next element in $L_i$, and the expected distance between consecutive elements in $L_i$ is $2$ (since each element in $L_{i-1}$ is promoted to $L_i$ with probability $1/2$). Therefore, the expected number of steps at level $i$ is at most $n/2^i$ (the number of elements in $L_i$) divided by the expected gap size.
+
+A cleaner argument proceeds by backwards analysis. At each level, the expected number of forward pointer traversals is $O(1)$. The maximum level is $\Theta(\log n)$ with high probability, since the probability that any element reaches level $c \log n$ is at most $n \cdot 2^{-c \log n} = n^{1-c}$.
+
+For the space: the expected number of nodes at level $i$ is $n/2^i$. Summing over all levels:
+\[
+\sum_{i=0}^{\infty} \frac{n}{2^i} = 2n = O(n).
+\]
+\end{proof}
+
+\begin{remark}
+Skip lists have excellent practical performance due to their cache-friendly sequential access patterns. In practice, skip lists often outperform balanced trees despite their lack of worst-case guarantees.
+\end{remark}
+
+\subsection{Comparison with balanced BSTs}
+
+\begin{table}[H]
+\centering
+\begin{tabular}{@{}lccc@{}}
+\toprule
+\textbf{Feature} & \textbf{Treap} & \textbf{Skip List} & \textbf{AVL Tree} \\
+\midrule
+Search (expected) & $O(\log n)$ & $O(\log n)$ & $O(\log n)$ \\
+Search (worst) & $O(n)$ & $O(n)$ & $O(\log n)$ \\
+Insert (expected) & $O(\log n)$ & $O(\log n)$ & $O(\log n)$ \\
+Space & $O(n)$ & $O(n)$ & $O(n)$ \\
+Simplicity & High & Very High & Low \\
+Cache performance & Moderate & Good & Moderate \\
+\bottomrule
+\end{tabular}
+\caption{Comparison of randomized and deterministic balanced tree structures.}
+\end{table}
+
+\begin{cpplisting}
+\textbf{C++ implementation:} See \texttt{src/chapter8/skip\_list.h} for a complete
+implementation of a skip list with configurable maximum level and geometric promotion.
+\end{cpplisting}
+
+%% ============================================================
+\section{Hash Tables}
+\label{sec:hash-tables}
+%% ============================================================
+
+Hash tables provide a fundamentally different approach to the dictionary problem: rather than maintaining sorted order, they map elements directly to positions in an array using a hash function. With a good hash function, each operation takes $O(1)$ \emph{expected} time, which is optimal.
+
+\begin{definition}[Hash function]
+A \emph{hash function} $h: \mathcal{U} \to \{0, 1, \ldots, m-1\}$ maps elements from a universe $\mathcal{U}$ to an array of $m$ slots. The quality of the hash function is determined by how uniformly it distributes elements across the array.
+\end{definition}
+
+\subsection{Universal hash families}
+
+The idea of universal hashing, introduced by Carter and Wegman~\cite{carter1979}, is to choose the hash function randomly from a family of hash functions at the beginning of the computation, before any elements are known.
+
+\begin{definition}[Universal hash family]
+A family $\mathcal{H}$ of hash functions from $\mathcal{U}$ to $\{0, 1, \ldots, m-1\}$ is called \emph{universal} if for all $x \neq y$ in $\mathcal{U}$:
+\[
+\Pr_{h \in \mathcal{H}}[h(x) = h(y)] \leq \frac{1}{m}.
+\]
+That is, for any two distinct elements, the probability of a collision is at most $1/m$.
+\end{definition}
+
+\begin{definition}[Pairwise independent hash family]
+A family $\mathcal{H}$ is \emph{pairwise independent} (or \emph{2-universal}) if for all $x \neq y$ and all $a, b \in \{0, \ldots, m-1\}$:
+\[
+\Pr_{h \in \mathcal{H}}[h(x) = a \text{ and } h(y) = b] = \frac{1}{m^2}.
+\]
+\end{definition}
+
+A standard universal hash family is the \emph{multiply-shift} family. Let $p$ be a prime larger than $|\mathcal{U}|$. For $a \in \{1, \ldots, p-1\}$ and $b \in \{0, \ldots, p-1\}$, define:
+\[
+h_{a,b}(x) = ((ax + b) \bmod p) \bmod m.
+\]
+The family $\mathcal{H} = \{h_{a,b} : a \in \{1, \ldots, p-1\}, b \in \{0, \ldots, p-1\}\}$ is universal.
+
+\begin{theorem}\label{thm:universal-hash}
+If $\mathcal{H}$ is a universal hash family and $n$ elements are hashed into an array of size $m$ using a randomly chosen $h \in \mathcal{H}$, then the expected number of collisions is at most $n^2/(2m)$.
+\end{theorem}
+
+\begin{proof}
+The number of collisions is $\sum_{i < j} \mathbf{1}[h(x_i) = h(x_j)]$. By linearity of expectation and universality:
+\[
+\mathbb{E}[\text{collisions}] = \sum_{i < j} \Pr[h(x_i) = h(x_j)] \leq \binom{n}{2} \cdot \frac{1}{m} < \frac{n^2}{2m}.
+\]
+\end{proof}
+
+\subsection{Collision resolution}
+
+Since the hash function maps a larger universe to a smaller array, collisions (two elements hashing to the same slot) are inevitable. There are two primary approaches:
+
+\paragraph{Chaining.} Each slot $j$ contains a linked list (or other collection) of all elements with $h(x) = j$. A search at slot $j$ scans this list. If the hash function is universal and $m = \Theta(n)$, the expected length of each chain is $O(1)$, giving $O(1)$ expected search time.
+
+\paragraph{Open addressing.} All elements are stored directly in the array. When a collision occurs, we probe a sequence of alternative slots (determined by a probe sequence) until an empty slot is found. With uniform hashing, the expected number of probes is $O(1/(1-\alpha))$, where $\alpha = n/m$ is the \emph{load factor}.
+
+\begin{algorithm}[H]
+\caption{Hash Table with Chaining}
+\begin{algorithmic}[1]
+\Function{HashInsert}{$T, x$}
+    \State $j \gets h(x)$
+    \State Prepend $x$ to $T[j]$
+\EndFunction
+\State
+\Function{HashSearch}{$T, x$}
+    \State $j \gets h(x)$
+    \State Search for $x$ in $T[j]$
+    \State \Return{result of search}
+\EndFunction
+\end{algorithmic}
+\end{algorithm}
+
+\begin{theorem}\label{thm:hash-table}
+With universal hashing and chaining, the expected time per operation (insert, search, delete) is $O(1 + n/m)$. Choosing $m = \Theta(n)$ gives $O(1)$ expected time per operation.
+\end{theorem}
+
+\subsection{Linear probing}
+
+In linear probing, when a collision occurs at slot $j$, we examine slots $j+1, j+2, \ldots$ (wrapping around) until an empty slot is found. Linear probing has excellent cache performance due to sequential memory access, but its analysis is more complex.
+
+The expected number of probes for a successful search with load factor $\alpha < 1$ is:
+\[
+\frac{1}{2}\left(1 + \frac{1}{1-\alpha}\right),
+\]
+and for an unsuccessful search:
+\[
+\frac{1}{2}\left(1 + \frac{1}{(1-\alpha)^2}\right).
+\]
+
+These bounds hold under the \emph{simple uniform hashing} assumption: each key is equally likely to hash to any slot, independently of other keys.
+
+\begin{cpplisting}
+\textbf{C++ implementation:} See \texttt{src/chapter8/hash\_table.h} for a complete
+implementation of a universal hash table with chaining and the multiply-shift hash family.
+\end{cpplisting}
+
+%% ============================================================
+\section{Hashing with $O(1)$ Search Time}
+\label{sec:perfect-hashing}
+%% ============================================================
+
+Universal hashing provides $O(1)$ \emph{expected} time per operation, but not worst-case bounds. The \emph{perfect hashing} problem asks for a hash table that achieves $O(1)$ \emph{worst-case} search time using $O(n)$ space.
+
+\subsection{FKS perfect hashing}
+
+The seminal result of Fredman, Koml\'{o}s, and Szemer\'{e}di~\cite{fredman1984} achieves this via a two-level hashing scheme:
+
+\begin{definition}[FKS perfect hashing]
+The FKS scheme uses two levels of hashing:
+\begin{enumerate}[nosep]
+    \item \textbf{Level 1:} A primary hash function $h_1: \mathcal{U} \to \{0, 1, \ldots, m-1\}$ with $m = n$ is chosen from a universal family. This maps elements to $n$ ``buckets.''
+    \item \textbf{Level 2:} For each bucket $i$ containing $n_i$ elements, a secondary hash function $h_i: \text{bucket}_i \to \{0, 1, \ldots, n_i^2 - 1\}$ is chosen from a universal family. The secondary table for bucket $i$ has size $n_i^2$.
+\end{enumerate}
+\end{definition}
+
+The key insight is that the secondary hash function is chosen \emph{after} the bucket is known, so we can search for a hash function that maps the $n_i$ elements to distinct positions (a \emph{perfect hash function} for that bucket).
+
+\begin{theorem}\label{thm:fks}
+With probability at least $1/2$, a randomly chosen primary hash function in the FKS scheme maps every bucket $i$ to at most $O(n_i^2)$ total secondary table space. The total space is $O(n)$ with high probability, and search time is $O(1)$ worst-case.
+\end{theorem}
+
+\begin{proof}
+The total secondary table space is $\sum_{i=0}^{m-1} n_i^2$. By the Cauchy--Schwarz inequality:
+\[
+\sum_{i=0}^{m-1} n_i^2 \geq \frac{(\sum n_i)^2}{m} = \frac{n^2}{m} = n.
+\]
+The question is whether the total space is $O(n)$ in expectation.
+
+Let $X_{i,j,k}$ be the indicator that elements $x_j$ and $x_k$ (with $j \neq k$) hash to the same slot in bucket $i$. For a fixed pair of elements that both land in bucket $i$, the probability that they collide in the secondary hash table (of size $n_i^2$) is at most $1/n_i^2$. The expected total number of collisions across all buckets is:
+\[
+\mathbb{E}[\text{collisions}] = \sum_{i=0}^{m-1} \binom{n_i}{2} \cdot \frac{1}{n_i^2} < \sum_{i=0}^{m-1} \frac{1}{2} = \frac{m}{2} = \frac{n}{2}.
+\]
+Since the expected number of collisions is less than $n/2$, by the probabilistic method, there exists a choice of secondary hash functions with fewer than $n/2$ collisions, which implies a total secondary table size of $O(n)$.
+
+By trying $O(\log n)$ random primary hash functions, we can ensure the $O(n)$ bound holds with high probability. The search procedure: compute $h_1(x)$ to find the bucket, then compute $h_{h_1(x)}(x)$ to find the exact slot, both in $O(1)$ time.
+\end{proof}
+
+\subsection{Dynamic perfect hashing}
+
+A limitation of FKS hashing is that it requires rebuilding when the number of elements changes significantly. \emph{Dynamic perfect hashing} addresses this by periodically rebuilding the entire table when the load factor deviates too far from 1. Specifically:
+
+\begin{itemize}[nosep]
+    \item When the number of elements exceeds $n$ (the table size), rebuild with a new table of size $\Theta(n^2)$ using a new primary hash function, then rehash all elements.
+    \item When the number of elements drops below $n/4$, rebuild with a table of size $\Theta(n)$ using a new primary hash function, then rehash all elements.
+\end{itemize}
+
+The amortized cost of each insert or delete is $O(1)$, and search is always $O(1)$ worst-case.
+
+\begin{theorem}\label{thm:dynamic-perfect}
+Dynamic perfect hashing achieves $O(1)$ worst-case search time and $O(1)$ amortized expected time per insertion and deletion, using $O(n)$ space.
+\end{theorem}
+
+\begin{proof}
+The rebuild cost when expanding from $n$ elements to $2n$ elements is $O(n^2)$ (the secondary table size). Amortized over $n$ insertions, this gives $O(n)$ per element, which is not $O(1)$.
+
+To fix this, we use a more careful analysis. When we have $n$ elements and the table size is $m = \Theta(n^2)$, we rebuild when $n$ exceeds $m$. The rebuild cost is $O(n^2)$. We can charge this cost to the $n/2$ elements that were inserted since the last rebuild, giving an amortized cost of $O(n)$ per element, which is too high.
+
+The correct approach uses a different table size strategy. Set the table size to $m = c \cdot n$ for a suitable constant $c$. Then the secondary table sizes satisfy $\sum n_i^2 = O(n)$ by the FKS analysis, and the rebuild cost is $O(n)$, giving $O(1)$ amortized cost.
+\end{proof}
+
+\begin{cpplisting}
+\textbf{C++ implementation:} See \texttt{src/chapter8/hash\_table.h} for an implementation
+of FKS-style two-level perfect hashing with dynamic resizing.
+\end{cpplisting}
+
+%% ============================================================
+\section*{Notes}
+%% ============================================================
+
+\begin{enumerate}[nosep]
+    \item \textbf{Treaps} were introduced by Aragon and Seidel~\cite{aron1989}. Their analysis builds on the correspondence between treaps and random BSTs, which was studied by Devroye~\cite{devroye1988} and others. The join and split operations on treaps enable efficient implementations of persistent data structures and priority queues.
+    \item \textbf{Skip lists} were invented by Pugh~\cite{pugh1990} as a simpler alternative to balanced trees. The original paper includes extensive experimental comparisons. Variants include \emph{scoreable skip lists}, \emph{indexable skip lists}, and \emph{concurrent skip lists} for parallel computing.
+    \item \textbf{Universal hashing} was introduced by Carter and Wegman~\cite{carter1979}. The multiply-shift family $h_{a,b}(x) = ((ax+b) \bmod p) \bmod m$ is one of the simplest and most practical universal families. For a prime-free alternative, the \emph{multiply-mod-prime} family $h_a(x) = \lfloor m \cdot ((ax \bmod p)/p) \rfloor$ due to Dietzfelbinger et al.~\cite{dietzfelbinger1997} achieves similar guarantees.
+    \item \textbf{Perfect hashing} was achieved by Fredman, Koml\'{o}s, and Szemer\'{e}di~\cite{fredman1984}, who showed that $O(n)$ space and $O(1)$ worst-case search time are simultaneously achievable. Their paper is notable for its use of the probabilistic method. Dietzfelbinger et al.~\cite{dietzfelbinger1994} later gave a simpler and more practical construction.
+    \item \textbf{ cuckoo hashing} was introduced by Pagh and Rodler~\cite{pagh2004} and achieves $O(1)$ worst-case lookup time with $O(n)$ space using two hash functions. The analysis uses properties of random graphs.
+    \item \textbf{Bloom filters}~\cite{bloom1970} are a related probabilistic data structure that supports membership queries with a small false positive rate using $O(n)$ bits of space.
+\end{enumerate}
+
+%% ============================================================
+\section*{Problems}
+%% ============================================================
+
+\begin{problem}[8.1]
+Prove that the treap deletion algorithm (rotating a node down to a leaf, then removing it) maintains both the BST property and the heap property. What is the maximum number of rotations required to delete a node at depth $d$?
+\end{problem}
+
+\begin{problem}[8.2]
+Design a treap-based algorithm to find the $k$-th smallest element in $O(\log n)$ expected time. Hint: augment each node with the size of its subtree.
+\end{problem}
+
+\begin{problem}[8.3]
+Analyze the expected number of levels in a skip list of $n$ elements. What is the probability that the maximum level exceeds $2 \log_2 n$?
+\end{problem}
+
+\begin{problem}[8.4]
+Prove that the family $\mathcal{H}_{a,b} = \{h_{a,b}(x) = ((ax + b) \bmod p) \bmod m : a \in \{1, \ldots, p-1\}, b \in \{0, \ldots, p-1\}\}$ is a universal hash family when $p$ is prime and $m \leq p$.
+\end{problem}
+
+\begin{problem}[8.5]
+Show that with universal hashing and chaining, the expected length of the longest chain is $O(\log n / \log \log n)$ when $m = n$. Hint: use the coupon collector's argument or the analysis of maximum load in balls-and-bins.
+\end{problem}
+
+\begin{problem}[8.6]
+Analyze the expected number of probes for a successful search in a hash table with linear probing and load factor $\alpha$. Derive the formula $\frac{1}{2}(1 + 1/(1-\alpha))$.
+\end{problem}
+
+\begin{problem}[8.7]
+In the FKS perfect hashing scheme, explain why the secondary hash function for bucket $i$ can be chosen to be perfect (no collisions) among the $n_i$ elements. What is the expected number of trials?
+\end{problem}
+
+\begin{problem}[8.8]
+Design a randomized data structure that supports insert, delete, and \emph{range counting}: given $a$ and $b$, return the number of elements in the set with keys in $[a, b]$. Your data structure should support each operation in $O(\log n)$ expected time.
+\end{problem}
+
+\begin{problem}[8.9]
+Implement a skip list and compare its performance (in terms of actual wall-clock time) with a std::map (a red--black tree) on random workloads of $10^6$ insertions, $10^6$ searches, and $10^6$ deletions. Which data structure is faster in practice, and by how much?
+\end{problem}
+
+\begin{problem}[8.10]
+\textbf{(Research)} A \emph{Cuckoo hash table} uses two hash functions $h_1$ and $h_2$ and stores each element $x$ in one of two positions: $h_1(x)$ or $h_2(x)$. When both positions are occupied, the existing element is ``kicked out'' to its alternate position. Prove that with $m = O(n)$ slots, the expected insertion time is $O(1)$, but that there is a constant probability of insertion failure when $m < n(1 + \epsilon)$ for some $\epsilon > 0$. How can multiple hash functions resolve this?
+\end{problem}
+
+
+\end{document}

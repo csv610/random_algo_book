@@ -1,0 +1,600 @@
+\documentclass[twoside,12pt]{book}
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage{mathpazo}
+\usepackage{amsmath,amssymb,amsthm}
+\usepackage{graphicx}
+\usepackage{listings}
+\usepackage{xcolor}
+\usepackage{hyperref}
+\usepackage{enumitem}
+\usepackage{tikz}
+\usepackage{algorithm}
+\usepackage{algpseudocode}
+\usepackage{booktabs}
+\usepackage{geometry}
+\usepackage{fancyhdr}
+\usepackage{titlesec}
+\geometry{papersize={6in,9in},margin=0.75in,top=0.75in,bottom=0.75in,inner=0.9in,outer=0.65in,headheight=14pt}
+\pagestyle{fancy}
+\fancyhf{}
+\fancyhead[LE]{\small\textit{5. The Probabilistic Method}}
+\fancyhead[RO]{\small\textit{Randomized Algorithms}}
+\fancyfoot[C]{\thepage}
+\renewcommand{\headrulewidth}{0.4pt}
+\definecolor{codegray}{rgb}{0.45,0.45,0.45}
+\lstdefinestyle{cppstyle}{basicstyle=\ttfamily\scriptsize,keywordstyle=\bfseries,commentstyle=\itshape\color{codegray},numbers=left,numberstyle=\tiny\color{codegray},numbersep=8pt,frame=single,framerule=0.4pt,rulecolor=\color{codegray},backgroundcolor=\color{gray!5},breaklines=true,tabsize=4,showstringspaces=false,language=C++}
+\lstset{style=cppstyle}
+\theoremstyle{plain}
+\newtheorem{theorem}{Theorem}[chapter]
+\newtheorem{lemma}[theorem]{Lemma}
+\newtheorem{corollary}[theorem]{Corollary}
+\newtheorem{proposition}[theorem]{Proposition}
+\theoremstyle{definition}
+\newtheorem{definition}[theorem]{Definition}
+\newtheorem{example}[theorem]{Example}
+\newtheorem{remark}[theorem]{Remark}
+\theoremstyle{remark}
+\newtheorem{exercise}[theorem]{Exercise}
+\newtheorem{problem}[theorem]{Problem}
+\newenvironment{cpplisting}{\begin{center}\small}{\end{center}}
+\begin{document}
+
+\chapter*{5 The Probabilistic Method}
+\addcontentsline{toc}{chapter}{5. The Probabilistic Method}
+\markboth{5.\ The Probabilistic Method}{5.\ The Probabilistic Method}
+
+The probabilistic method is one of the most powerful and elegant techniques
+in combinatorics and theoretical computer science. Introduced by
+Erd\H{o}s in the 1940s, its core idea is deceptively simple: to prove that
+a combinatorial object with certain properties \emph{exists}, it suffices
+to show that a randomly constructed object has the desired properties with
+positive probability. Unlike constructive proofs, the probabilistic method
+need not exhibit the object explicitly---it merely demonstrates that the
+object cannot fail to exist.
+
+The method has three essential ingredients. First, define a probability
+space over candidate objects. Second, identify the ``bad'' events---those
+properties that the object must avoid. Third, show that the probability of
+any bad event is strictly less than one, so that with positive probability
+no bad event occurs. The power of the method lies in the fact that the
+probabilistic analysis often reveals structural truths that are invisible
+to purely algebraic or constructive approaches.
+
+In this chapter, we develop the probabilistic method from its foundations
+through several important applications: random satisfiability, expander
+graphs, oblivious routing, the Lov\'{a}sz Local Lemma, and the method of
+conditional probabilities for derandomization.
+
+%======================================================================
+\section{Overview of the Method}
+\label{sec:prob-method-overview}
+%======================================================================
+
+The simplest form of the probabilistic method is captured by the following
+observation. Suppose we wish to show that there exists an object $x$ in a
+finite set $S$ satisfying property $P$. If we define a probability
+distribution on $S$ and show that
+\[
+\Pr_{x \leftarrow S}[P(x)] > 0,
+\]
+then there must exist at least one $x \in S$ with property $P$.
+
+More generally, suppose we have $m$ ``bad'' events $A_1, A_2, \ldots, A_m$
+that we wish to avoid simultaneously. If we can show that
+\[
+\Pr\!\Bigl[\bigcup_{i=1}^{m} A_i\Bigr] < 1,
+\]
+then $\Pr[\overline{A_1} \cap \overline{A_2} \cap \cdots \cap \overline{A_m}]
+> 0$, and the desired object exists. The union bound (Boole's inequality)
+gives the simple sufficient condition
+\[
+\sum_{i=1}^{m} \Pr[A_i] < 1.
+\]
+More refined versions, such as the Lov\'{a}sz Local Lemma (Section~\ref{sec:lll}),
+provide much sharper conditions.
+
+\begin{example}[Ramsey Numbers]
+\label{ex:ramsey}
+The Ramsey number $R(3,3)$ is the minimum $n$ such that every 2-coloring
+of the edges of the complete graph $K_n$ contains a monochromatic triangle.
+We prove the upper bound $R(3,3) \leq 6$ using the probabilistic method
+(though a direct argument suffices for this small case).
+
+More interestingly, consider the question: for a given $n$, what is the
+probability that a random 2-coloring of $K_n$ avoids monochromatic
+triangles? Color each edge independently red or blue with probability
+$1/2$ each. For a fixed triangle, the probability that all three edges
+receive the same color is $2 \cdot (1/2)^3 = 1/4$. By linearity of
+expectation, the expected number of monochromatic triangles is
+\[
+\binom{n}{3} \cdot \frac{1}{4}.
+\]
+When $n = 5$, this expectation is $\binom{5}{3}/4 = 10/4 = 2.5$. When
+$n = 4$, it is $\binom{4}{3}/4 = 4/4 = 1$. The probabilistic argument
+shows that for $n = 5$, since the expected count is $2.5 > 0$, there
+exist colorings with monochromatic triangles---but this does not yet show
+that \emph{every} coloring has one. The power of the method is more
+evident in larger Ramsey problems where direct enumeration is infeasible.
+\end{example}
+
+\begin{lemma}[Expected Monochromatic Subgraphs]
+\label{lem:monochromatic}
+For a random 2-coloring of the edges of $K_n$ (each edge colored independently
+red or blue with probability $1/2$), the expected number of monochromatic
+copies of $K_k$ is
+\[
+\binom{n}{k} \cdot 2^{1 - \binom{k}{2}}.
+\]
+\end{lemma}
+
+\begin{proof}
+There are $\binom{n}{k}$ copies of $K_k$ in $K_n$. For a fixed copy, the
+probability that all $\binom{k}{2}$ edges receive the same color is
+$2 \cdot (1/2)^{\binom{k}{2}} = 2^{1 - \binom{k}{2}}$. By linearity of
+expectation, the expected number of monochromatic copies is the product.
+\end{proof}
+
+This simple counting argument---relying only on linearity of
+expectation---yields non-trivial upper bounds on Ramsey numbers and is
+the prototype for the probabilistic method.
+
+%======================================================================
+\section{Maximum Satisfiability}
+\label{sec:maxsat}
+%======================================================================
+
+The Maximum Satisfiability problem (MAX-SAT) asks: given a Boolean
+formula in conjunctive normal form (CNF), find an assignment that
+satisfies the maximum number of clauses. This problem is NP-hard in
+general, but the probabilistic method provides elegant approximation
+guarantees.
+
+\begin{definition}[MAX-SAT]
+Let $\phi = C_1 \wedge C_2 \wedge \cdots \wedge C_m$ be a CNF formula
+with $n$ variables $x_1, \ldots, x_n$ and $m$ clauses. Each clause $C_j$
+is a disjunction of literals. The MAX-SAT problem asks for an assignment
+$\alpha : \{x_1, \ldots, x_n\} \to \{0, 1\}$ maximizing the number of
+satisfied clauses $|\{j : \alpha \models C_j\}|$.
+\end{definition}
+
+\begin{theorem}[Random Assignment for MAX-SAT]
+\label{thm:maxsat-random}
+For any CNF formula $\phi$ with $m$ clauses, a random assignment satisfies
+at least $m/2$ clauses in expectation. Consequently, there exists an
+assignment satisfying at least $m/2$ clauses.
+\end{theorem}
+
+\begin{proof}
+Let $X_j$ be the indicator random variable for the event that clause $C_j$
+is satisfied by a random assignment (each variable set to $0$ or $1$
+independently with probability $1/2$). Since $C_j$ is a disjunction of
+$l_j$ literals, the probability that $C_j$ is \emph{not} satisfied is
+$(1/2)^{l_j}$. Thus
+\[
+\mathbb{E}[X_j] = \Pr[C_j \text{ is satisfied}] = 1 - 2^{-l_j} \geq 1 - \frac{1}{2} = \frac{1}{2}
+\]
+for every clause with at least one literal. By linearity of expectation,
+\[
+\mathbb{E}\!\Bigl[\sum_{j=1}^{m} X_j\Bigr] = \sum_{j=1}^{m} \mathbb{E}[X_j]
+\geq \frac{m}{2}.
+\]
+Since the expected number of satisfied clauses is at least $m/2$, there
+must exist an assignment satisfying at least $m/2$ clauses.
+\end{proof}
+
+This result extends immediately to MAX-3SAT, where each clause has exactly
+three literals.
+
+\begin{corollary}[7/8-Approximation for MAX-3SAT]
+\label{cor:max3sat}
+For any 3-CNF formula $\phi$ with $m$ clauses, a random assignment satisfies
+at least $7m/8$ clauses in expectation. Hence MAX-3SAT has a
+$7/8$-approximation.
+\end{corollary}
+
+\begin{proof}
+Each clause has exactly three literals, so
+\[
+\mathbb{E}[X_j] = 1 - 2^{-3} = 1 - \frac{1}{8} = \frac{7}{8}.
+\]
+By linearity of expectation, $\mathbb{E}[\sum X_j] = 7m/8$.
+\end{proof}
+
+The ratio $7/8$ is the best achievable by any random assignment analysis
+for MAX-3SAT. Tighter bounds require more sophisticated techniques, but
+this simple argument demonstrates the power of the probabilistic method
+for approximation algorithms.
+
+%======================================================================
+\section{Expanding Graphs}
+\label{sec:expanders}
+%======================================================================
+
+Expander graphs are sparse graphs with strong connectivity properties:
+every small set of vertices has many neighbors. They arise naturally in
+the probabilistic method as objects that exist with high probability.
+
+\begin{definition}[Expander Graph]
+A $d$-regular graph $G = (V, E)$ on $n$ vertices is an \emph{expander} if
+its second-largest eigenvalue $\lambda_2$ of the adjacency matrix satisfies
+\[
+\lambda_2 \leq 2\sqrt{d - 1}.
+\]
+Such graphs are called \emph{Ramanujan graphs} when this bound is achieved.
+\end{definition}
+
+The spectral gap $\lambda_1 - \lambda_2 = d - \lambda_2$ controls the
+expansion quality. By the Cheeger inequality, the edge expansion $h(G)$
+is related to the spectral gap by
+\[
+\frac{d - \lambda_2}{2} \leq h(G) \leq \sqrt{2d(d - \lambda_2)}.
+\]
+
+\begin{theorem}[Random Regular Graphs are Expanders]
+\label{thm:random-expander}
+For every fixed degree $d \geq 3$, a random $d$-regular graph on $n$
+vertices has $\lambda_2 \leq 2\sqrt{d-1} + \epsilon$ with high probability
+for any $\epsilon > 0$, as $n \to \infty$.
+\end{theorem}
+
+The proof uses the trace method: the $k$-th moment of
+$\operatorname{tr}(A^k)$ counts closed walks of length $k$ in $G$, and
+concentration of this count yields concentration of the eigenvalue
+distribution. For Ramanujan-quality expanders, explicit constructions
+based on number theory (Lubotzky--Phillips--Sarnak, Margulis) achieve the
+bound $\lambda_2 \leq 2\sqrt{d-1}$ deterministically.
+
+The following lemma characterizes the spectral gap in terms of graph
+connectivity.
+
+\begin{lemma}[Cheeger Inequality]
+\label{lem:cheeger}
+For a $d$-regular graph $G$ on $n$ vertices with edge expansion
+\[
+h(G) = \min_{S \subseteq V, |S| \leq n/2} \frac{|\partial S|}{|S|},
+\]
+we have
+\[
+\frac{d - \lambda_2}{2} \leq h(G) \leq \sqrt{2d(d - \lambda_2)}.
+\]
+\end{lemma}
+
+%======================================================================
+\section{Oblivious Routing Revisited}
+\label{sec:oblivious-routing}
+%======================================================================
+
+In Chapter~4, we analyzed random routing on the complete graph. We now
+consider oblivious routing on general graphs, where the routing strategy
+must be fixed in advance without knowledge of the traffic pattern.
+
+\begin{definition}[Oblivious Routing]
+An oblivious routing strategy on a graph $G$ is a probability distribution
+over paths for each source-destination pair $(s, t)$, specified without
+knowledge of the other traffic demands. The \emph{competitive ratio} is
+the worst-case ratio of the expected maximum congestion to the optimal
+offline maximum congestion.
+\end{definition}
+
+\begin{theorem}[Random Oblivious Routing]
+\label{thm:oblivious-routing}
+On any graph $G$ with $n$ vertices and average degree $\bar{d}$, the
+random oblivious routing strategy---choosing a shortest path uniformly at
+random for each demand---achieves competitive ratio $O(\log n)$ with high
+probability.
+\end{theorem}
+
+The analysis proceeds by decomposing each shortest path into edges, then
+applying the Chernoff bound to the congestion at each edge. For each edge
+$e$, the congestion $X_e$ is the sum of independent indicator variables
+(one per path using $e$), and standard concentration inequalities yield
+the $O(\log n)$ bound on the maximum congestion.
+
+The key insight connecting this to the probabilistic method is that the
+\emph{existence} of a good routing is guaranteed by the probabilistic
+argument: the expected maximum congestion is $O(\log n)$, so a routing
+with maximum congestion $O(\log n)$ exists.
+
+%======================================================================
+\section{The Lov\'{a}sz Local Lemma}
+\label{sec:lll}
+%======================================================================
+
+The union bound $\Pr[\bigcup A_i] \leq \sum \Pr[A_i]$ is often too crude
+when the bad events are not ``spread out'' across the probability space.
+The Lov\'{a}sz Local Lemma provides a much sharper tool when the bad
+events have limited dependencies.
+
+\begin{definition}[Dependency Graph]
+Let $A_1, \ldots, A_m$ be events in a probability space. A
+\emph{dependency graph} for these events is a graph $H$ on vertex set
+$\{1, \ldots, m\}$ such that for each $i$, the event $A_i$ is independent
+of the events $\{A_j : j \notin N_H(i)\}$, where $N_H(i)$ denotes the
+neighbors of $i$ in $H$.
+\end{definition}
+
+\begin{theorem}[Lov\'{a}sz Local Lemma---Asymmetric Form]
+\label{thm:lll}
+Let $A_1, A_2, \ldots, A_m$ be events with a dependency graph $H$ of
+maximum degree $d$. If there exist real numbers $x_1, x_2, \ldots, x_m$
+in $[0, 1)$ such that
+\[
+\Pr[A_i] \leq x_i \prod_{j \in N_H(i)} (1 - x_j)
+\qquad \text{for all } i = 1, \ldots, m,
+\]
+then
+\[
+\Pr\!\Bigl[\bigcap_{i=1}^{m} \overline{A_i}\Bigr]
+> \prod_{i=1}^{m} (1 - x_i) > 0.
+\]
+\end{theorem}
+
+The symmetric form is often more convenient.
+
+\begin{corollary}[Symmetric Local Lemma]
+\label{cor:lll-symmetric}
+If each event $A_i$ has $\Pr[A_i] \leq p$ and depends on at most $d$
+other events, and if
+\[
+ep(d + 1) \leq 1,
+\]
+then $\Pr[\bigcap \overline{A_i}] > 0$.
+\end{corollary}
+
+\begin{proof}
+Set $x_i = 1/(d+1)$ for all $i$. The condition $\Pr[A_i] \leq
+x_i(1 - x_i)^d$ is implied by $p \leq \frac{1}{e(d+1)}$ since
+$(1 - 1/(d+1))^d \geq 1/e$.
+\end{proof}
+
+\begin{example}[2-SAT]
+Consider a 2-SAT formula $\phi$ on $n$ variables with $m$ clauses. Each
+clause has two literals. Assign each variable independently to $0$ or $1$
+with probability $1/2$. The bad event $A_j$ is that clause $C_j$ is not
+satisfied, so $\Pr[A_j] = 1/4$. Each clause shares variables with at most
+$2(l_j - 1)$ other clauses, so the dependency degree is at most $d = 2m$.
+The condition $ep(d+1) \leq 1$ requires $m \leq \lfloor e^{-1}/(2p) \rfloor$,
+which limits the density. For sparse formulas, the Local Lemma guarantees
+satisfiability.
+\end{example}
+
+\begin{example}[Hypergraph Coloring]
+\label{ex:hypergraph}
+Consider a 3-uniform hypergraph $H = (V, E)$ with $|V| = n$ and
+$|E| = m$ edges. We wish to 2-color the vertices so that no edge is
+monochromatic. Color each vertex independently red or blue with probability
+$1/2$. For each edge $e \in E$, let $A_e$ be the event that $e$ is
+monochromatic. Then $\Pr[A_e] = 2 \cdot 2^{-3} = 1/4$. Each edge shares
+vertices with at most $3(n-3) = 3n - 9$ other edges (since each of its 3
+vertices can belong to at most $n - 3$ other edges). The Local Lemma
+condition $ep(d+1) \leq 1$ becomes $e(n/4)(3n - 8) \leq 1$, which is
+satisfied for $n \leq O(1)$. More generally, for $k$-uniform hypergraphs,
+the condition $ep(d+1) \leq 1$ gives bounds of the form $m \leq
+2^{k-1} / (ek)$, ensuring a proper 2-coloring exists.
+\end{example}
+
+\begin{example}[$k$-SAT]
+For $k$-SAT formulas with clause density $m/n \leq 2^{k-1}/(ek)$,
+the Local Lemma guarantees that a random assignment satisfies all clauses
+with positive probability. This gives a satisfiability threshold that
+matches the upper bound from the DPLL algorithm for small $k$.
+\end{example}
+
+%======================================================================
+\section{The Method of Conditional Probabilities}
+\label{sec:conditional}
+%======================================================================
+
+The probabilistic method proves existence but does not construct the
+object. The \emph{method of conditional probabilities} transforms a
+probabilistic existence argument into a deterministic algorithm by
+replacing random choices with deterministic ones that maintain
+non-negative conditional expectation.
+
+The key insight is as follows. Suppose we want to show that a random
+variable $X$ satisfies $\mathbb{E}[X] \geq 0$, which implies the existence
+of an outcome with $X \geq 0$. We can derandomize by setting the variables
+$x_1, x_2, \ldots, x_n$ one at a time. At step $i$, we compute the
+conditional expectation $\mathbb{E}[X \mid x_1, \ldots, x_{i-1}]$ as a
+function of $x_i$, and choose the value of $x_i$ that maximizes this
+conditional expectation. The tower property of conditional expectation
+ensures that the final value satisfies $X \geq \mathbb{E}[X] \geq 0$.
+
+\begin{theorem}[Derandomization of MAX-3SAT]
+\label{thm:derand-maxsat}
+For any 3-CNF formula with $m$ clauses, there exists a deterministic
+polynomial-time algorithm that finds an assignment satisfying at least
+$7m/8$ clauses.
+\end{theorem}
+
+\begin{proof}
+We apply the method of conditional probabilities to the random variable
+$X = \sum_{j=1}^{m} X_j$, where $X_j$ is the indicator for clause $C_j$
+being satisfied. The expected value is $\mathbb{E}[X] = 7m/8$.
+
+Initialize all variables as unset. For $i = 1, 2, \ldots, n$, we set
+$x_i$ to the value ($0$ or $1$) that maximizes the conditional expectation
+$\mathbb{E}[X \mid x_1, \ldots, x_i]$. This conditional expectation can
+be computed in polynomial time: for each clause $C_j$, if all its literals
+are already determined and none is true, then $X_j = 0$; if any literal
+is true, then $X_j = 1$; otherwise, $X_j$ is a Bernoulli random variable
+with $\mathbb{E}[X_j \mid \text{partial assignment}] = 1 - 2^{-r}$, where
+$r$ is the number of unset literals in $C_j$.
+
+By the tower property,
+\[
+\mathbb{E}[X \mid x_1, \ldots, x_n] = X(x_1, \ldots, x_n) \geq
+\mathbb{E}[X \mid x_1] \geq \cdots \geq \mathbb{E}[X] = \frac{7m}{8}.
+\]
+Thus the final assignment satisfies at least $7m/8$ clauses.
+\end{proof}
+
+The method of conditional probabilities is the ``algorithmic'' backbone of
+the probabilistic method. It transforms existential proofs into efficient
+algorithms, demonstrating that the power of randomization can often be
+eliminated without sacrificing the quality of the result.
+
+\begin{cpplisting}
+\begin{lstlisting}[caption={Deterministic MAX-SAT via conditional expectations (C++).}]
+MaxSATResult deterministic_maxsat(
+    const vector<vector<int>>& clauses, int n_vars) {
+  // x[i] = -1 (unset), 0, or 1
+  vector<int> assignment(n_vars, -1);
+  int n = clauses.size();
+
+  for (int i = 0; i < n_vars; ++i) {
+    // Try setting x[i] = 0 and x[i] = 1
+    for (int val = 0; val <= 1; ++val) {
+      assignment[i] = val;
+      // Compute conditional expectation for each clause
+    }
+    // Pick the value giving higher conditional E[X]
+    // (details in implementation)
+  }
+  // Evaluate final assignment
+  // ...
+}
+\end{lstlisting}
+\end{cpplisting}
+
+%======================================================================
+\section*{Notes}
+%======================================================================
+
+The probabilistic method was introduced by Erd\H{o}s~\cite{erdos1947} in
+his 1947 proof of a lower bound on Ramsey numbers. The elegant simplicity
+of the approach---``if the average is good, something good must
+exist''---has made it one of the most widely used tools in combinatorics.
+
+The Lov\'{a}sz Local Lemma was proved by Erd\H{o}s and
+Lov\'{a}sz~\cite{lovasz1975} in 1975. Spencer's 1975
+survey~\cite{spencer1975} and the definitive monograph by Alon and
+Spencer~\cite{alonspencer1992} (The Probabilistic Method, Wiley) are
+standard references.
+
+The method of conditional probabilities was developed by Spencer and
+others as a systematic derandomization technique. The algorithmic LLL of
+Moser and Tardos~\cite{mosertardos2010} provides an efficient constructive
+version of the Local Lemma, resolving a long-standing algorithmic question.
+
+Expander graphs have deep connections to coding theory, pseudorandomness,
+and computational complexity. The existence of Ramanujan graphs was
+established by Lubotzky--Phillips--Sarnak and Margulis using algebraic
+methods; random regular graphs achieve near-optimal expansion with high
+probability.
+
+\begin{thebibliography}{9}
+\bibitem{erdos1947}
+P.~Erd\H{o}s,
+``Some remarks on number theory,''
+\textit{Bull. Res. Council Israel}, 3:1947, pp.~8--10.
+
+\bibitem{lovasz1975}
+P.~Erd\H{o}s and L.~Lov\'{a}sz,
+``Problems and results on $3$-chromatic hypergraphs and some related
+questions,''
+\textit{Infinite and Finite Sets}, 1975, pp.~609--627.
+
+\bibitem{spencer1975}
+J.~Spencer,
+``Asymptotic lower bounds for Ramsey functions,''
+\textit{Discrete Mathematics}, 9(1):73--80, 1975.
+
+\bibitem{alonspencer1992}
+N.~Alon and J.~Spencer,
+\textit{The Probabilistic Method},
+Wiley-Interscience, 1992 (2nd ed.~2000, 3rd ed.~2008 with J.~Spencer and
+E.~Sudakov).
+
+\bibitem{mosertardos2010}
+R.~Moser and G.~Tardos,
+``A constructive proof of the general Lov\'{a}sz Local Lemma,''
+\textit{J.~ACM}, 57(2):1--15, 2010.
+
+\bibitem{lubotzky1988}
+A.~Lubotzky, R.~Phillips, and P.~Sarnak,
+``Ramanujan graphs,''
+\textit{Combinatorica}, 8(3):261--277, 1988.
+
+\bibitem{margulis1988}
+G.~A.~Margulis,
+``Explicit group-theoretic constructions of combinatorial schemes and
+their application in the design of expanders and superconcentrators,''
+\textit{Problemy Peredachi Informatsii}, 24(2):31--39, 1988.
+\end{thebibliography}
+
+%======================================================================
+\section*{Problems}
+%======================================================================
+
+\begin{problem}
+Let $G = G(n, 1/2)$ be the Erd\H{o}s--R\'{e}nyi random graph. Using the
+probabilistic method, prove that $G$ contains a triangle-free induced
+subgraph on at least $n/4$ vertices.
+\end{problem}
+
+\begin{problem}
+Prove that for any graph $G$ on $n$ vertices with average degree $\bar{d}$,
+there exists an independent set of size at least $\frac{n}{\bar{d} + 1}$.
+Use the probabilistic method with a non-uniform distribution.
+\end{problem}
+
+\begin{problem}
+Let $\phi$ be a CNF formula where each clause has at least $k$ literals.
+Show that a random assignment satisfies at least $\prod_{j=1}^{m}
+(1 - 2^{-l_j})$ clauses in expectation, where $l_j$ is the length of
+clause $j$. Derive a lower bound when $k = 4$.
+\end{problem}
+
+\begin{problem}
+Use the Lov\'{a}sz Local Lemma to prove that the edges of $K_n$ can be
+3-colored so that no monochromatic triangle exists, provided $n \leq
+\lfloor e^{-1} \cdot 2^2 / 3 \rfloor$. Compare with the bound obtained
+from the union bound.
+\end{problem}
+
+\begin{problem}
+Consider a $k$-uniform hypergraph $H$ with $m$ edges and maximum degree
+$\Delta$ (the maximum number of edges containing any single vertex). Show
+that $H$ admits a 2-coloring with no monochromatic edge if $m \leq
+2^{k-1} \Delta / k$.
+\end{problem}
+
+\begin{problem}
+Apply the method of conditional probabilities to the Ramsey problem:
+deterministically find a 2-coloring of $K_5$ that minimizes the number
+of monochromatic triangles. Write pseudocode for the algorithm.
+\end{problem}
+
+\begin{problem}
+Let $A_1, \ldots, A_m$ be events each with probability at most $p$, and
+suppose each event depends on at most $d$ others. Show that the symmetric
+Local Lemma condition $ep(d+1) \leq 1$ implies
+$\Pr[\overline{A_1} \cap \cdots \cap \overline{A_m}] \geq
+\left(1 - \frac{1}{d+1}\right)^m$.
+\end{problem}
+
+\begin{problem}
+Construct a random $3$-regular graph on $n = 100$ vertices and compute
+its second-largest eigenvalue $|\lambda_2|$ using the power method.
+Compare with the Ramanujan bound $2\sqrt{2} \approx 2.828$. Repeat for
+100 trials and report the distribution of $|\lambda_2|$.
+\end{problem}
+
+\begin{problem}
+Show that for a 3-CNF formula with $m$ clauses, the method of conditional
+probabilities can be implemented in $O(mn)$ time, where $n$ is the number
+of variables.
+\end{problem}
+
+\begin{problem}
+\textbf{(Erd\H{o}s--Selfridge.)} Let $\mathcal{F}$ be a family of subsets
+of $\{1, \ldots, n\}$, each of size at least $k$. If $\sum_{S \in
+\mathcal{F}} 2^{-|S|} < 1/2$, then there exists a 2-coloring of
+$\{1, \ldots, n\}$ with no monochromatic set in $\mathcal{F}$. Prove this
+using the asymmetric Local Lemma, and compare the bound with the union
+bound.
+\end{problem}
+
+\end{document}

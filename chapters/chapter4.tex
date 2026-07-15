@@ -1,0 +1,556 @@
+\documentclass[twoside,12pt]{book}
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage{mathpazo}
+\usepackage{amsmath,amssymb,amsthm}
+\usepackage{graphicx}
+\usepackage{listings}
+\usepackage{xcolor}
+\usepackage{hyperref}
+\usepackage{enumitem}
+\usepackage{tikz}
+\usepackage{algorithm}
+\usepackage{algpseudocode}
+\usepackage{booktabs}
+\usepackage{geometry}
+\usepackage{fancyhdr}
+\usepackage{titlesec}
+\geometry{papersize={6in,9in},margin=0.75in,top=0.75in,bottom=0.75in,inner=0.9in,outer=0.65in,headheight=14pt}
+\pagestyle{fancy}
+\fancyhf{}
+\fancyhead[LE]{\small\textit{4. Tail Inequalities}}
+\fancyhead[RO]{\small\textit{Randomized Algorithms}}
+\fancyfoot[C]{\thepage}
+\renewcommand{\headrulewidth}{0.4pt}
+\definecolor{codegray}{rgb}{0.45,0.45,0.45}
+\lstdefinestyle{cppstyle}{basicstyle=\ttfamily\scriptsize,keywordstyle=\bfseries,commentstyle=\itshape\color{codegray},numbers=left,numberstyle=\tiny\color{codegray},numbersep=8pt,frame=single,framerule=0.4pt,rulecolor=\color{codegray},backgroundcolor=\color{gray!5},breaklines=true,tabsize=4,showstringspaces=false,language=C++}
+\lstset{style=cppstyle}
+\theoremstyle{plain}
+\newtheorem{theorem}{Theorem}[chapter]
+\newtheorem{lemma}[theorem]{Lemma}
+\newtheorem{corollary}[theorem]{Corollary}
+\newtheorem{proposition}[theorem]{Proposition}
+\theoremstyle{definition}
+\newtheorem{definition}[theorem]{Definition}
+\newtheorem{example}[theorem]{Example}
+\newtheorem{remark}[theorem]{Remark}
+\theoremstyle{remark}
+\newtheorem{exercise}[theorem]{Exercise}
+\newtheorem{problem}[theorem]{Problem}
+\newenvironment{cpplisting}{\begin{center}\small}{\end{center}}
+\begin{document}
+
+\chapter*{4 Tail Inequalities}
+\addcontentsline{toc}{chapter}{4. Tail Inequalities}
+\markboth{4.\ Tail Inequalities}{4.\ Tail Inequalities}
+
+In the analysis of randomized algorithms, we frequently need to bound the
+probability that a random variable deviates significantly from its expected
+value. The Markov inequality provides a generic tool for this purpose, but
+its bound is often too loose for practical use. In this chapter, we develop
+sharper \emph{tail inequalities}---Chernoff bounds, Hoeffding bounds, and
+their martingale extensions---that exploit independence and structural
+properties to yield exponentially small failure probabilities. These bounds
+are among the most frequently used tools in the analysis of randomized
+algorithms and have far-reaching applications in computer science,
+statistics, and combinatorics.
+
+%======================================================================
+\section{The Chernoff Bound}
+\label{sec:chernoff}
+%======================================================================
+
+We begin with the Chernoff bound, perhaps the most widely used tail
+inequality in the analysis of randomized algorithms. The bound applies to
+the sum of independent Bernoulli random variables and provides
+exponentially decaying bounds on the probability that the sum deviates
+from its expectation.
+
+Let $X_1, X_2, \ldots, X_n$ be independent Bernoulli random variables,
+where $\Pr[X_i = 1] = p_i$ and $\Pr[X_i = 0] = 1 - p_i$. Define
+$X = \sum_{i=1}^{n} X_i$ with expectation $\mu = \mathbb{E}[X] =
+\sum_{i=1}^{n} p_i$. Our goal is to bound $\Pr[X \geq (1+\delta)\mu]$
+and $\Pr[X \leq (1-\delta)\mu]$ for $\delta > 0$.
+
+The key idea behind the Chernoff bound is the use of the \emph{moment
+generating function} (MGF). For any $\lambda > 0$,
+\[
+\Pr[X \geq a] = \Pr[e^{\lambda X} \geq e^{\lambda a}]
+\leq \frac{\mathbb{E}[e^{\lambda X}]}{e^{\lambda a}}
+\]
+by Markov's inequality. The challenge is to bound
+$\mathbb{E}[e^{\lambda X}]$.
+
+\begin{lemma}[MGF Bound for Bernoulli Sums]
+\label{lem:mgf}
+Let $X_1, X_2, \ldots, X_n$ be independent Bernoulli random variables with
+$\mathbb{E}[X_i] = p_i$ and $\mu = \sum_{i=1}^{n} p_i$. Then for all
+$\lambda > 0$,
+\[
+\mathbb{E}[e^{\lambda X}] \leq e^{\mu(e^{\lambda} - 1)}.
+\]
+\end{lemma}
+
+\begin{proof}
+Since the $X_i$ are independent,
+\[
+\mathbb{E}[e^{\lambda X}] = \prod_{i=1}^{n} \mathbb{E}[e^{\lambda X_i}]
+= \prod_{i=1}^{n} \bigl(p_i e^{\lambda} + (1-p_i)\bigr)
+= \prod_{i=1}^{n} \bigl(1 + p_i(e^{\lambda} - 1)\bigr).
+\]
+Using the inequality $1 + x \leq e^x$ (valid for all $x$), each factor
+satisfies
+\[
+1 + p_i(e^{\lambda} - 1) \leq \exp\bigl(p_i(e^{\lambda} - 1)\bigr).
+\]
+Taking the product,
+\[
+\mathbb{E}[e^{\lambda X}] \leq \exp\!\Bigl(\sum_{i=1}^{n}
+p_i(e^{\lambda} - 1)\Bigr) = e^{\mu(e^{\lambda} - 1)}. \qedhere
+\]
+\end{proof}
+
+Combining Lemma~\ref{lem:mgf} with Markov's inequality yields the
+Chernoff bound in its standard multiplicative form.
+
+\begin{theorem}[Chernoff Bound---Multiplicative Form]
+\label{thm:chernoff}
+Let $X_1, X_2, \ldots, X_n$ be independent Bernoulli random variables
+with $\mathbb{E}[X] = \mu = \sum_{i=1}^{n} p_i$ where $X =
+\sum_{i=1}^{n} X_i$. Then for any $\delta > 0$:
+\begin{enumerate}[label=(\roman*)]
+\item \textbf{Upper tail:}
+$\Pr[X \geq (1+\delta)\mu] \leq
+   \left(\frac{e^{\delta}}{(1+\delta)^{(1+\delta)}}\right)^{\!\mu}.$
+In particular, for $0 < \delta \leq 1$:
+\[
+\Pr[X \geq (1+\delta)\mu] \leq e^{-\mu\delta^2/3}.
+\]
+\item \textbf{Lower tail:}
+$\Pr[X \leq (1-\delta)\mu] \leq
+   \left(\frac{e^{-\delta}}{(1-\delta)^{(1-\delta)}}\right)^{\!\mu}.$
+In particular, for $0 < \delta \leq 1$:
+\[
+\Pr[X \leq (1-\delta)\mu] \leq e^{-\mu\delta^2/2}.
+\]
+\end{enumerate}
+\end{theorem}
+
+\begin{proof}
+We prove the upper tail; the lower tail is analogous.
+
+By Markov's inequality and Lemma~\ref{lem:mgf}, for any $\lambda > 0$:
+\[
+\Pr[X \geq (1+\delta)\mu] \leq
+e^{-\lambda(1+\delta)\mu} \cdot e^{\mu(e^{\lambda}-1)}.
+\]
+Setting $\lambda = \ln(1+\delta) > 0$:
+\[
+\Pr[X \geq (1+\delta)\mu] \leq
+(1+\delta)^{-(1+\delta)\mu} \cdot e^{\mu\delta} =
+\left(\frac{e^{\delta}}{(1+\delta)^{(1+\delta)}}\right)^{\!\mu}.
+\]
+For $0 < \delta \leq 1$, the concavity of $\ln$ and a Taylor expansion
+show that $\ln(1+\delta) \geq \delta - \delta^2/2$, which yields
+$\delta - (1+\delta)\ln(1+\delta) \leq -\delta^2/3$, giving the simplified
+bound $e^{-\mu\delta^2/3}$.
+
+For the lower tail, we choose $\lambda = -\ln(1-\delta) > 0$ and obtain
+the analogous bound $e^{-\mu\delta^2/2}$.
+\end{proof}
+
+\begin{remark}
+The asymmetry in the exponents ($-1/3$ vs.\ $-1/2$) reflects the fact
+that the lower tail decays faster than the upper tail. This is a
+consequence of the convexity of $e^x$ and the different optimal choices
+of $\lambda$.
+\end{remark}
+
+\begin{example}[Application to Lower Bounds]
+\label{ex:chernoff-lower}
+Chernoff bounds provide a simple route to proving lower bounds on the
+running time of randomized algorithms. Consider the problem of estimating
+the fraction of satisfying assignments of a DNF formula. Each clause in
+the DNF is satisfied by a fraction $p_j$ of random assignments. Sampling
+$k$ random assignments and checking each against the DNF, the number of
+satisfied samples $S$ satisfies $\mathbb{E}[S] = kp$ where $p$ is the
+true fraction. By the Chernoff bound, to estimate $p$ within relative
+error $\epsilon$, we need $k = O(\ln(1/\delta)/(p\epsilon^2))$ samples.
+This immediately implies a lower bound: no algorithm using fewer samples
+can achieve relative error $\epsilon$ with probability exceeding $1 -
+\delta$.
+\end{example}
+
+\subsection{Derandomization via Conditional Expectations}
+
+Chernoff bounds also serve as the foundation for \emph{derandomization}
+of randomized algorithms. The method of conditional expectations allows
+us to systematically replace random choices with deterministic ones while
+preserving the expectation bound. The key observation is that
+$\mathbb{E}[X \mid X_1 = x_1, \ldots, X_k = x_k]$ is itself a sum of
+independent Bernoulli random variables, to which the Chernoff bound
+applies. By evaluating conditional expectations, one can deterministically
+construct a solution that is at least as good as the expectation.
+
+%======================================================================
+\section{Routing in a Parallel Computer}
+\label{sec:routing}
+%======================================================================
+
+One of the classic applications of Chernoff bounds in computer science is
+to the analysis of randomized routing algorithms in parallel architectures.
+
+Consider a parallel computer with $n$ processors connected to $n$ memory
+modules. At each time step, each processor independently selects a memory
+module uniformly at random and sends a packet to that module. If multiple
+packets are destined for the same module, they queue up and are served
+one at a time. The routing is completed when all packets have been
+delivered, and the \emph{congestion} is the maximum queue length at any
+module.
+
+The expected number of packets arriving at any given memory module is
+$\mu = n \cdot (1/n) = 1$. Thus, we expect each module to receive about
+one packet. However, the interesting question is whether the maximum
+congestion is close to this expectation.
+
+\begin{theorem}[Routing Congestion]
+\label{thm:routing}
+In the random routing model described above, the maximum queue length is
+at most $\frac{\ln n}{\ln \ln n}$ with probability at least $1 - n^{-c}$
+for any fixed constant $c > 0$.
+\end{theorem}
+
+\begin{proof}
+Let $q_j$ denote the queue length at module $j$. Since each of the $n$
+processors independently chooses module $j$ with probability $1/n$, we
+have $q_j = \sum_{i=1}^{n} X_{ij}$ where $X_{ij}$ is the indicator
+that processor $i$ sends to module $j$. Thus $q_j$ is a sum of $n$
+independent Bernoulli random variables with $p_i = 1/n$ for each, giving
+$\mu = 1$.
+
+By the Chernoff bound (Theorem~\ref{thm:chernoff}(i)), for any $t > 0$:
+\[
+\Pr[q_j \geq t] \leq \left(\frac{e^{t-1}}{t^t}\right).
+\]
+Setting $t = \frac{\ln n}{\ln \ln n}$ and applying a union bound over
+all $n$ modules:
+\[
+\Pr\!\Bigl[\max_j q_j \geq t\Bigr]
+\leq n \cdot \Pr[q_1 \geq t]
+\leq n \cdot \left(\frac{e}{t}\right)^t
+= n \cdot \exp\bigl(t(1 - \ln t)\bigr).
+\]
+Substituting $t = \frac{\ln n}{\ln \ln n}$:
+\[
+t(1 - \ln t) = \frac{\ln n}{\ln\ln n}
+\left(1 - \ln\!\left(\frac{\ln n}{\ln\ln n}\right)\right)
+= \frac{\ln n}{\ln\ln n}\left(1 - \ln\ln n + \ln\ln\ln n\right),
+\]
+which is $O(-\ln n)$ for large $n$. Hence the failure probability is
+$n \cdot e^{-\Omega(\ln n)} = n^{-c}$ for suitable $c > 1$.
+\end{proof}
+
+\begin{remark}
+The bound of $\frac{\ln n}{\ln \ln n}$ is asymptotically tight for this
+model: it can be shown that with high probability, the maximum congestion
+is at least $\Omega\!\left(\frac{\ln n}{\ln \ln n}\right)$. The key
+insight is that the union bound, combined with the exponential decay of
+the Chernoff bound, converts the per-module exponential tail into a
+high-probability global guarantee.
+\end{remark}
+
+The following C++ code illustrates this phenomenon experimentally.
+We simulate random routing for varying numbers of processors and compare
+the observed maximum congestion against the theoretical bound.
+
+\begin{cpplisting}
+\begin{lstlisting}[caption={Routing simulation (see \texttt{routing.h})}]
+int simulate_routing(int n, mt19937& rng) {
+    std::vector<int> queues(n, 0);
+    uniform_int_distribution<int> dist(0, n - 1);
+    for (int i = 0; i < n; i++)
+        queues[dist(rng)]++;
+    return *max_element(queues.begin(), queues.end());
+}
+\end{lstlisting}
+\end{cpplisting}
+
+%======================================================================
+\section{A Wiring Problem}
+\label{sec:wiring}
+%======================================================================
+
+The Chernoff bound finds another elegant application in the analysis of
+wiring problems in VLSI design. Consider the following model: we have $n$
+signal sources and $n$ signal sinks placed on a line. Each source $i$ is
+connected to a unique sink $\pi(i)$, where $\pi$ is a random permutation.
+Each wire is laid out along the line, and the total wire length is
+$\sum_{i=1}^{n} |i - \pi(i)|$.
+
+For a random permutation, the displacement $|i - \pi(i)|$ is a random
+variable with $\mathbb{E}[|i - \pi(i)|] = \Theta(\sqrt{n})$ for a
+typical index $i$ (more precisely, the expected displacement for a
+uniformly random position is $\mathbb{E}[|i - \pi(i)|] \leq \sqrt{n}$).
+By linearity of expectation, the expected total wire length is
+$\Theta(n^{3/2})$.
+
+The Chernoff bound provides a concentration result: with high probability,
+the total wire length is close to its expectation. More precisely, let
+$W = \sum_{i=1}^{n} |i - \pi(i)|$. Although the terms $|i - \pi(i)|$ are
+not independent (they are determined by the single permutation $\pi$),
+one can decompose the analysis into independent contributions using the
+method of \emph{Hoeffding decomposition} or by bounding the sum by
+independent random variables.
+
+\begin{theorem}[Wire Length Concentration]
+\label{thm:wiring}
+For a random permutation $\pi$ on $\{1, \ldots, n\}$, the total wire
+length $W = \sum_{i=1}^{n} |i - \pi(i)|$ satisfies, for any $\delta > 0$:
+\[
+\Pr\!\bigl[|W - \mathbb{E}[W]| \geq \delta \cdot \mathbb{E}[W]\bigr]
+\leq 2\exp\!\bigl(-\Omega(\delta^2 n)\bigr).
+\]
+\end{theorem}
+
+This result has practical implications: it guarantees that random wiring
+layouts in VLSI circuits will, with high probability, have wire lengths
+close to the expected value, enabling reliable performance prediction.
+
+%======================================================================
+\section{Martingales}
+\label{sec:martingales}
+%======================================================================
+
+The Chernoff bound requires independence of the underlying random
+variables, which limits its applicability. Many natural random variables
+exhibit sequential dependence---for example, the number of edges in a
+random graph, the height of a random search tree, or the score in a
+sequential process. \emph{Martingales} provide the right framework for
+analyzing such quantities.
+
+\begin{definition}[Martingale]
+\label{def:martingale}
+A sequence of random variables $X_0, X_1, X_2, \ldots, X_n$ is called a
+\emph{martingale} with respect to a filtration (sequence of
+$\sigma$-algebras) $\mathcal{F}_0 \subseteq \mathcal{F}_1 \subseteq
+\cdots \subseteq \mathcal{F}_n$ if:
+\begin{enumerate}[label=(\roman*)]
+\item $X_i$ is $\mathcal{F}_i$-measurable for each $i$;
+\item $\mathbb{E}[|X_i|] < \infty$ for each $i$;
+\item $\mathbb{E}[X_i \mid \mathcal{F}_{i-1}] = X_{i-1}$ for each
+      $i \geq 1$.
+\end{enumerate}
+Intuitively, a martingale models a ``fair game'': the expected future
+value, given the present, equals the present value.
+\end{definition}
+
+\begin{example}[Random Graph Edge Count]
+\label{ex:graph-martingale}
+Consider the Erd\H{o}s--R\'{e}nyi random graph $G(n, p)$, and let $X_k$
+denote the number of edges in the subgraph induced by the first $k$
+vertices. Then $X_0, X_1, \ldots, X_n$ forms a martingale (with respect
+to the natural filtration). Indeed, when the $(k+1)$-th vertex is added,
+each potential edge to the existing $k$ vertices is included independently
+with probability $p$. The conditional expectation of the new edges is
+$kp$, so $\mathbb{E}[X_{k+1} \mid X_k] = X_k + kp$ --- wait, this is
+not a martingale but a \emph{submartingale}. A proper martingale arises
+by considering $Z_k = X_k - \mathbb{E}[X_k] = X_k - \binom{k}{2}p$.
+\end{example}
+
+The power of martingale theory lies in concentration inequalities that
+generalize the Chernoff bound.
+
+\begin{theorem}[Azuma--Hoeffding Inequality]
+\label{thm:azuma}
+Let $X_0, X_1, \ldots, X_n$ be a martingale with bounded differences:
+\[
+|X_i - X_{i-1}| \leq c_i \quad \text{for all } i = 1, \ldots, n,
+\]
+where $c_1, c_2, \ldots, c_n$ are constants. Then for any $t > 0$:
+\[
+\Pr\!\bigl[|X_n - X_0| \geq t\bigr]
+\leq 2\exp\!\left(-\frac{t^2}{2\sum_{i=1}^{n} c_i^2}\right).
+\]
+\end{theorem}
+
+\begin{proof}
+We prove the upper tail $\Pr[X_n - X_0 \geq t]$; the lower tail follows
+by symmetry. Define the \emph{Doob martingale} differences $D_i = X_i -
+X_{i-1}$, so $X_n - X_0 = \sum_{i=1}^{n} D_i$.
+
+For any $\lambda > 0$:
+\[
+\Pr[X_n - X_0 \geq t] = \Pr\!\left[e^{\lambda \sum D_i}
+\geq e^{\lambda t}\right]
+\leq e^{-\lambda t} \cdot \mathbb{E}\!\left[e^{\lambda \sum D_i}\right].
+\]
+Since $\mathbb{E}[D_i \mid \mathcal{F}_{i-1}] = 0$ (by the martingale
+property) and $|D_i| \leq c_i$, the Hoeffding lemma gives:
+\[
+\mathbb{E}\!\left[e^{\lambda D_i} \mid \mathcal{F}_{i-1}\right]
+\leq e^{\lambda^2 c_i^2 / 2}.
+\]
+Taking iterated expectations:
+\[
+\mathbb{E}\!\left[e^{\lambda \sum D_i}\right]
+\leq \exp\!\left(\frac{\lambda^2}{2}\sum_{i=1}^{n} c_i^2\right).
+\]
+Minimizing over $\lambda > 0$ by setting $\lambda = t / \sum c_i^2$
+yields the claimed bound.
+\end{proof}
+
+\begin{corollary}[Concentration for Bounded-Difference Functions]
+\label{cor:bounded-diff}
+Let $f(x_1, \ldots, x_n)$ be a function satisfying the
+\emph{bounded differences} condition: changing any single input $x_i$
+changes $f$ by at most $c_i$, while leaving the other inputs fixed.
+If $X_1, \ldots, X_n$ are independent random variables, then
+$Z = f(X_1, \ldots, X_n)$ satisfies:
+\[
+\Pr\!\bigl[|Z - \mathbb{E}[Z]| \geq t\bigr]
+\leq 2\exp\!\left(-\frac{t^2}{2\sum_{i=1}^{n} c_i^2}\right).
+\]
+\end{corollary}
+
+\begin{proof}
+Define the Doob martingale $Z_k = \mathbb{E}[Z \mid X_1, \ldots, X_k]$.
+Then $Z_0 = \mathbb{E}[Z]$ and $Z_n = Z$. The bounded differences
+condition ensures $|Z_k - Z_{k-1}| \leq c_k$, so Theorem~\ref{thm:azuma}
+applies.
+\end{proof}
+
+\begin{example}[Random Graph Applications]
+\label{ex:graph-azuma}
+The Azuma--Hoeffding inequality is particularly powerful for random
+graphs. For the chromatic number $\chi(G)$ of $G(n, 1/2)$, we have
+$\chi(G) = f(X_1, \ldots, X_m)$ where $X_e$ are the edge indicators and
+$f$ satisfies bounded differences with $c_e = 1$ for all $e$. Thus:
+\[
+\Pr\!\bigl[|\chi(G) - \mathbb{E}[\chi(G)]| \geq t\bigr]
+\leq 2\exp\!\left(-\frac{t^2}{m}\right)
+\]
+where $m = \binom{n}{2}$. This shows that the chromatic number of a
+random graph is highly concentrated around its expectation.
+\end{example}
+
+\begin{remark}
+The Azuma--Hoeffding inequality is tight up to constant factors in the
+exponent when all $c_i$ are equal. More refined inequalities (such as the
+Bennett and Bernstein inequalities) provide better constants when the
+$c_i$ are non-uniform or when additional information about the
+distribution is available.
+\end{remark}
+
+%======================================================================
+\section*{Notes}
+%======================================================================
+
+The Chernoff bound originated in the work of \textbf{Chernoff} (1952) on
+the asymptotic efficiency of tests and estimates. The multiplicative form
+presented here was developed and popularized by
+\textbf{Hoeffding} (1963), who also established the more general bounds
+for sums of independent bounded random variables. An earlier, independent
+result by \textbf{Hoeffding} (1956) on the Hoeffding inequality for
+bounded random variables predates the Chernoff-style bound in the
+literature.
+
+The routing application (Section~\ref{sec:routing}) is based on the
+analysis of packet routing in parallel architectures, which has been a
+central problem in parallel computing since the 1980s. The bound of
+$O(\ln n / \ln \ln n)$ for random routing is a classical result; see
+Leighton, Maggs, and Rao (1994) for related results on oblivious routing.
+
+The Azuma--Hoeffding inequality (Theorem~\ref{thm:azuma}) is named after
+\textbf{Azuma} (1967), who proved a version for martingales with bounded
+differences, and \textbf{Hoeffding} (1963), who proved the independent
+case. The elegant connection between bounded differences and martingale
+concentration was developed by \textbf{McDiarmid} (1989) in his
+foundational paper on the ``method of bounded differences.'' The survey by
+\textbf{Spencer} (1993) provides an excellent introduction to these
+techniques with numerous applications in combinatorics.
+
+For further reading, we recommend the comprehensive treatment in
+\emph{Probability and Computing} by Mitzenmacher and Upfal (2005), and
+the monograph \emph{Concentration Inequalities} by Boucheron, Lugosi, and
+Massart (2013).
+
+%======================================================================
+\section*{Problems}
+%======================================================================
+
+\begin{problem}
+Let $X_1, \ldots, X_n$ be independent Bernoulli random variables with
+$\Pr[X_i = 1] = 1/n$ for all $i$, and let $X = \sum X_i$. Use the
+Chernoff bound to show that $\Pr[X \geq 2] \leq n/e^2$ for $n \geq 4$.
+Compare with the exact value obtained from the Poisson approximation.
+\end{problem}
+
+\begin{problem}
+Prove that the lower tail bound in Theorem~\ref{thm:chernoff}(ii) is
+tight up to constant factors in the exponent. That is, exhibit a sequence
+of independent Bernoulli random variables for which $\Pr[X \leq
+(1-\delta)\mu] \geq e^{-\Theta(\mu\delta^2)}$.
+\end{problem}
+
+\begin{problem}
+In the routing problem of Section~\ref{sec:routing}, suppose each
+processor sends to a \emph{random} destination chosen uniformly from
+$\{1, \ldots, n\}$, but now there are $m$ rounds. After each round, any
+delivered packets are removed. Show that the expected total time to deliver
+all packets is $O(\ln n)$ rounds with high probability.
+\end{problem}
+
+\begin{problem}
+Let $G = G(n, 1/2)$ be the Erd\H{o}s--R\'{e}nyi random graph. Using the
+Azuma--Hoeffding inequality, prove that the number of triangles in $G$ is
+concentrated within $O(n^{3/2})$ of its expectation.
+\end{problem}
+
+\begin{problem}
+Let $f(x_1, \ldots, x_n) = \max_{1 \leq i \leq n} x_i$ where $x_i \in
+[0, 1]$. Show that $f$ satisfies the bounded differences condition with
+$c_i = 1$ for all $i$. Apply Corollary~\ref{cor:bounded-diff} to the
+maximum of $n$ independent uniform $[0,1]$ random variables and compare
+the Azuma--Hoeffding bound with the exact distribution.
+\end{problem}
+
+\begin{problem}
+Prove that if $X_0, X_1, \ldots, X_n$ is a martingale with $|X_i -
+X_{i-1}| \leq 1$ for all $i$, then $\Pr[|X_n - X_0| \geq t] \leq
+2e^{-t^2/(2n)}$. This is sometimes called the ``simple'' Azuma
+inequality.
+\end{problem}
+
+\begin{problem}
+Consider a random variable $Z = \prod_{i=1}^{n} Y_i$ where $Y_i$ are
+independent, each taking value $2$ with probability $1/2$ and value $1/2$
+with probability $1/2$. Taking logarithms and applying the Chernoff bound,
+show that $\Pr[Z \geq 2^{n/2 + t\sqrt{n}}] \leq e^{-\Omega(t^2)}$.
+Interpret this as a ``multiplicative'' Chernoff bound.
+\end{problem}
+
+\begin{problem}
+Let $A$ be a random $n \times n$ adjacency matrix of $G(n, p)$ with $p =
+c/n$ for a constant $c > 0$. The largest eigenvalue $\lambda_{\max}(A)$ of
+$A$ satisfies $|\lambda_{\max}(A) - cp| \leq O(\sqrt{cp})$ with high
+probability. Use the method of bounded differences to prove a concentration
+inequality for $\lambda_{\max}(A)$.
+\end{problem}
+
+\begin{problem}
+Show that the moment generating function bound in Lemma~\ref{lem:mgf}
+gives a tighter result than directly applying Markov's inequality to $X$
+without the exponential transformation. Specifically, compare the bounds
+obtained for $\Pr[X \geq 2\mu]$ using (a) Markov's inequality on $X$
+directly and (b) the Chernoff bound.
+\end{problem}
+
+\begin{problem}
+\textbf{(Chernoff for Poisson.)} Let $X \sim \text{Poisson}(\lambda)$.
+Prove that $\Pr[X \geq (1+\delta)\lambda] \leq
+\left(\frac{e^{\delta}}{(1+\delta)^{(1+\delta)}}\right)^{\lambda}$ for
+$\delta > 0$, using the same MGF technique as in the proof of
+Theorem~\ref{thm:chernoff}.
+\end{problem}
+
+\end{document}

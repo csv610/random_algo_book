@@ -1,0 +1,1221 @@
+\documentclass[twoside,12pt]{book}
+
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage{mathpazo}
+\usepackage{amsmath,amssymb,amsthm}
+\usepackage{graphicx}
+\usepackage{listings}
+\usepackage{xcolor}
+\usepackage{hyperref}
+\usepackage{enumitem}
+\usepackage{tikz}
+\usepackage{algorithm}
+\usepackage{algpseudocode}
+\usepackage{booktabs}
+\usepackage{geometry}
+\usepackage{fancyhdr}
+\usepackage{titlesec}
+
+\geometry{
+  papersize={6in,9in},
+  margin=0.75in,
+  top=0.75in,bottom=0.75in,
+  inner=0.9in,outer=0.65in,
+  headheight=14pt
+}
+
+\pagestyle{fancy}
+\fancyhf{}
+\fancyhead[LE]{\small\textit{1. Introduction}}
+\fancyhead[RO]{\small\textit{Randomized Algorithms}}
+\fancyfoot[C]{\thepage}
+\renewcommand{\headrulewidth}{0.4pt}
+
+\definecolor{codegray}{rgb}{0.45,0.45,0.45}
+\lstdefinestyle{cppstyle}{
+  basicstyle=\ttfamily\scriptsize,
+  keywordstyle=\bfseries,
+  commentstyle=\itshape\color{codegray},
+  numbers=left,
+  numberstyle=\tiny\color{codegray},
+  numbersep=8pt,
+  frame=single,
+  framerule=0.4pt,
+  rulecolor=\color{codegray},
+  backgroundcolor=\color{gray!5},
+  breaklines=true,
+  tabsize=4,
+  showstringspaces=false,
+  language=C++,
+  morekeywords={nullptr,size_t,auto,const,constexpr,
+    unordered_map,vector,pair,mt19937,
+    uniform_int_distribution,INT_MAX}
+}
+\lstset{style=cppstyle}
+
+\theoremstyle{plain}
+\newtheorem{theorem}{Theorem}[chapter]
+\newtheorem{lemma}[theorem]{Lemma}
+\newtheorem{corollary}[theorem]{Corollary}
+\newtheorem{proposition}[theorem]{Proposition}
+\theoremstyle{definition}
+\newtheorem{definition}[theorem]{Definition}
+\newtheorem{example}[theorem]{Example}
+\newtheorem{remark}[theorem]{Remark}
+\theoremstyle{remark}
+\newtheorem{exercise}[theorem]{Exercise}
+
+\begin{document}
+
+\chapter*{1 Introduction}
+\addcontentsline{toc}{chapter}{1 Introduction}
+\markboth{1 Introduction}{1 Introduction}
+
+Randomized algorithms have emerged as powerful tools in computer science,
+offering elegant solutions to problems that are difficult to solve efficiently
+by deterministic means. In this chapter, we introduce the fundamental concepts
+through several examples that illustrate the power and beauty of randomization
+in algorithm design.
+
+Two events $\mathcal{E}_1$ and $\mathcal{E}_2$ are said to be
+\emph{independent} if the probability that they both occur is given by
+\begin{equation}
+  \Pr[\mathcal{E}_1 \cap \mathcal{E}_2]
+  = \Pr[\mathcal{E}_1] \times \Pr[\mathcal{E}_2].
+  \tag{1.1}
+\end{equation}
+In the more general case where $\mathcal{E}_1$ and $\mathcal{E}_2$ are not
+necessarily independent,
+\begin{equation}
+  \Pr[\mathcal{E}_1 \cap \mathcal{E}_2]
+  = \Pr[\mathcal{E}_1] \times \Pr[\mathcal{E}_2 \mid \mathcal{E}_1],
+  \tag{1.2}
+\end{equation}
+where $\Pr[\mathcal{E}_1 \mid \mathcal{E}_2]$ denotes the conditional
+probability of $\mathcal{E}_1$ given $\mathcal{E}_2$. Sometimes, when a
+collection of events is not independent, a convenient method for computing
+the probability of their intersection is to use the following generalization
+of~(1.2):
+\begin{equation}
+  \Pr\!\Bigl[\bigcap_{i=1}^{k} \mathcal{E}_i\Bigr]
+  = \Pr[\mathcal{E}_1]
+    \times \Pr[\mathcal{E}_2 \mid \mathcal{E}_1]
+    \times \Pr[\mathcal{E}_3 \mid \mathcal{E}_1 \cap \mathcal{E}_2]
+    \cdots
+    \Pr\!\Bigl[\mathcal{E}_k \mid \bigcap_{i=1}^{k-1} \mathcal{E}_i\Bigr].
+  \tag{1.3}
+\end{equation}
+
+%==========================================================================
+\section{A Min-Cut Algorithm}
+\label{sec:mincut}
+%==========================================================================
+
+Consider a graph-theoretic example.  Let $G$ be a connected, undirected
+multigraph with $n$ vertices.  A multigraph may contain multiple edges
+between any pair of vertices.  A \emph{cut} in $G$ is a set of edges whose
+removal results in $G$ being broken into two or more components.  A
+\emph{min-cut} is a cut of minimum cardinality.  We now study a simple
+algorithm for finding a min-cut of a graph.
+
+We repeat the following step: pick an edge uniformly at random and merge the
+two vertices at its end-points (Figure~\ref{fig:contraction}).  If as a
+result there are several edges between some pairs of (newly formed) vertices,
+retain them all.  Edges between vertices that are merged are removed, so
+that there are never any self-loops.  We refer to this process of merging
+the two end-points of an edge into a single vertex as the \emph{contraction}
+of that edge.  With each contraction, the number of vertices of $G$
+decreases by one.  The crucial observation is that an edge contraction does
+not reduce the min-cut size in $G$.  This is because every cut in the graph
+at any intermediate stage is a cut in the original graph.  The algorithm
+continues the contraction process until only two vertices remain; at this
+point, the set of edges between these two vertices is a cut in $G$ and is
+output as a candidate min-cut.
+
+\begin{figure}[htbp]
+\centering
+\begin{tikzpicture}[scale=0.8,
+  every node/.style={circle,draw,minimum size=8mm}]
+  \node (1) at (0,1)   {1};
+  \node (2) at (1.5,1) {2};
+  \node (3) at (0.75,2){3};
+  \node (4) at (0,0)   {4};
+  \node (5) at (1.5,0) {5};
+  \draw (1)--(2); \draw (1)--(3); \draw (1)--(4);
+  \draw (2)--(3); \draw (2)--(5); \draw (3)--(4);
+  \draw (3)--(5); \draw (4)--(5);
+  \node at (0.75,-0.8){\small (a) Original graph};
+
+  \node (12) at (4,1)   {$\{1,2\}$};
+  \node (3b) at (4.75,2){3};
+  \node (4b) at (4,0)   {4};
+  \node (5b) at (4.75,0){5};
+  \draw (12)--(3b); \draw (12)--(4b); \draw (12)--(5b);
+  \draw (3b)--(4b); \draw (3b)--(5b); \draw (4b)--(5b);
+  \node at (4.375,-0.8){\small (b) After contracting $(1,2)$};
+\end{tikzpicture}
+\caption{A step in the min-cut algorithm; the effect of contracting
+  edge $e=(1,2)$ is shown.}
+\label{fig:contraction}
+\end{figure}
+
+Does this algorithm always find a min-cut?  Let us analyze its behavior
+after first reviewing some elementary definitions from graph theory.
+
+\begin{definition}
+For any vertex $v$ in a multigraph $G$, the \emph{neighborhood} of $G$,
+denoted~$\Gamma(v)$, is the set of vertices of $G$ that are adjacent
+to~$v$.  The \emph{degree} of~$v$, denoted~$d(v)$, is the number of edges
+incident on~$v$.  For a set $S$ of vertices of $G$, the \emph{neighborhood}
+of~$S$, denoted~$\Gamma(S)$, is the union of the neighborhoods of the
+constituent vertices.
+\end{definition}
+
+Note that $d(v)$ is the same as the cardinality of $\Gamma(v)$ when there
+are no self-loops or multiple edges between $v$ and any of its neighbors.
+
+Let $k$ be the min-cut size.  We fix our attention on a particular min-cut
+$C$ with $k$ edges.  Clearly $G$ has at least $kn/2$ edges; otherwise there
+would be a vertex of degree less than $k$, and its incident edges would be a
+min-cut of size less than $k$.  We will bound from below the probability that
+no edge of $C$ is ever contracted during an execution of the algorithm, so
+that the edges surviving till the end are exactly the edges in~$C$.
+
+Let $e_i$ denote the event of not picking an edge of $C$ at the $i$th step,
+for $1 \le i \le n-2$.  The probability that the edge randomly chosen in the
+first step is in $C$ is at most $k/(nk/2)=2/n$, so that
+$\Pr[e_1] \ge 1-2/n$.  Assuming that $e_1$ occurs, during the second step
+there are at least $k(n{-}1)/2$ edges, so the probability of picking an edge
+in $C$ is at most $2/(n{-}1)$, so that $\Pr[e_2 \mid e_1] \ge 1-2/(n{-}1)$.
+At the $i$th step, the number of remaining vertices is $n-i+1$.  The size of
+the min-cut is still at least~$k$, so the graph has at least
+$k(n{-}i{+}1)/2$ edges remaining at this step.  Thus,
+$\Pr[e_i \mid \bigcap_{j=1}^{i-1} e_j] \ge 1-2/(n{-}i{+}1)$.
+What is the probability that no edge of $C$ is ever picked in the process?
+We invoke~(1.3) to obtain
+\begin{equation}
+  \Pr\!\Bigl[\bigcap_{i=1}^{n-2} e_i\Bigr]
+  > \prod_{i=1}^{n-2}\Bigl(1-\frac{2}{n-i+1}\Bigr)
+  = \frac{2}{n(n-1)}.
+  \tag{1.4}
+\end{equation}
+
+The probability of discovering a particular min-cut (which may in fact be the
+unique min-cut in $G$) is larger than $2/n^2$.  Thus our algorithm may err
+in declaring the cut it outputs to be a min-cut.  Suppose we were to repeat
+the above algorithm $n^2/2$ times, making independent random choices each
+time.  By~(1.1), the probability that a min-cut is not found in any of the
+$n^2/2$ attempts is at most
+\begin{equation}
+  \Bigl(1-\frac{2}{n^2}\Bigr)^{n^2/2} < \frac{1}{e}.
+  \tag{1.5}
+\end{equation}
+
+By this process of repetition, we have managed to reduce the probability of
+failure from $1-2/n^2$ to a more respectable~$1/e$.  Further executions of
+the algorithm will make the failure probability arbitrarily small---the only
+consideration being that repetitions increase the running time.
+
+Note the extreme simplicity of the randomized algorithm we have just studied.
+In contrast, most deterministic algorithms for this problem are based on
+network flows and are considerably more complicated.  In Section~10.2 we will
+return to the min-cut problem and fill in some implementation details that
+have been glossed over in the above presentation; in fact, it will be shown
+that a variant of this algorithm has an expected running time that is
+significantly smaller than that of the best known algorithms based on
+network flow.
+
+\begin{exercise}
+Suppose that at each step of our min-cut algorithm, instead of choosing a
+random edge for contraction we choose two vertices at random and coalesce
+them into a single vertex.  Show that there are inputs on which the
+probability that this modified algorithm finds a min-cut is exponentially
+small.
+\end{exercise}
+
+%% ----- C++ : Min-Cut -----
+\subsection{C++ Implementation}
+
+The following implementation demonstrates Karger's algorithm.  A multigraph
+is represented with weighted adjacency lists; the weight of edge $(u,v)$
+equals its multiplicity.
+
+\begin{lstlisting}[
+  caption={Graph data structure for the min-cut algorithm.},
+  label={lst:graph}]
+#include <vector>
+#include <unordered_map>
+#include <algorithm>
+#include <numeric>
+#include <climits>
+#include <random>
+#include <chrono>
+#include <iostream>
+#include <cmath>
+
+class RandomEngine {
+public:
+  static RandomEngine& instance() {
+    static RandomEngine e; return e;
+  }
+  int uniform_int(int lo, int hi) {
+    return std::uniform_int_distribution<int>(lo,hi)(eng_);
+  }
+  double uniform_real(double lo=0,double hi=1) {
+    return std::uniform_real_distribution<double>(lo,hi)(eng_);
+  }
+private:
+  RandomEngine()
+    : eng_(std::chrono::steady_clock::now()
+           .time_since_epoch().count()) {}
+  std::mt19937 eng_;
+};
+
+struct Graph {
+  int n;
+  std::unordered_map<int,
+    std::unordered_map<int,int>> adj;
+  explicit Graph(int n) : n(n) {}
+  void add_edge(int u, int v, int c=1) {
+    adj[u][v]+=c; adj[v][u]+=c;
+  }
+  int edge_count() const {
+    int t=0;
+    for (auto& [u,nb] : adj)
+      for (auto& [v,w] : nb)
+        if (u<v) t+=w;
+    return t;
+  }
+};
+\end{lstlisting}
+
+\begin{lstlisting}[
+  caption={Karger's min-cut algorithm.},
+  label={lst:karger}]
+void contract(auto& adj, int u, int v) {
+  for (auto& [w,wt] : adj[v])
+    if (w!=u) { adj[u][w]+=wt; adj[w][u]+=wt; }
+  adj.erase(v);
+  for (auto& [_,nb] : adj) nb.erase(v);
+  adj[u].erase(u);            // remove self-loops
+}
+
+int karger_min_cut(Graph& g) {
+  auto adj = g.adj;
+  std::vector<int> vs(g.n);
+  std::iota(vs.begin(), vs.end(), 0);
+  while (vs.size()>2) {
+    // collect all edges (with multiplicity)
+    std::vector<std::pair<int,int>> E;
+    for (auto& [u,nb] : adj)
+      for (auto& [v,w] : nb)
+        if (u<v)
+          for (int i=0;i<w;i++) E.push_back({u,v});
+    if (E.empty()) break;
+    auto [u,v] = E[RandomEngine::instance()
+                        .uniform_int(0,E.size()-1)];
+    contract(adj,u,v);
+    vs.erase(std::remove(vs.begin(),vs.end(),v),
+             vs.end());
+  }
+  return vs.size()==2 ? adj[vs[0]][vs[1]] : 0;
+}
+
+int karger_repeated(Graph& g, int T) {
+  int best = INT_MAX;
+  for (int t=0;t<T;t++)
+    best = std::min(best, karger_min_cut(g));
+  return best;
+}
+\end{lstlisting}
+
+\begin{lstlisting}[
+  caption={Driver: empirical verification of the theoretical bounds.},
+  label={lst:mincut_demo}]
+int main() {
+  Graph g(5);
+  g.add_edge(0,1); g.add_edge(0,2); g.add_edge(0,3);
+  g.add_edge(1,2); g.add_edge(1,3); g.add_edge(2,3);
+  g.add_edge(2,4); g.add_edge(3,4);
+
+  int n=g.n, T=(n*n)/2;
+  std::cout<<"Single trial : "<<karger_min_cut(g)<<"\n";
+  std::cout<<T<<" trials     : "<<karger_repeated(g,T)<<"\n";
+
+  double p=2.0/(n*(n-1));
+  std::cout<<"P(success) >= 2/n(n-1) = "<<p<<"\n";
+  std::cout<<"P(failure in "<<T<<" trials) <= "
+           <<std::pow(1-p,T)<<"\n";
+  std::cout<<"1/e = "<<1.0/std::exp(1.0)<<"\n";
+}
+\end{lstlisting}
+
+\paragraph{Complexity.}
+Each trial of the algorithm runs in $O(n^2)$ time with the adjacency-map
+representation.  With $n^2/2$ trials the total expected running time is
+$O(n^4)$.
+
+%==========================================================================
+\section{Las Vegas and Monte Carlo}
+\label{sec:lvmc}
+%==========================================================================
+
+The randomized sorting algorithm and the min-cut algorithm exemplify two
+different types of randomized algorithms.  The sorting algorithm always gives
+the correct solution.  The only variation from one run to another is its
+running time, whose distribution we study.  We call such an algorithm a
+\emph{Las Vegas algorithm}.
+
+In contrast, the min-cut algorithm may sometimes produce a solution that is
+incorrect.  However, we are able to bound the probability of such an
+incorrect solution.  We call such an algorithm a \emph{Monte Carlo
+algorithm}.  In Section~1.2.2 we observed a useful property of a
+Monte Carlo algorithm: if the algorithm is run repeatedly with independent
+random choices each time, the failure probability can be made arbitrarily
+small, at the expense of running time.  Later, we will see examples of
+algorithms in which both the running time and the quality of the solution are
+random variables; sometimes these are also referred to as Monte Carlo
+algorithms.  For decision problems (problems for which the answer to an
+instance is YES or NO), there are two kinds of Monte Carlo algorithms: those
+with one-sided error, and those with two-sided error.  A Monte Carlo
+algorithm is said to have \emph{two-sided error} if there is a non-zero
+probability that it errs when it outputs either YES or NO.  It is said to
+have \emph{one-sided error} if the probability that it errs is zero for at
+least one of the possible outputs (YES/NO) that it produces.
+
+We will see examples of all three types of algorithms---Las Vegas, Monte
+Carlo with one-sided error, and Monte Carlo with two-sided error---in this
+book.  Which is better, Monte Carlo or Las Vegas?  The answer depends on the
+application---in some applications an incorrect solution may be catastrophic.
+A Las Vegas algorithm is by definition a Monte Carlo algorithm with error
+probability~0.  The following exercise gives us a way of deriving a Las Vegas
+algorithm from a Monte Carlo algorithm.  Note that the efficiency of the
+derivation procedure depends on the time taken to verify the correctness of
+a solution to the problem.
+
+\begin{exercise}
+Consider a Monte Carlo algorithm $\mathcal{A}$ for a problem $\Pi$ whose
+expected running time is at most $T(n)$ on any instance of size $n$ and that
+produces a correct solution with probability $\gamma(n)$.  Suppose further
+that given a solution to $\Pi$, we can verify its correctness in time $t(n)$.
+Show how to obtain a Las Vegas algorithm that always gives a correct answer
+to $\Pi$ and runs in expected time at most
+$(T(n)+t(n))/\gamma(n)$.
+\end{exercise}
+
+In attempting Exercise~1.2 the reader will have to use a simple property of
+the geometric random variable (Appendix~C).  Consider a biased coin that, on
+a toss, has probability $p$ of coming up HEADS and $1-p$ of coming up TAILS.
+What is the expected number of (independent) tosses up to and including the
+first head?  The number of such tosses is a random variable that is said to
+be \emph{geometrically distributed}.  The expectation of this random variable
+is~$1/p$.  This fact will prove useful in numerous applications.
+
+\begin{exercise}
+Let $0<\epsilon_2<\epsilon_1<1$.  Consider a Monte Carlo algorithm that
+gives the correct solution to a problem with probability at least
+$1-\epsilon_1$, regardless of the input.  How many independent executions of
+this algorithm suffice to raise the probability of obtaining a correct
+solution to at least $1-\epsilon_2$, regardless of the input?
+\end{exercise}
+
+We say that a Las Vegas algorithm is an \emph{efficient Las Vegas algorithm}
+if on any input its expected running time is bounded by a polynomial function
+of the input size.  Similarly, we say that a Monte Carlo algorithm is an
+\emph{efficient Monte Carlo algorithm} if on any input its worst-case running
+time is bounded by a polynomial function of the input size.
+
+%% ----- C++ : Las Vegas -----
+\subsection{C++ Implementation: Randomized QuickSort}
+
+Randomized QuickSort is the canonical Las Vegas algorithm: it always
+produces a correctly sorted array, yet its running time is a random variable
+with $\mathbb{E}[T(n)]=O(n\log n)$.
+
+\begin{lstlisting}[
+  caption={Randomized QuickSort---a Las Vegas algorithm.},
+  label={lst:quicksort}]
+int partition(std::vector<int>& a, int lo, int hi) {
+  int pi = RandomEngine::instance().uniform_int(lo,hi);
+  std::swap(a[pi], a[hi]);
+  int pivot = a[hi], i = lo-1;
+  for (int j=lo; j<hi; j++)
+    if (a[j]<=pivot) std::swap(a[++i], a[j]);
+  std::swap(a[i+1], a[hi]);
+  return i+1;
+}
+
+void rand_quicksort(std::vector<int>& a,int lo,int hi){
+  if (lo<hi) {
+    int p = partition(a,lo,hi);
+    rand_quicksort(a,lo,p-1);
+    rand_quicksort(a,p+1,hi);
+  }
+}
+\end{lstlisting}
+
+%% ----- C++ : Monte Carlo -----
+\subsection{C++ Implementation: Monte Carlo---Estimating $\pi$}
+
+The following Monte Carlo algorithm estimates $\pi$ by sampling.  It has
+two-sided error: the estimate may be too high or too low, but the error
+decreases as $O(1/\sqrt{n})$.
+
+\begin{lstlisting}[
+  caption={Monte Carlo estimation of $\pi$ (two-sided error).},
+  label={lst:pi}]
+double estimate_pi(int n) {
+  int inside = 0;
+  for (int i=0;i<n;i++) {
+    double x = RandomEngine::instance()
+                   .uniform_real(-1,1);
+    double y = RandomEngine::instance()
+                   .uniform_real(-1,1);
+    if (x*x+y*y<=1.0) inside++;
+  }
+  return 4.0*inside/n;
+}
+\end{lstlisting}
+
+\begin{table}[htbp]
+\centering
+\begin{tabular}{rrr}
+\toprule
+\textbf{Samples} & \textbf{Estimate} & \textbf{Error} \\
+\midrule
+    100 & 3.12000 & 0.02159 \\
+  1\,000 & 3.14400 & 0.00241 \\
+ 10\,000 & 3.13840 & 0.00319 \\
+100\,000 & 3.14076 & 0.00083 \\
+  \bottomrule
+\end{tabular}
+\caption{Typical output of the $\pi$ estimator.}
+\end{table}
+
+%% ----- C++ : MC $\to$ LV -----
+\subsection{Converting Monte Carlo to Las Vegas}
+
+A Monte Carlo algorithm can be turned into a Las Vegas algorithm whenever
+solutions can be \emph{verified} efficiently.
+
+\begin{lstlisting}[
+  caption={Monte Carlo $\to$ Las Vegas via verification.},
+  label={lst:conversion}]
+// Monte Carlo: correct w.p.\ 2/3
+std::pair<int,bool> mc(int x) {
+  bool ok = RandomEngine::instance()
+                 .uniform_real() < 2.0/3.0;
+  return ok ? std::make_pair(2*x,true)
+            : std::make_pair(3*x,false);
+}
+
+bool verify(int x, int r) { return r==2*x; }
+
+// Las Vegas wrapper
+std::pair<int,int> mc_to_lv(int x) {
+  int tries=0;
+  while (true) {
+    tries++;
+    auto [r,ok] = mc(x);
+    if (verify(x,r)) return {r,tries};
+  }
+}
+\end{lstlisting}
+
+\begin{remark}
+If the single-trial success probability is~$p$, the number of independent
+trials until the first success follows a \emph{geometric distribution} with
+mean~$1/p$.  Hence the expected running time of the Las Vegas wrapper is
+$(T(n)+t(n))/p$.
+\end{remark}
+
+%==========================================================================
+\section{Binary Planar Partitions}
+\label{sec:bpp}
+%==========================================================================
+
+We now illustrate another very useful and basic tool from probability
+theory: \emph{linearity of expectation}.  For random variables
+$X_1,X_2,\ldots,X_n$,
+\begin{equation}
+  \mathbb{E}\!\Bigl[\sum_{i=1}^{n} X_i\Bigr]
+  = \sum_{i=1}^{n} \mathbb{E}[X_i].
+  \tag{1.6}
+\end{equation}
+(See Proposition~C.5.)  We have implicitly used this tool in our analysis of
+RandQS.  A point that cannot be overemphasized is that~(1.6) holds
+\emph{regardless} of any dependencies between the $X_i$.
+
+\begin{example}[The Sailor Problem]
+A ship arrives at a port, and the 40 sailors on board go ashore for
+revelry.  Later at night, the 40 sailors return to the ship and, in their
+state of inebriation, each chooses a random cabin to sleep in.  What is the
+expected number of sailors sleeping in their own cabins?
+\end{example}
+
+The inefficient approach to this problem would be to consider all $40^{40}$
+arrangements of sailors in cabins.  The solution will involve the use of a
+simple and often useful device called an \emph{indicator variable}, together
+with linearity of expectation.  Let $X_i$ be 1 if the $i$th sailor chooses
+her own cabin, and 0 otherwise.  Thus $X_i$ indicates whether or not a
+certain event occurs, and is hence called an indicator variable.  We wish to
+determine the expected number of sailors who get their own cabins, which is
+$\mathbb{E}[\sum_{i=1}^{40} X_i]$.  By linearity of expectation, this is
+$\sum_{i=1}^{40} \mathbb{E}[X_i]$.  Since the cabins are chosen at random,
+the probability that the $i$th sailor gets her own cabin is~$1/40$, so
+$\mathbb{E}[X_i]=1/40$.  Thus the expected number of sailors who get their
+own cabins is $\sum_{i=1}^{40} 1/40 = 1$.
+
+%% ----- Binary Planar Partitions -----
+\subsection{Binary Planar Partitions}
+
+Our next illustration is the construction of a binary planar partition of a
+set of $n$ disjoint line segments in the plane, a problem with applications
+to computer graphics.  A binary planar partition consists of a binary tree
+together with some additional information, as described below.  Every internal
+node of the tree has two children.  Associated with each node $v$ of the tree
+is a region $r(v)$ of the plane.  Associated with each internal node $v$ of
+the tree is a line $\ell(v)$ that intersects $r(v)$.  The region
+corresponding to the root is the entire plane.  The region $r(v)$ is
+partitioned by $\ell(v)$ into two regions $r_1(v)$ and $r_2(v)$, which are
+the regions associated with the two children of~$v$.  Thus, any region $r$ of
+the partition is bounded by the partition lines on the path from the root to
+the node corresponding to $r$ in the tree.
+
+Given a set $S=\{s_1,s_2,\ldots,s_n\}$ of non-intersecting line segments
+in the plane, we wish to find a binary planar partition such that every
+region in the partition contains at most one line segment (or a portion of
+one line segment).  Notice that the definition allows us to divide an input
+line segment $s_i$ into several segments $s_{i1},s_{i2},\ldots$, each of
+which lies in a different region.
+
+\begin{exercise}
+Show that there exists a set of line segments for which no binary planar
+partition can avoid breaking up some of the segments into pieces, if each
+segment is to lie in a different region of the partition.
+\end{exercise}
+
+Binary planar partitions have two applications in computer graphics.  Here,
+we describe one of them, the problem of hidden line elimination.  The second
+application has to do with the constructive solid geometry (or CSG)
+representation of a polyhedral object.
+
+In rendering a scene on a graphics terminal, we are often faced with a
+situation in which the scene remains fixed, but it is to be viewed from
+several directions.  The hidden line elimination problem is the following:
+having adopted a viewpoint and a direction of viewing, we want to draw only
+the portion of the scene that is visible, eliminating those objects that are
+``obscured by other objects'' in front of them relative to the viewpoint.
+
+One approach uses a binary partition tree.  Once the scene has been decomposed
+into line segments, we construct a binary planar partition tree for it.  Now,
+given the direction of viewing, we use an idea known as the \emph{painter's
+algorithm} to render the scene: first draw the objects that are furthest
+``behind,'' and then progressively draw the objects that are in front.
+
+The time it takes to render the scene depends on the size of the binary
+planar partition tree.  We therefore wish to construct a binary planar
+partition that is as small as possible.  Because the construction of the
+partition can break some of the input segments $s_i$ into smaller pieces, the
+size of the partition need not be~$n$; in fact, it is not clear that a
+partition of size $O(n)$ always exists.
+
+For a line segment $s$, let $\ell(s)$ denote the line obtained by extending
+(if necessary) $s$ on both sides to infinity.  For the set
+$S=\{s_1,s_2,\ldots,s_n\}$ of line segments, a simple and natural class of
+partitions is the set of \emph{autopartitions}, which are formed by only
+using lines from the set $\{\ell(s_1),\ell(s_2),\ldots,\ell(s_n)\}$ in
+constructing the partition.
+
+\begin{algorithm}[htbp]
+\caption{RandAuto}
+\label{alg:randauto}
+\begin{algorithmic}[1]
+\State \textbf{Input:} A set $S=\{s_1,\ldots,s_n\}$ of non-intersecting
+  line segments.
+\State \textbf{Output:} A binary autopartition $P_\pi$ of $S$.
+\State Pick a permutation $\pi$ of $\{1,2,\ldots,n\}$ uniformly at random.
+\While{a region contains more than one segment}
+  \State Cut it with $\ell(s_i)$ where $i$ is first in $\pi$ such that
+    $s_i$ cuts that region.
+\EndWhile
+\end{algorithmic}
+\end{algorithm}
+
+\begin{theorem}
+\label{thm:partition}
+The expected size of the autopartition produced by RandAuto is $O(n\log n)$.
+\end{theorem}
+
+\begin{proof}
+For line segments $u$ and $v$, define $\operatorname{index}(u,v)$ to be~$i$
+if $\ell(u)$ intersects $i{-}1$ other segments before hitting $v$, and
+$\operatorname{index}(u,v)=\infty$ if $\ell(u)$ does not hit $v$.  Since a
+segment $u$ can be extended in two directions, it is possible that
+$\operatorname{index}(u,v)=\operatorname{index}(u,w)$ for two different
+lines $v$ and $w$.
+
+Let us denote by $u\dashv v$ the event that $\ell(u)$ cuts $v$ in the
+constructed partition.  Let $\operatorname{index}(u,v)=i$, and let
+$u_1,u_2,\ldots,u_{i-1}$ be the segments that $\ell(u)$ intersects before
+hitting~$v$.  The event $u\dashv v$ happens only if $u$ occurs before any
+of $\{u_1,u_2,\ldots,u_{i-1},v\}$ in the randomly chosen permutation
+$\pi$.  The probability that this happens is $1/(i+1)$.
+
+Let $C_{u,v}$ be an indicator variable that is 1 if $u\dashv v$ and 0
+otherwise; clearly,
+$\mathbb{E}[C_{u,v}]=\Pr[u\dashv v]\le 1/(\operatorname{index}(u,v)+1)$.
+The size of $P_\pi$ equals $n$ plus the number of intersections due to cuts.
+Thus, its expectation is
+$n+\mathbb{E}[\sum_u\sum_v C_{u,v}]$ and by linearity of expectation this
+equals
+\begin{equation}
+  n + \sum_u \sum_v \Pr[u\dashv v]
+  \le n + \sum_u \sum_v
+    \frac{1}{\operatorname{index}(u,v)+1}.
+  \tag{1.7}
+\end{equation}
+
+For any line segment $u$ and any finite positive integer $i$, there are at
+most two vertices $v$ and $w$ such that $\operatorname{index}(u,v)$ and
+$\operatorname{index}(u,w)$ equal~$i$.  This is because the extension of the
+segment $u$ along either of the two possible directions will meet any other
+line segment at most once.  Thus, in each of the two directions, there is a
+total ordering on the points of intersection with other segments and the
+index values increase monotonically.  This implies that
+\begin{equation}
+  \sum_{v\ne u} \frac{1}{\operatorname{index}(u,v)+1}
+  \le \sum_{i=1}^{n-1} \frac{2}{i+1}
+  = O(\log n).
+  \tag{1.8}
+\end{equation}
+
+Combining this with~(1.7) implies that the expected size of $P_\pi$ is
+bounded above by $n+O(n\log n)$, which is $O(n\log n)$.
+\end{proof}
+
+Note that in computing the expected number of intersections, we only made
+use of linearity of expectation.  We do not require any independence between
+the events $u\dashv v$ and $u\dashv w$, for segments $u$, $v$, and~$w$.
+Indeed, these events need not be independent in general.
+
+One way of interpreting Theorem~\ref{thm:partition} is as follows: since the
+expected size of the binary planar partition constructed by the algorithm is
+$O(n\log n)$ on any input, there must exist a binary autopartition of size
+$O(n\log n)$ for every input.  This follows from the simple fact that any
+random variable assumes at least one value that is no greater than its
+expectation.  Thus we have used a \emph{probabilistic argument} to assert
+that a combinatorial object---in this case a binary autopartition of size
+$O(n\log n)$---exists with absolute certainty rather than with some
+probability.  This is an example of the \emph{probabilistic method} in
+combinatorics.  We will study the probabilistic method in greater detail in
+Chapter~5.
+
+%% ----- C++ : BPP -----
+\subsubsection*{C++ Implementation}
+
+\begin{lstlisting}[
+  caption={RandAuto for binary planar partitions.},
+  label={lst:bpp}]
+struct Seg { double x1,y1,x2,y2; int id; };
+
+bool intersect(const Seg& a, const Seg& b) {
+  auto o=[](double px,double py,
+            double qx,double qy,
+            double rx,double ry){
+    double v=(qy-py)*(rx-qx)-(qx-px)*(ry-qy);
+    return std::abs(v)<1e-10?0:(v>0?1:2);
+  };
+  return o(a.x1,a.y1,a.x2,a.y2,b.x1,b.y1)
+        !=o(a.x1,a.y1,a.x2,a.y2,b.x2,b.y2)
+      && o(b.x1,b.y1,b.x2,b.y2,a.x1,a.y1)
+        !=o(b.x1,b.y1,b.x2,b.y2,a.x2,a.y2);
+}
+
+// Build autopartition recursively
+// segs: remaining segments in this region
+// Returns number of leaf nodes (partition size)
+int rand_auto(std::vector<Seg*>& segs) {
+  if (segs.empty()) return 0;
+  if (segs.size()==1) return 1;       // leaf
+  std::vector<int> p(segs.size());
+  std::iota(p.begin(),p.end(),0);
+  std::shuffle(p.begin(),p.end(),
+    std::mt19937(std::random_device()()));
+  Seg* cut = segs[p[0]];             // random pivot
+  std::vector<Seg*> L,R;
+  for (size_t i=1;i<segs.size();i++) {
+    if (intersect(*cut,*segs[i]))
+      { L.push_back(segs[i]); R.push_back(segs[i]); }
+    else {
+      double dx=cut->x2-cut->x1;
+      double dy=cut->y2-cut->y1;
+      double cross=dx*(segs[i]->y1-cut->y1)
+                  -dy*(segs[i]->x1-cut->x1);
+      (cross>=0?L:R).push_back(segs[i]);
+    }
+  }
+  return rand_auto(L)+rand_auto(R);
+}
+\end{lstlisting}
+
+%==========================================================================
+\section{A Probabilistic Recurrence}
+\label{sec:recurrence}
+%==========================================================================
+
+Frequently, we express a random variable of interest as a recurrence in
+terms of other random variables.  In this section, we study one such
+situation using the Find algorithm analyzed in detail in Problem~1.9.  The
+material in this section, although useful, is not an essential prerequisite
+for subsequent topics and may be omitted in the first reading.
+
+The Find algorithm for selecting the $k$th smallest of a set $S$ of $n$
+elements works as follows.  We pick a random element $y$ and partition
+$S\setminus\{y\}$ into two sets $S_1$ and $S_2$ (elements smaller and larger
+than~$y$ respectively) as in RandQS.  Suppose $|S_1|=k-1$; then $y$ is the
+desired element and we are done.  Otherwise, if $|S_1|>k$, we recursively
+find the $k$th smallest element of $S_1$; else we recursively find the
+$(k-|S_1|-1)$th smallest element in~$S_2$.
+
+The expected number of comparisons made by the Find algorithm is the subject
+of Problem~1.9.  Suppose instead that we were to ask the following question:
+what is the expected number of times we make the recursive call in the
+algorithm?  Equivalently, what is the expected number of times we pick a
+random element in the algorithm?  While this question may not be especially
+important for the Find algorithm, it is the kind of question that arises in
+the analysis of a number of parallel and geometric algorithms.  Intuitively,
+we expect that the size of the residual problem in the Find algorithm is
+divided by a constant factor at each recursive level, so that we expect that
+the number of recursive invocations is $O(\log n)$.  Below, we show that
+this intuition can be formalized in a general setting.
+
+Let $g(x)$ be a monotone non-decreasing function from the positive reals to
+the positive reals.  Consider a particle whose position changes at discrete
+time steps and is always at a positive integer.  If the particle is currently
+at position $m>1$, it proceeds at the next step to the position $m-X$, where
+$X$ is a random variable ranging over the integers $1,\ldots,m-1$.  All we
+know about $X$ is that $\mathbb{E}[X]\ge g(m)$, and that $X$ is chosen
+independently of the past.  It is clear that the particle will always reach
+position~1 and the process terminates in that state.  The interesting
+question is, assuming that the particle starts at position~$n$, what is the
+expected number of steps before it reaches position~1?
+
+\begin{theorem}
+\label{thm:recurrence}
+Let $T$ be the random variable denoting the number of steps in which the
+particle reaches the position~1.  Then,
+$\mathbb{E}[T]\le \displaystyle\int_1^n \frac{dx}{g(x)}$.
+\end{theorem}
+
+\begin{proof}
+The proof is by induction on $n$; let us suppose the theorem holds for values
+of $m$ smaller than $n$.  Let $f(m)=\int_1^m dx/g(x)$ for $m>1$.  We wish
+to show that $\mathbb{E}[T]\le f(n)$.
+
+Consider the first step, during which the particle proceeds from position $n$
+to position $n-X$, where $X$ is chosen from a distribution for which
+$\mathbb{E}[X]\ge g(n)$.  We have
+\begin{align}
+  \mathbb{E}[T]
+  &\le 1 + \mathbb{E}[f(n-X)]
+    \tag{1.9}\\
+  &= 1 + \mathbb{E}\!\left[\int_{n-X}^{n}\frac{dy}{g(y)}\right]
+    \tag{1.10}\\
+  &\le 1 + \mathbb{E}\!\left[\frac{X}{g(n)}\right]
+    \tag{1.11}\\
+  &= 1 + \frac{\mathbb{E}[X]}{g(n)}
+    \tag{1.12}\\
+  &\le 1 + f(n) - 1 = f(n).
+    \tag{1.13}
+\end{align}
+The inequality~(1.10) follows from the inductive hypothesis applied to
+position $n-X$.  The inequality~(1.11) follows from the assumption that $g$
+is non-decreasing, so $1/g(y)\le 1/g(n)$ for $y\le n$.  The
+inequality~(1.13) follows from the lower bound on $\mathbb{E}[X]$ and the
+observation that $f(n)-f(n-X)\ge X/g(n)$.
+\end{proof}
+
+\begin{exercise}
+If $X$ were to range over all integers having value at most $m-1$ (possibly
+including negative integers), how would the statement and proof of
+Theorem~\ref{thm:recurrence} change?
+\end{exercise}
+
+For the Find algorithm, we can show (following the analysis of Problem~1.9)
+that $g(m)\ge m/4$.  We may then apply the above theorem to bound the
+expected number of recursive calls to Find by $4\ln n$.
+
+\begin{exercise}
+What prevents us from using Theorem~\ref{thm:recurrence} to bound the
+expected number of levels of recursion in the RandQS algorithm?
+\end{exercise}
+
+%% ----- C++ : Find -----
+\subsection{C++ Implementation}
+
+\begin{lstlisting}[
+  caption={Randomized Find---selecting the $k$th smallest element.},
+  label={lst:find}]
+int rand_find(std::vector<int>& a, int k) {
+  if (a.size()==1) return a[0];
+  int pi = RandomEngine::instance()
+               .uniform_int(0,a.size()-1);
+  int pivot = a[pi];
+  std::vector<int> L,E,G;
+  for (int x : a) {
+    if      (x<pivot) L.push_back(x);
+    else if (x==pivot) E.push_back(x);
+    else              G.push_back(x);
+  }
+  if (k<=(int)L.size())
+    return rand_find(L,k);
+  else if (k<=(int)(L.size()+E.size()))
+    return pivot;
+  else
+    return rand_find(G,k-L.size()-E.size());
+}
+\end{lstlisting}
+
+\begin{lstlisting}[
+  caption={Empirical measurement of recursion depth.},
+  label={lst:find_analysis}]
+struct Stats { int calls=0, depth=0; };
+
+int rand_find_analyzed(std::vector<int>& a,int k,
+                       int d, Stats& s) {
+  s.calls++;
+  s.depth = std::max(s.depth,d);
+  if (a.size()==1) return a[0];
+  int pi = RandomEngine::instance()
+               .uniform_int(0,a.size()-1);
+  int pivot = a[pi];
+  std::vector<int> L,E,G;
+  for (int x : a) {
+    if      (x<pivot) L.push_back(x);
+    else if (x==pivot) E.push_back(x);
+    else              G.push_back(x);
+  }
+  if (k<=(int)L.size())
+    return rand_find_analyzed(L,k,d+1,s);
+  else if (k<=(int)(L.size()+E.size()))
+    return pivot;
+  else
+    return rand_find_analyzed(G,
+      k-L.size()-E.size(),d+1,s);
+}
+
+// Typical output for n=1000:
+//   Avg recursive calls: ~12
+//   Avg max depth:       ~11
+//   Theoretical O(log n): ~10
+//   Theorem 1.3 bound 4 ln n: ~27
+\end{lstlisting}
+
+%==========================================================================
+\section{Computation Model and Complexity Classes}
+\label{sec:complexity}
+%==========================================================================
+
+\subsection{RAMs and Turing Machines}
+
+Following common practice, throughout this book we use the Turing machine
+model to discuss complexity-theory issues.  As is common, however, we switch
+to the RAM (random access machine) as the model of computation when
+describing and analyzing algorithms (except in the study of parallel and
+distributed algorithms in Chapter~12, where we define a version of the RAM
+model for machines working in parallel).
+
+\begin{definition}
+A \emph{deterministic Turing machine} is a quadruple $M=(S,\Sigma,\delta,s)$.
+Here $S$ is a finite set of states, of which $s\in S$ is the machine's
+initial state.  The machine uses a finite set of symbols, denoted~$\Sigma$;
+this set includes special symbols $\mathrm{BLANK}$ and $\mathrm{FIRST}$.  The
+function $\delta$ is the transition function, mapping
+$S\times\Sigma$ to
+$(S\cup\{\mathrm{HALT},\mathrm{YES},\mathrm{NO}\})\times\Sigma\times\{\leftarrow,
+\rightarrow,\mathrm{STAY}\}$.
+\end{definition}
+
+A \emph{probabilistic Turing machine} is a Turing machine augmented with the
+ability to generate an unbiased coin flip in one step.  It corresponds to a
+randomized algorithm.
+
+In the RAM model, we have a machine that can perform the following types of
+operations involving registers and main memory: input--output operations,
+memory--register transfers, indirect addressing, branching, and arithmetic
+operations.  Each register or memory location may hold an integer that can be
+accessed as a unit, but an algorithm has no access to the representation of
+the number.
+
+\begin{proposition}
+Any Turing machine computation of length polynomial in the size of the input
+can be simulated by a RAM computation of length polynomial in the size of the
+input.  Any RAM computation of length polynomial in the size of the input can
+be simulated by a Turing machine computation of length polynomial in the size
+of the input.
+\end{proposition}
+
+\subsection{Complexity Classes}
+
+We now define some basic complexity classes focusing on those involving
+randomized algorithms.
+
+\begin{definition}
+The class $\mathbf{P}$ consists of all languages $L$ that have a
+polynomial-time algorithm $A$ such that for any input $x\in\Sigma^*$,
+$x\in L \Rightarrow A(x)$ accepts, and
+$x\notin L \Rightarrow A(x)$ rejects.
+\end{definition}
+
+\begin{definition}
+The class $\mathbf{NP}$ consists of all languages $L$ that have a
+polynomial-time algorithm $A$ such that for any input $x\in\Sigma^*$,
+$x\in L \Rightarrow \exists\, y\in\Sigma^*: A(x,y)$ accepts, where
+$|y|$ is bounded by a polynomial in $|x|$; and
+$x\notin L \Rightarrow \forall\, y\in\Sigma^*: A(x,y)$ rejects.
+\end{definition}
+
+\begin{definition}
+The class $\mathbf{RP}$ (Randomized Polynomial time) consists of all
+languages $L$ that have a randomized algorithm $A$ running in worst-case
+polynomial time such that for any input $x\in\Sigma^*$,
+$x\in L \Rightarrow \Pr[A(x)\text{ accepts}]\ge 1/2$; and
+$x\notin L \Rightarrow \Pr[A(x)\text{ accepts}]=0$.
+\end{definition}
+
+\begin{definition}
+The class $\mathbf{ZPP}$ (Zero-error Probabilistic Polynomial time) is the
+class of languages that have Las Vegas algorithms running in expected
+polynomial time.
+\end{definition}
+
+\begin{definition}
+The class $\mathbf{BPP}$ (Bounded-error Probabilistic Polynomial time)
+consists of all languages $L$ that have a randomized algorithm $A$ running
+in worst-case polynomial time such that for any input $x\in\Sigma^*$,
+$x\in L \Rightarrow \Pr[A(x)\text{ accepts}]\ge 3/4$; and
+$x\notin L \Rightarrow \Pr[A(x)\text{ accepts}]\le 1/4$.
+\end{definition}
+
+\begin{exercise}
+Show that $\mathrm{ZPP}=\mathrm{RP}\cap\mathrm{co\text{-}RP}$.
+\end{exercise}
+
+\begin{exercise}
+Verify the following inclusions:
+$\mathrm{P}\subseteq\mathrm{RP}\subseteq\mathrm{NP}
+  \subseteq\mathrm{PSPACE}\subseteq\mathrm{EXP}\subseteq\mathrm{NEXP}$.
+It is not known whether these inclusions are strict.
+\end{exercise}
+
+\begin{exercise}
+Verify the following inclusions:
+$\mathrm{RP}\subseteq\mathrm{BPP}\subseteq\mathrm{PP}$.
+It is not known whether these inclusions are strict.
+\end{exercise}
+
+\begin{exercise}
+Show that $\mathrm{PP}=\mathrm{co\text{-}PP}$ and
+$\mathrm{BPP}=\mathrm{co\text{-}BPP}$.
+\end{exercise}
+
+\begin{exercise}
+Show that $\mathrm{NP}\subseteq\mathrm{PP}\subseteq\mathrm{PSPACE}$.
+\end{exercise}
+
+%==========================================================================
+\section*{Notes}
+\addcontentsline{toc}{section}{Notes}
+%==========================================================================
+
+The ideas underlying randomized algorithms can be traced back to Monte Carlo
+methods used in numerical analysis, statistical physics, and simulation.  In
+the context of computability theory, the notion of a probabilistic Turing
+machine was proposed by de~Leeuw, Moore, Shannon, and Shapiro~[122] and
+further explored in the pioneering work of Rabin~[340] and
+Gill~[166].  Berlekamp~[57], Rabin~[341], and Solovay and
+Strassen~[382] gave early examples of concrete randomized algorithms.
+
+Our RandQS algorithm is based on Hoare's algorithm~[201].  The min-cut
+algorithm of Section~1.2.2, together many variations and
+extensions, is due to Karger~[231].  Monte Carlo methods have been popular in
+the sciences for over a hundred years.  The classic experiment on
+approximating the value of $\pi$ by dropping needles on a sheet of paper with
+parallel lines is described in an eighteenth-century paper by
+Buffon~[86].  The origin of the modern theory of Monte Carlo methods in the
+physical sciences is widely attributed to Ulam, von~Neumann, and
+Fermi~[116].  The term \emph{Las Vegas algorithm} was introduced by
+Babai~[37].
+
+The material of Section~\ref{sec:bpp} is drawn from Paterson and
+Yao~[329].  The Find algorithm described in Section~\ref{sec:recurrence} is
+due to Hoare~[200].  Theorem~\ref{thm:recurrence} is given in a paper by
+Karp, Upfal, and Wigderson~[250].  Karp~[244] gives a number of additional
+results on probabilistic recurrence relations.
+
+The reader is referred to introductory texts on algorithms and complexity
+such as those by Aho, Hopcroft, and Ullman~[5,~6] and
+Papadimitriou~[326] for more details on the Turing machine model and the
+RAM model.  The books by Bovet and Crescenzi~[81] and by
+Papadimitriou~[326] contain a more detailed treatment of the complexity
+classes described in this chapter.
+
+%==========================================================================
+\section*{Problems}
+\addcontentsline{toc}{section}{Problems}
+%==========================================================================
+
+\begin{exercise}[1.1]
+(Due to J.~von~Neumann~[409].)
+\begin{enumerate}[label=(\alph*)]
+\item Suppose you are given a coin for which the probability of HEADS, say
+  $p$, is unknown.  How can you use this coin to generate unbiased (i.e.,
+  $\Pr[\text{HEADS}]=\Pr[\text{TAILS}]=1/2$) coin-flips?  Give a scheme for
+  which the expected number of flips of the biased coin for extracting one
+  unbiased coin-flip is no more than $1/[p(1-p)]$.  (Hint: Consider two
+  consecutive flips of the biased coin.)
+\item Devise an extension of the scheme that extracts the largest possible
+  number of independent, unbiased coin-flips from a given number of flips of
+  the biased coin.
+\end{enumerate}
+\end{exercise}
+
+\begin{exercise}[1.2]
+(Due to D.~E.~Knuth and A.~C.-C.~Yao~[264].)
+\begin{enumerate}[label=(\alph*)]
+\item Suppose you are provided with a source of unbiased random bits.  Explain
+  how you will use this to generate uniform samples from the set
+  $S=\{0,\ldots,n-1\}$.  Determine the expected number of random bits
+  required by your sampling algorithm.
+\item What is the worst-case number of random bits required by your sampling
+  algorithm?  Consider the case when $n$ is a power of~2, as well as the case
+  when it is not.
+\item Solve (a) and (b) when, instead of unbiased random bits, you are
+  required to use as the source of randomness uniform random samples from the
+  set $\{0,\ldots,p-1\}$; consider the case when $n$ is a power of $p$, as
+  well as the case when it is not.
+\end{enumerate}
+\end{exercise}
+
+\begin{exercise}[1.3]
+(Due to D.~E.~Knuth and A.~C.-C.~Yao~[264].) Suppose you are provided with
+a source of unbiased random bits.  Provide efficient (in terms of expected
+running time and expected number of random bits used) schemes for generating
+samples from the distribution over the set $\{2,3,\ldots,12\}$ induced by
+rolling two unbiased dice and taking the sum of their outcomes.
+\end{exercise}
+
+\begin{exercise}[1.4]
+\begin{enumerate}[label=(\alph*)]
+\item Suppose you are required to generate a random permutation of size $n$.
+  Assuming that you have access to a source of independent and unbiased
+  random bits, suggest a method for generating random permutations of size
+  $n$.  Efficiency is measured in terms of both time and number of random
+  bits.  What lower bounds can you prove for this task?
+\item Consider the following method for generating a random permutation of
+  size $n$.  Pick $n$ random values $X_1,\ldots,X_n$ independently from the
+  uniform distribution over the interval $[0,1]$.  Now, the permutation that
+  orders the random variables in ascending order is claimed to be a random
+  permutation, and it can be determined by sorting the random values.  Is the
+  claim correct?  How efficient is this scheme?
+\item Consider the following ``lazy'' implementation of the scheme suggested
+  in~(b).  The binary representation of the fraction $X_i$ is a sequence of
+  unbiased and independent random bits.  At any given stage of the sorting
+  algorithm, we would have chosen only as many bits of each $X_i$ as
+  necessary to resolve all the comparisons performed up to that point.  When
+  comparing $X_i$ to $X_j$, if the current prefixes of their binary
+  expansions do not determine the outcome of the comparison, then we extend
+  their prefixes by choosing further random bits until this happens.  Compute
+  tight bounds on the expected number of random bits used by this
+  implementation.
+\end{enumerate}
+\end{exercise}
+
+\begin{exercise}[1.5]
+Consider the problem of using a source of unbiased random bits to generate
+samples from the set $S=\{0,\ldots,n-1\}$ such that the element $i$ is
+chosen with probability $p_i$.  Show how to perform this sampling using
+$O(\log n)$ random bits per sample, regardless of the values of $p_i$.  Use
+the result from part~(c) of Problem~1.4.
+\end{exercise}
+
+\begin{exercise}[1.6]
+Consider a sequence of $n$ flips of an unbiased coin.  Let $H_i$ denote the
+absolute value of the excess of the number of HEADS over the number of TAILS
+seen in the first $i$ flips.  Define $H=\max_i H_i$.  Show that
+$\mathbb{E}[H_i]=\Theta(\sqrt{i})$, and that
+$\mathbb{E}[H]=\Theta(\sqrt{n})$.
+\end{exercise}
+
+\begin{exercise}[1.7]
+Suppose we choose a permutation $\pi$ of the ordered set
+$N=\{1,2,\ldots,n\}$ uniformly at random from the space of all permutations
+of $N$.  Let $L(\pi)$ denote the length of the longest increasing
+subsequence in permutation~$\pi$.
+\begin{enumerate}[label=(\alph*)]
+\item For large $n$ and some positive constant $c$, prove that
+  $\mathbb{E}[L(\pi)]\ge c\sqrt{n}$.
+\item Is the bound in~(a) tight?
+\end{enumerate}
+\end{exercise}
+
+\begin{exercise}[1.8]
+Consider adapting the min-cut algorithm of Section~1.2.2 to the
+problem of finding an $s$-$t$ min-cut in an undirected graph.  In this
+problem, we are given an undirected graph $G$ together with two distinguished
+vertices $s$ and $t$.  An $s$-$t$ cut is a set of edges whose removal from
+$G$ disconnects $s$ from $t$; we seek an $s$-$t$ cut of minimum cardinality.
+As the algorithm proceeds, the vertex $s$ may get amalgamated into a new
+vertex as a result of an edge being contracted; we call this vertex the
+$s$-vertex (initially the $s$-vertex is $s$ itself).  Similarly, we have a
+$t$-vertex.  As we run the contraction algorithm, we ensure that we never
+contract an edge between the $s$-vertex and the $t$-vertex.
+\begin{enumerate}[label=(\alph*)]
+\item Show that there are graphs on which the probability that this algorithm
+  finds an $s$-$t$ min-cut is exponentially small.
+\item How large can the number of $s$-$t$ min-cuts in an instance be?
+\end{enumerate}
+\end{exercise}
+
+\begin{exercise}[1.9]
+Consider the Find algorithm described in Section~\ref{sec:recurrence} for
+selecting the $k$th smallest of a set $S$ of $n$ elements.  Show that the
+algorithm finds the $k$th smallest element in $S$ in expected time $O(n)$.
+\end{exercise}
+
+\begin{exercise}[1.10]
+Consider the setting of Example~1.1 (the Sailor Problem).  Show that the
+probability that no sailor returns to her own cabin approaches $1/e$ as the
+number of sailors grows large.
+\end{exercise}
+
+\begin{exercise}[1.11]
+Verify the following inclusions:
+$\mathrm{P}\subseteq\mathrm{RP}\subseteq\mathrm{NP}
+  \subseteq\mathrm{PSPACE}\subseteq\mathrm{EXP}\subseteq\mathrm{NEXP}$.
+It is not known whether these inclusions are strict.
+\end{exercise}
+
+\begin{exercise}[1.12]
+Verify the following inclusions:
+$\mathrm{RP}\subseteq\mathrm{BPP}\subseteq\mathrm{PP}$.
+It is not known whether these inclusions are strict.
+\end{exercise}
+
+\begin{exercise}[1.13]
+Show that $\mathrm{PP}=\mathrm{co\text{-}PP}$ and
+$\mathrm{BPP}=\mathrm{co\text{-}BPP}$.
+\end{exercise}
+
+\begin{exercise}[1.14]
+Show that $\mathrm{NP}\subseteq\mathrm{PP}\subseteq\mathrm{PSPACE}$.
+\end{exercise}
+
+\begin{exercise}[1.15]
+(Due to K.-I.~Ko~[265].)  Show that $\mathrm{NP}\subseteq\mathrm{BPP}$
+implies $\mathrm{NP}=\mathrm{RP}$.
+\end{exercise}
+
+\end{document}

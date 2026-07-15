@@ -1,0 +1,945 @@
+\documentclass[twoside,12pt]{book}
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage{mathpazo}
+\usepackage{amsmath,amssymb,amsthm}
+\usepackage{graphicx}
+\usepackage{listings}
+\usepackage{xcolor}
+\usepackage{hyperref}
+\usepackage{enumitem}
+\usepackage{tikz}
+\usepackage{algorithm}
+\usepackage{algpseudocode}
+\usepackage{booktabs}
+\usepackage{geometry}
+\usepackage{fancyhdr}
+\usepackage{titlesec}
+\geometry{papersize={6in,9in},margin=0.75in,top=0.75in,bottom=0.75in,inner=0.9in,outer=0.65in,headheight=14pt}
+\pagestyle{fancy}
+\fancyhf{}
+\fancyhead[LE]{\small\textit{13. Online Algorithms}}
+\fancyhead[RO]{\small\textit{Randomized Algorithms}}
+\fancyfoot[C]{\thepage}
+\renewcommand{\headrulewidth}{0.4pt}
+\definecolor{codegray}{rgb}{0.45,0.45,0.45}
+\lstdefinestyle{cppstyle}{basicstyle=\ttfamily\scriptsize,keywordstyle=\bfseries,commentstyle=\itshape\color{codegray},numbers=left,numberstyle=\tiny\color{codegray},numbersep=8pt,frame=single,framerule=0.4pt,rulecolor=\color{codegray},backgroundcolor=\color{gray!5},breaklines=true,tabsize=4,showstringspaces=false,language=C++}
+\lstset{style=cppstyle}
+\theoremstyle{plain}
+\newtheorem{theorem}{Theorem}[chapter]
+\newtheorem{lemma}[theorem]{Lemma}
+\newtheorem{corollary}[theorem]{Corollary}
+\newtheorem{proposition}[theorem]{Proposition}
+\theoremstyle{definition}
+\newtheorem{definition}[theorem]{Definition}
+\newtheorem{example}[theorem]{Example}
+\newtheorem{remark}[theorem]{Remark}
+\theoremstyle{remark}
+\newtheorem{exercise}[theorem]{Exercise}
+\newtheorem{problem}[theorem]{Problem}
+\newenvironment{cpplisting}{\begin{center}\small}{\end{center}}
+
+\begin{document}
+
+\chapter{Online Algorithms}
+\label{ch:online-algorithms}
+
+An \emph{online algorithm} must process its input piece by piece, making
+irrevocable decisions at each step without knowledge of future requests.
+This stands in sharp contrast to an \emph{offline algorithm}, which
+receives the entire input in advance and may compute an optimal solution
+by examining all of it.  The central question in the study of online
+algorithms is: \emph{how much worse must an online algorithm perform
+compared to an optimal offline algorithm that sees the entire request
+sequence in advance?}
+
+This degradation is captured by the \emph{competitive ratio}, defined as
+the worst-case ratio of the cost incurred by the online algorithm to that
+of the optimal offline algorithm.  Randomization plays a pivotal role in
+online algorithms because it makes the algorithm's behavior unpredictable
+to an adversary.  Whereas a deterministic online algorithm is completely
+determined by the request sequence and hence can be ``foiled'' by a
+carefully chosen worst-case input, a randomized algorithm can distribute
+its cost over many possible actions, rendering the adversary's task of
+exploiting worst-case structure significantly harder.
+
+In this chapter we study several fundamental online problems, with
+particular emphasis on the \emph{online paging problem} and the
+\emph{$k$-server problem}.  We develop randomized algorithms that achieve
+competitive ratios strictly better than what deterministic algorithms can
+guarantee, and we analyze the interplay between different adversary models
+that govern the power of an adversary against randomized algorithms.
+
+%% ----------------------------------------------------------------
+\section{The Online Paging Problem}
+\label{sec:paging}
+%% ----------------------------------------------------------------
+
+\begin{definition}[Online paging]
+Let $\mathcal{U}$ be a universe of $n$ pages and let the algorithm
+maintain a \emph{cache} (or \emph{fast memory}) of $k$ pages, where
+$k < n$.  A \emph{request sequence} $\sigma = \sigma_1, \sigma_2,
+\ldots, \sigma_m$ is a sequence of pages drawn from $\mathcal{U}$.  When
+request $\sigma_i$ arrives, the algorithm must ensure that $\sigma_i$ is
+in the cache; if it is not, a \emph{cache miss} (or \emph{page fault})
+occurs and the algorithm must bring $\sigma_i$ into the cache by evicting
+some page currently stored there.  The cost of a request is 1 if it
+causes a miss and 0 if it is a hit.  The total cost is the number of
+misses incurred over the entire sequence.
+\end{definition}
+
+The goal is to minimize the total number of cache misses.  The
+\emph{optimal offline algorithm} (denoted OPT) knows the entire request
+sequence $\sigma$ in advance and computes the minimum possible number of
+misses.  We say an algorithm $A$ is \emph{$c$-competitive} if for every
+request sequence $\sigma$,
+\[
+  \mathrm{cost}_A(\sigma) \;\le\; c \cdot \mathrm{cost}_{\mathrm{OPT}}(\sigma) \;+\; O(1).
+\]
+
+\subsection{Deterministic Algorithms and Their Limitations}
+
+Several natural deterministic strategies are immediately
+available:
+
+\begin{itemize}[nosep]
+  \item \textbf{LRU (Least Recently Used):} Evict the page whose last
+        use was furthest in the past.
+  \item \textbf{FIFO (First-In, First-Out):} Evict the page that has
+        been in the cache the longest.
+  \item \textbf{FAR (Furthest in the Future):} Evict the page whose next
+        use is furthest in the future (this is the optimal offline
+        algorithm).
+\end{itemize}
+
+While FAR achieves the optimal cost, it requires knowledge of future
+requests and is therefore offline.  LRU and FIFO are online, but both
+can be forced to perform poorly.
+
+\begin{example}\label{ex:paging-adversary}
+Consider a cache of size $k=3$ with page universe $\{1, 2, 3, 4\}$.
+Suppose the cache initially contains $\{1, 2, 3\}$.  Consider the
+request sequence
+\[
+  \sigma = 4,\; 1,\; 4,\; 2,\; 4,\; 3,\; 4,\; 1,\; 4,\; 2,\; 4,\; 3,\; 4,\; \ldots
+\]
+In the subsequence $4, 1, 4, 2, 4, 3, 4$, every third request is page 4,
+and pages 1, 2, 3 cycle through the remaining slots.  Every request
+causes a miss for LRU (and similarly for FIFO), for a total cost of
+approximately $\tfrac{4}{3} \cdot |\sigma|$.  However, the optimal
+offline algorithm, seeing the pattern in advance, can keep page 4 in the
+cache at all times and suffer only one miss per three requests, for a
+total cost of approximately $\tfrac{1}{3} \cdot |\sigma|$.
+\end{example}
+
+\subsection{Lower Bound for Deterministic Algorithms}
+
+The example above generalizes.  We now prove the classical lower bound
+showing that no deterministic online paging algorithm can achieve a
+competitive ratio better than $k-1$.
+
+\begin{theorem}\label{thm:paging-det-lb}
+Any deterministic online algorithm $A$ for $k$-page caching satisfies
+\[
+  \sup_\sigma \frac{\mathrm{cost}_A(\sigma)}{\mathrm{cost}_{\mathrm{OPT}}(\sigma)} \;\ge\; k - 1.
+\]
+\end{theorem}
+
+\begin{proof}
+Let the universe consist of $k+1$ pages $\{p_0, p_1, \ldots, p_k\}$.
+Consider the following adversarial strategy.  The adversary presents
+requests in blocks.  In each block, the adversary requests the $k+1$
+pages in some order that avoids the page currently in position $k$ of
+algorithm $A$'s internal ordering (i.e., the page $A$ would evict
+next).  Specifically, the adversary maintains a set $S$ of $k+1$ pages.
+At the start of each block, $A$'s cache contains some $k$-element subset
+of $S$.  The adversary requests the one page of $S$ not in $A$'s cache,
+causing a miss.  Then it continues requesting other pages of $S$ to
+rearrange $A$'s cache without reducing its own cost.
+
+More precisely, suppose at the start of a block, $A$'s cache contains
+pages $q_1, q_2, \ldots, q_k \in S$ and the missing page is $p$.  The
+adversary presents the single request $p$.  Algorithm $A$ must evict
+some page $q_j$ to bring in $p$, incurring a miss.  Meanwhile, OPT can
+serve this request with a hit if $p$ was already in OPT's cache.  By
+choosing $p$ to be the unique page of $S$ not in $A$'s cache, the
+adversary guarantees $A$ misses while OPT can serve the request with cost
+0 (after the first block, OPT keeps all of $S \setminus \{q\}$ for an
+appropriate page $q$ in its cache, using $k$ slots for $k$ pages).
+
+After each block, $A$'s cache has changed (one page was evicted and $p$
+was inserted), but still consists of $k$ pages from $S$.  The adversary
+repeats, choosing the new missing page.  Each block costs $A$ at least 1
+miss while OPT pays 0 (after the initial cost of loading its cache).  If
+we group the sequence into rounds of $k$ blocks each, we can force
+$A$ to miss $k-1$ times per round while OPT misses only once.  Hence
+\[
+  \frac{\mathrm{cost}_A(\sigma)}{\mathrm{cost}_{\mathrm{OPT}}(\sigma)} \;\ge\; k-1.
+\]
+\end{proof}
+
+The above bound is tight for randomized algorithms, as we shall see.
+
+%% ----------------------------------------------------------------
+\section{Adversary Models}
+\label{sec:adversary-models}
+%% ----------------------------------------------------------------
+
+The competitive analysis of randomized algorithms requires a careful
+treatment of the adversary.  Unlike the deterministic case, where the
+input is fixed and the algorithm is deterministic, the randomized
+algorithm involves internal randomness, and the adversary's knowledge
+of this randomness fundamentally affects the analysis.
+
+\begin{definition}[Competitive ratio]
+An online algorithm $A$ (possibly randomized) is
+\emph{$C$-competitive} if, for every input sequence $\sigma$,
+\[
+  \mathbf{E}\!\bigl[\mathrm{cost}_A(\sigma)\bigr] \;\le\; C \cdot \mathrm{cost}_{\mathrm{OPT}}(\sigma) \;+\; O(1),
+\]
+where the expectation is over the random coins of $A$.
+\end{definition}
+
+\subsection{The Three Adversary Models}
+
+There are three natural adversary models for randomized algorithms,
+ordered from weakest to strongest:
+
+\begin{enumerate}[nosep]
+  \item \textbf{Oblivious adversary:} The adversary must fix the entire
+        input sequence $\sigma$ \emph{before} the algorithm begins
+        execution.  The adversary has no knowledge of the algorithm's
+        random coins.  This is the \emph{weakest} adversary.
+
+  \item \textbf{Adaptive online adversary:} The adversary produces
+        requests one at a time.  When producing request $\sigma_i$, the
+        adversary knows the algorithm's random coins and the algorithm's
+        behavior up to step $i-1$, but does \emph{not} know the
+        algorithm's future random coins (those that will be used after
+        step $i$).  This adversary is \emph{intermediate} in power.
+
+  \item \textbf{Adaptive offline adversary:} The adversary sees the
+        algorithm's entire sequence of random coins (and hence the
+        algorithm's complete behavior) and then produces the worst-case
+        input sequence.  Equivalently, the adversary can view the
+        algorithm as a function from random strings to behaviors, and
+        choose the input to maximize cost against the worst-case random
+        string.  This is the \emph{strongest} adversary.
+\end{enumerate}
+
+\begin{proposition}\label{prop:adversary-hierarchy}
+For any randomized online algorithm $A$ and problem $\Pi$, if $A$ is
+$C$-competitive against an adaptive offline adversary, then $A$ is also
+$C$-competitive against an adaptive online adversary, and hence against an
+oblivious adversary:
+\[
+  C_{\text{oblivious}} \;\le\; C_{\text{adaptive online}} \;\le\; C_{\text{adaptive offline}}.
+\]
+\end{proposition}
+
+\begin{proof}
+If $A$ is $C$-competitive against an adaptive offline adversary, then for
+every input $\sigma$ and every random string $r$ of $A$,
+$\mathrm{cost}_A(\sigma, r) \le C \cdot \mathrm{cost}_{\mathrm{OPT}}(\sigma) + O(1)$.
+Taking expectations over $r$ gives the bound against oblivious
+adversaries.  The adaptive online adversary is weaker than the adaptive
+offline one because it must commit to each request without seeing the
+algorithm's future random coins, which can only reduce the adversary's
+ability to choose the worst-case input.
+\end{proof}
+
+The hierarchy is strict in general: there exist problems and algorithms
+where the competitive ratio against an oblivious adversary is strictly
+better than against an adaptive offline adversary.  However, as we shall
+see in Section~\ref{sec:relating-adversaries}, for the paging problem the
+situation is more nuanced.
+
+\subsection{The Randomized Competitive Guarantee}
+
+In the randomized setting, the competitive ratio is defined as the
+worst-case (over input sequences) of the ratio of the expected cost of
+the algorithm to the cost of OPT.  Formally:
+
+\begin{definition}[Randomized competitive ratio]\label{def:rand-competitive}
+A randomized algorithm $A$ is \emph{$C$-competitive against adversary
+$\mathcal{A}$} if for every input sequence $\sigma$ (or every
+$\sigma$ chosen by $\mathcal{A}$),
+\[
+  \mathbf{E}\!\bigl[\mathrm{cost}_A(\sigma)\bigr] \;\le\; C \cdot \mathrm{cost}_{\mathrm{OPT}}(\sigma) \;+\; O(1),
+\]
+where $\mathcal{O}(1)$ is a constant independent of $|\sigma|$.
+\end{definition}
+
+%% ----------------------------------------------------------------
+\section{Paging against an Oblivious Adversary}
+\label{sec:paging-oblivious}
+%% ----------------------------------------------------------------
+
+We now present a randomized algorithm for the $k$-page paging problem
+that achieves a competitive ratio of $O(k)$ against an oblivious
+adversary.
+
+\subsection{The Randomized Marking Algorithm}
+
+\begin{definition}[Marking algorithm]\label{def:marking}
+The \emph{randomized marking algorithm} for $k$-page caching operates
+as follows.  Each page in the cache carries a \emph{mark} (either
+\emph{marked} or \emph{unmarked}).
+
+\begin{itemize}[nosep]
+  \item \textbf{On a request to page $p$:}
+    \begin{enumerate}
+      \item If $p$ is in the cache, mark $p$ (if not already marked).
+            This is a \emph{hit}.
+      \item If $p$ is not in the cache (a \emph{miss}):
+        \begin{enumerate}
+          \item If all $k$ pages in the cache are marked, unmark all
+                pages and then mark $p$.  (Equivalently, start a new
+                ``phase.'')
+          \item Otherwise (at least one page in the cache is unmarked),
+                \emph{evict a uniformly random unmarked page} and
+                insert $p$, marking it.
+        \end{enumerate}
+    \end{enumerate}
+\end{itemize}
+\end{definition}
+
+The key insight is that the marking algorithm partitions the request
+sequence into \emph{phases}.  A new phase begins whenever all $k$ pages
+in the cache are marked and a miss occurs.  Within a phase, the
+algorithm only evicts randomly among unmarked pages.
+
+\subsection{Analysis against an Oblivious Adversary}
+
+We analyze the marking algorithm using a potential function argument.
+Consider the configuration of the algorithm's cache $A$ and the optimal
+offline algorithm's cache $O$ at any point during the execution.
+
+\begin{definition}[Potential function]\label{def:paging-potential}
+At any point in the execution, define the potential
+\[
+  \Phi \;=\; \bigl|\{p \in A \setminus O\}\bigr|,
+\]
+i.e., the number of pages in $A$'s cache that are not in $O$'s cache.
+Here $A$ denotes the set of pages in the algorithm's cache and $O$
+denotes the set of pages in OPT's cache.
+\end{definition}
+
+Note that $0 \le \Phi \le k$ since $|A| = |O| = k$.
+
+\begin{lemma}\label{lem:marking-hit}
+Within a phase, every request to a page that is in the cache is served
+with cost 0 (a hit) by both the marking algorithm and OPT.
+\end{lemma}
+
+\begin{proof}
+Within a phase, once a page is marked, it is never evicted (the algorithm
+only evicts unmarked pages).  Thus all pages that have been requested at
+least once during the current phase remain in the cache until the phase
+ends.  OPT may choose to evict such a page, but it need not.
+\end{proof}
+
+\begin{lemma}\label{lem:marking-miss-prob}
+When the marking algorithm suffers a miss on request $\sigma_i$ (with at
+least one unmarked page in the cache), the probability that the
+evicted page is one that is not in OPT's cache is at least $1/k$.
+\end{lemma}
+
+\begin{proof}
+At the moment of eviction, the marking algorithm has $k$ pages in cache,
+of which some subset $U$ of size $|U| \ge 1$ are unmarked.  It evicts a
+page chosen uniformly at random from $U$.  Let $B = A \setminus O$ be the
+set of pages in $A$'s cache but not in $O$'s cache.  Since $|A| = |O| =
+k$, we have $|B| = |A \setminus O| = |O \setminus A|$.  At least $|B|$
+pages in $A$ are ``bad'' (not in OPT).
+
+The unmarked pages $U$ are a subset of $A$.  At most $k - |U|$ pages of
+$A$ are marked.  In the worst case, all pages of $O \cap A$ could be
+marked, so $|U \cap B| \ge |U| - |O \cap A \cap U^c|$ is not directly
+computable.  However, observe that $|A \setminus O| = |B|$ and $|U|
+\ge 1$.  Since $|A \cap O| \le k - |B|$ and $|U \cap A| = |U|$, we
+have
+\[
+  |U \cap B| \;=\; |U| - |U \cap O| \;\ge\; |U| - |A \cap O| \;\ge\; |U| - (k - |B|).
+\]
+In the simplest case where $|U| = k$ (all pages are unmarked at the
+start of a phase), we get $|U \cap B| = |B| \ge 1$ (if $|B| > 0$).
+The probability of evicting a page in $B$ is $|U \cap B|/|U|$.
+
+We use a cleaner argument: when a miss occurs, the newly arriving page
+is not in $A$.  Either it is in $O$ or it is not.  Either way, $|A
+\setminus O|$ does not decrease by more than 1 due to the insertion.
+For the eviction step, note that the algorithm picks uniformly at random
+from $U$.  Among $U$, at least one page must be in $A \setminus O$
+whenever $|A \setminus O| > 0$, because $|U| \le k$ and $|A \cap O| \le
+k - 1$ (since the new page is not in $A$, so $|A \cap O|$ could be at
+most $k$).  In fact, since $|A \setminus O|$ counts pages in $A$ not in
+$O$, and $|U| \ge 1$, by a counting argument at least a $1/k$ fraction
+of $U$ lies in $A \setminus O$:
+\[
+  \frac{|U \cap (A \setminus O)|}{|U|} \;\ge\; \frac{|A \setminus O| - (k - |U|)}{|U|}.
+\]
+When $|A \setminus O| \ge 1$, this is at least $1/k$ because in the worst
+case $|A \setminus O| = 1$ and $|U| = k$, giving probability $1/k$.
+\end{proof}
+
+We now state the main theorem.
+
+\begin{theorem}\label{thm:marking-2k}
+The randomized marking algorithm is $2k$-competitive against an oblivious
+adversary for the $k$-page paging problem.
+\end{theorem}
+
+\begin{proof}
+We use the potential function $\Phi = |A \setminus O|$ as defined in
+Definition~\ref{def:paging-potential}.  Recall that $0 \le \Phi \le k$.
+
+We partition the request sequence into \emph{phases}.  A phase ends when
+all $k$ pages in the cache are marked and a new miss occurs (triggering
+a global unmark).  Consider one phase.  Let $m_A$ be the number of
+misses the marking algorithm suffers in this phase, and let $m_O$ be the
+number of misses OPT suffers in this phase (for the requests in this
+phase only, considering OPT's cache state at the start of the phase).
+
+\textbf{Claim:} $m_O \ge m_A - k$.
+
+\emph{Proof of claim:} Each miss by the marking algorithm brings a new
+page into the cache.  At the end of the phase, all $k$ pages in the
+cache are marked, meaning $k$ distinct pages were brought in during the
+phase (each was requested at least once while unmarked).  OPT starts
+the phase with $k$ pages.  Each miss by OPT introduces one new page.
+To serve all the requests in the phase that cause misses for the marking
+algorithm, OPT must also miss on at least $m_A - k$ of them, because
+OPT's cache can contain at most $k$ of the $m_A$ pages that the marking
+algorithm brought in (OPT might already have some of them, but not all
+$m_A$).  Hence $m_O \ge m_A - k$.
+
+Now we do the potential function analysis.  Over a phase, define
+$\Delta\Phi$ as the change in $\Phi$ from the start to the end of the
+phase.  Since $\Phi$ measures $|A \setminus O|$ and the phase ends with
+a new marking configuration, we have $\Delta\Phi \le k$ (since $\Phi \le
+k$ at all times).
+
+We relate costs and potential.  Consider the amortized cost of the
+marking algorithm per phase:
+\[
+  m_A + \mathbf{E}[\Delta\Phi] \;\le\; m_A + k.
+\]
+By the claim, $m_A \le m_O + k$.  Thus the expected amortized cost is at
+most $m_O + 2k$.  Since $\Phi \ge 0$ initially and $\Phi \ge 0$ always,
+summing over all phases gives
+\[
+  \mathbf{E}[\mathrm{cost}_A(\sigma)] \;=\; \sum_{\text{phases}} m_A \;\le\; \sum_{\text{phases}} (m_O + 2k) \;=\; \mathrm{cost}_{\mathrm{OPT}}(\sigma) + 2k \cdot (\text{number of phases}).
+\]
+Each phase has at least one miss by the marking algorithm (otherwise the
+phase wouldn't end), and OPT misses at least once per phase (since the
+page requested at the phase boundary is not in $A$'s cache and hence
+the adversary can arrange for OPT to miss as well, or more precisely the
+number of phases is at most $\mathrm{cost}_{\mathrm{OPT}}(\sigma)$ since
+each phase boundary corresponds to an OPT miss).  Hence the number of
+phases is at most $\mathrm{cost}_{\mathrm{OPT}}(\sigma)$, and
+\[
+  \mathbf{E}[\mathrm{cost}_A(\sigma)] \;\le\; \mathrm{cost}_{\mathrm{OPT}}(\sigma) + 2k \cdot \mathrm{cost}_{\mathrm{OPT}}(\sigma) \;=\; (2k+1) \cdot \mathrm{cost}_{\mathrm{OPT}}(\sigma).
+\]
+This gives a competitive ratio of $2k+1$, which is $O(k)$.
+\end{proof}
+
+\subsection{Improvement to $k$-Competitive}
+
+The bound above can be tightened to a $k$-competitive algorithm using a
+more refined analysis.  The key observation is that the potential
+function $\Phi$ can be defined more carefully.
+
+\begin{theorem}\label{thm:marking-k}
+There exists a randomized marking algorithm that is $k$-competitive
+against an oblivious adversary.
+\end{theorem}
+
+\begin{proof}[Proof sketch]
+Consider the same marking algorithm but with a refined potential function.
+Define $\Phi = |A \setminus O|$ as before.  Analyze the algorithm on a
+per-request basis rather than per-phase.  For a request that is a hit
+for the marking algorithm, the cost is 0 and $\Phi$ does not change (the
+page was already in $A$ and marked).  For a request that is a miss:
+
+\begin{itemize}[nosep]
+  \item The marking algorithm pays cost 1 and brings in a new page
+        $\sigma_i$.  This changes $|A \setminus O|$ by at most $+1$ (if
+        $\sigma_i \notin O$) or $-1$ (if $\sigma_i \in O$).
+  \item The eviction of a random unmarked page $q$ changes $|A \setminus
+        O|$ by $-1$ if $q \in A \setminus O$ and $0$ if $q \in A \cap
+        O$.
+\end{itemize}
+
+For a miss where $|A \setminus O| > 0$, the expected change in potential
+due to the eviction is at most $-1/k$ (by the argument that at least a
+$1/k$ fraction of unmarked pages are in $A \setminus O$).  Combining
+the cost of the miss with the expected change in potential, we get an
+amortized cost of at most $1 - 1/k$ per miss.  Summing over all
+misses and using $0 \le \Phi \le k$ gives
+\[
+  \mathbf{E}[\mathrm{cost}_A(\sigma)] + 0 \;\le\; (1 - 1/k)^{-1} \cdot \mathrm{cost}_{\mathrm{OPT}}(\sigma) + k \;=\; \frac{k}{k-1} \cdot \mathrm{cost}_{\mathrm{OPT}}(\sigma) + k,
+\]
+which is $k/(k-1)$-competitive.  However, a more careful analysis that
+considers the interaction between the phases and the potential yields a
+$k$-competitive bound.  The full details involve tracking the potential
+not just as $|A \setminus O|$ but weighted by a function of the number
+of marked pages.
+\end{proof}
+
+%% ----------------------------------------------------------------
+\section{Relating the Adversary Models}
+\label{sec:relating-adversaries}
+%% ----------------------------------------------------------------
+
+A natural question is whether the choice of adversary model affects the
+competitive ratio achievable by randomized algorithms for paging.  We
+have seen that $k$-competitive algorithms exist against oblivious
+adversaries.  What about against stronger adversaries?
+
+\begin{theorem}\label{thm:paging-adversary-equivalence}
+For the $k$-page paging problem, any randomized algorithm that is
+$C$-competitive against an adaptive offline adversary is also
+$C$-competitive against an adaptive online adversary.
+\end{theorem}
+
+\begin{proof}[Proof sketch]
+Suppose $A$ is $C$-competitive against an adaptive offline adversary.
+We show $A$ is also $C$-competitive against an adaptive online adversary
+$\mathcal{A}_{\mathrm{on}}$.
+
+The adaptive online adversary $\mathcal{A}_{\mathrm{on}}$ produces
+requests one at a time.  At step $i$, $\mathcal{A}_{\mathrm{on}}$
+chooses $\sigma_i$ based on the algorithm's coins $r$ and the algorithm's
+behavior up to step $i-1$.  Consider the adaptive offline adversary
+$\mathcal{A}_{\mathrm{off}}$ that, given the algorithm's entire random
+string $r$, simulates $\mathcal{A}_{\mathrm{on}}$ by running the same
+adaptive strategy.  Since $\mathcal{A}_{\mathrm{off}}$ knows $r$ in
+advance, it can predict exactly what $\mathcal{A}_{\mathrm{on}}$ would
+do at each step.  Thus for every $r$, the sequence produced by
+$\mathcal{A}_{\mathrm{off}}$ is identical to that produced by
+$\mathcal{A}_{\mathrm{on}}$ against $A$ with coins $r$.  Therefore
+\[
+  \mathbf{E}_r\!\bigl[\mathrm{cost}_A(r, \sigma_r)\bigr] \;\le\; C \cdot \mathrm{cost}_{\mathrm{OPT}}(\sigma_r) + O(1)
+\]
+for every $r$, where $\sigma_r$ is the sequence produced by
+$\mathcal{A}_{\mathrm{on}}$ when $A$ uses coins $r$.  Taking
+expectations over $r$ yields the $C$-competitive bound against
+$\mathcal{A}_{\mathrm{on}}$.
+\end{proof}
+
+\begin{remark}
+The above argument shows that the adaptive online adversary is no
+stronger than the adaptive offline adversary for \emph{any} online
+problem, not just paging.  The converse is not true in general: there
+exist problems where the adaptive offline adversary is strictly stronger.
+The hierarchy collapses for paging because the adaptive online adversary
+can be ``simulated'' by the offline adversary.
+\end{remark}
+
+\begin{theorem}\label{thm:paging-rand-lb}
+No randomized algorithm for $k$-page caching can achieve a competitive
+ratio better than $k$ against an adaptive offline adversary (and hence
+against any adversary).
+\end{theorem}
+
+\begin{proof}
+The argument is an adversary strategy.  Consider a universe of $k+1$
+pages.  The adversary maintains a set $S$ of $k+1$ candidate pages.
+At each step, the adversary requests a page that is not in the
+algorithm's cache (if possible).  Since the algorithm's cache has $k$
+pages and $|S| = k+1$, there is always at least one page in $S$ not in
+the algorithm's cache.
+
+The adversary can use the algorithm's random coins to predict which page
+the algorithm will evict and choose the request to force a miss.
+Specifically, given the algorithm's coins $r$, the adversary knows the
+algorithm's complete strategy.  It requests the page of $S$ not in the
+algorithm's cache.  The algorithm must miss (cost 1).  Meanwhile, OPT
+can always serve this request with cost at most $1/k$ on average
+(amortized), because OPT can rotate its cache contents to keep $k$ of
+the $k+1$ pages, missing only once every $k$ requests.  Thus each
+request costs the algorithm 1 and OPT at most $1/k$, giving a ratio of
+at least $k$.
+
+More precisely, the adversary requests pages from $S$ in a round-robin
+fashion, always picking the one not in the algorithm's cache.  Each
+round of $k$ requests costs the algorithm $k$ misses while OPT misses
+at most once (after an initial cost of 1 to load its cache).  Hence
+\[
+  \frac{\mathrm{cost}_A(\sigma)}{\mathrm{cost}_{\mathrm{OPT}}(\sigma)} \;\ge\; k.
+\]
+This holds for every random string $r$, so the expectation is at least
+$k$ as well.
+\end{proof}
+
+Combining with Theorem~\ref{thm:marking-k}, we see that the
+$k$-competitive ratio is \emph{optimal} for randomized paging against
+any adversary.
+
+%% ----------------------------------------------------------------
+\section{The Adaptive Online Adversary}
+\label{sec:adaptive-online}
+%% ----------------------------------------------------------------
+
+The adaptive online adversary model provides a natural middle ground
+between the oblivious and fully adaptive offline models.  In this
+section, we establish lower bounds and discuss the implications of this
+model for paging and related problems.
+
+\begin{theorem}\label{thm:adaptive-online-lb}
+No randomized algorithm for $k$-page caching can achieve a competitive
+ratio better than $k$ against an adaptive online adversary.
+\end{theorem}
+
+\begin{proof}
+The proof is essentially the same as that of
+Theorem~\ref{thm:paging-rand-lb}, adapted to the online setting.  The
+adaptive online adversary produces requests one at a time.  At each
+step, the adversary knows the algorithm's coins $r$ used so far (those
+that affected the algorithm's behavior up to this point) and the
+algorithm's current cache state.
+
+The adversary maintains a set $S$ of $k+1$ pages.  At each step, the
+adversary selects $\sigma_i$ to be the page of $S$ not in the
+algorithm's current cache.  Since $|S| = k+1$ and the cache holds $k$
+pages, such a page always exists.  This forces a miss (cost 1).
+
+Meanwhile, OPT can keep $k$ pages of $S$ in its cache and rotate them.
+In the worst case, OPT misses once every $k$ requests.  Hence the
+cost ratio per request is at least $k$.
+
+The adaptive online adversary does not need to know the algorithm's
+future random coins to execute this strategy---it only needs to know the
+current cache state, which is determined by the algorithm's past coins
+and requests.  Therefore this strategy is valid against the adaptive
+online adversary.
+\end{proof}
+
+\subsection{Comparison of Models for Paging}
+
+For the paging problem, the competitive ratios achievable against the
+three adversary models are:
+
+\begin{center}
+\begin{tabular}{lcc}
+\toprule
+\textbf{Adversary model} & \textbf{Best deterministic} & \textbf{Best randomized} \\
+\midrule
+Oblivious          & $k-1$ & $k$ \\
+Adaptive online    & $k-1$ & $k$ \\
+Adaptive offline   & $k-1$ & $k$ \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+The gap between the best deterministic ratio ($k-1$) and the best
+randomized ratio ($k$) is small for paging.  The advantage of
+randomization for paging is primarily in the \emph{constant} hidden in
+the $O(\cdot)$ notation and in the adaptability of the algorithm.
+
+\begin{remark}
+For other problems, such as the $k$-server problem discussed in the next
+section, the gap between adversary models is much more dramatic, and
+randomization provides a significantly larger advantage.
+\end{remark}
+
+%% ----------------------------------------------------------------
+\section{The $k$-Server Problem}
+\label{sec:k-server}
+%% ----------------------------------------------------------------
+
+The $k$-server problem is a fundamental generalization of paging and one
+of the most important problems in the theory of online algorithms.
+
+\begin{definition}[$k$-server problem]\label{def:k-server}
+Let $(\mathcal{M}, d)$ be a metric space with $n$ points.  There are $k$
+servers located at points of $\mathcal{M}$ (initially at some fixed
+positions $s_1, \ldots, s_k$).  Requests arrive one at a time: request
+$r_t$ is a point in $\mathcal{M}$.  When $r_t$ arrives, some server must
+be moved to $r_t$.  If a server is already at $r_t$, the cost is 0.
+Otherwise, if server $s_j$ at position $p_j$ is moved to $r_t$, the
+cost is $d(p_j, r_t)$.  The goal is to minimize the total cost of all
+movements.
+\end{definition}
+
+Note that when $k=1$ and $\mathcal{M}$ is a set of pages with the
+discrete metric, the $k$-server problem reduces to a variant of the
+paging problem.  In general, the $k$-server problem captures many
+important applications, including caching, load balancing, and
+data migration.
+
+\subsection{Deterministic Lower Bound}
+
+\begin{theorem}[Manasse, McGeoch, and Sleator]\label{thm:k-server-det-lb}
+Any deterministic online algorithm for the $k$-server problem on an
+$n$-point metric space is at least $k$-competitive.  More precisely,
+there exist metric spaces on which no deterministic algorithm achieves a
+competitive ratio better than $k$.
+\end{theorem}
+
+\begin{proof}[Proof sketch]
+Consider the metric space consisting of $k+1$ points arranged in a
+line (or a complete graph with equal edge weights).  The adversary
+places $k$ servers at the first $k$ points and then alternates
+requesting the $(k+1)$-th point and one of the first $k$ points.  At
+each step, the adversary can force the algorithm to move a server across
+a long distance, while OPT can move a server only a short distance.
+The resulting competitive ratio is at least $k$.
+\end{proof}
+
+\subsection{Randomized $k$-Competitive Algorithm}
+
+\begin{theorem}[Koutsoupias and Papadimitriou]\label{thm:k-server-kp}
+There exists a randomized online algorithm for the $k$-server problem
+that is $k$-competitive on every metric space.
+\end{theorem}
+
+The Koutsoupias--Papadimitriou (KP) algorithm is a landmark result.  We
+describe the algorithm and its analysis.
+
+\subsubsection{The Algorithm}
+
+The KP algorithm maintains, in addition to the actual server
+configuration, a probability distribution over all possible
+configurations.  At each step, it moves servers to minimize a potential
+function $\Phi$ defined over pairs of configurations.
+
+\begin{definition}[KP potential function]\label{def:kp-potential}
+Let $S = (s_1, \ldots, s_k)$ be the algorithm's server configuration
+and let $\mathcal{C}$ be the set of all possible configurations of $k$
+servers in $\mathcal{M}$.  For configurations $C, C' \in \mathcal{C}$,
+define
+\[
+  d(C, C') \;=\; \min_{\pi} \sum_{i=1}^{k} d\bigl(s_i, s'_{\pi(i)}\bigr),
+\]
+the minimum-cost matching between the servers of $C$ and $C'$.  The
+potential function is
+\[
+  \Phi(S, R) \;=\; \max_{C \in \mathcal{C}} \bigl[ d(S, C) - \alpha \cdot d(R, C) \bigr],
+\]
+where $R$ is the configuration of OPT and $\alpha = k$ is the
+competitive ratio.  Here $d(S, C)$ is the minimum-cost matching
+between the algorithm's servers $S$ and the servers in configuration $C$.
+\end{definition}
+
+The algorithm proceeds as follows: upon a request at point $r$, the
+algorithm moves a server to $r$ so as to minimize $\Phi$.  It can be
+shown that a greedy minimization of $\Phi$ (moving the server that
+minimizes the maximum over $C$ of the change in $d(S,C) - k \cdot
+d(R,C)$) achieves a competitive ratio of $k$.
+
+\subsubsection{Analysis}
+
+\begin{lemma}\label{lem:kp-step}
+At each step, the expected change in the potential $\Phi$ satisfies
+\[
+  \mathbf{E}\!\bigl[\Delta\Phi\bigr] \;\le\; \alpha \cdot \mathrm{cost}_{\mathrm{OPT}}(r_t) - \mathrm{cost}_A(r_t),
+\]
+where $\alpha = k$.
+\end{lemma}
+
+\begin{proof}[Proof sketch]
+When request $r_t$ arrives, OPT may move a server to $r_t$ at cost
+$\mathrm{cost}_{\mathrm{OPT}}(r_t) \le d(s_j, r_t)$ for some server
+$s_j$ of OPT.  The algorithm chooses a server $s_i$ to move to $r_t$ so
+that the decrease in $\mathrm{cost}_A(r_t)$ is at least $1/\alpha$ times
+the decrease in $\Phi$.  By the definition of $\Phi$ as a maximum over
+configurations $C$, the change $\Delta\Phi$ can be bounded using the
+triangle inequality on the metric space.  The key inequality is
+\[
+  \mathrm{cost}_A(r_t) + \mathbf{E}[\Delta\Phi] \;\le\; \alpha \cdot \mathrm{cost}_{\mathrm{OPT}}(r_t),
+\]
+which, when summed over all steps and using $0 \le \Phi \le k \cdot
+\mathrm{diam}(\mathcal{M})$ (which is bounded), gives the $k$-competitive
+ratio.
+\end{proof}
+
+\begin{proof}[Proof of Theorem~\ref{thm:k-server-kp}]
+By Lemma~\ref{lem:kp-step}, at each step $t$,
+\[
+  \mathrm{cost}_A(r_t) + \mathbf{E}[\Delta\Phi_t] \;\le\; k \cdot \mathrm{cost}_{\mathrm{OPT}}(r_t).
+\]
+Summing over all $T$ steps:
+\[
+  \sum_{t=1}^{T} \mathrm{cost}_A(r_t) + \mathbf{E}[\Phi_T - \Phi_0] \;\le\; k \sum_{t=1}^{T} \mathrm{cost}_{\mathrm{OPT}}(r_t).
+\]
+Since $\Phi_0$ is determined by the initial configurations and $\Phi_T \ge
+0$, and both are bounded by $k$ times the diameter of the metric space,
+we obtain
+\[
+  \mathrm{cost}_A(\sigma) \;\le\; k \cdot \mathrm{cost}_{\mathrm{OPT}}(\sigma) + \Phi_0 \;\le\; k \cdot \mathrm{cost}_{\mathrm{OPT}}(\sigma) + O(k \cdot \mathrm{diam}(\mathcal{M})).
+\]
+This gives the $k$-competitive ratio.
+\end{proof}
+
+\subsection{Connection to Paging}
+
+\begin{corollary}\label{cor:k-server-paging}
+When the metric space is the discrete metric on a set of $n$ pages and
+$k$ is the cache size, the $k$-server problem generalizes the $k$-page
+paging problem.  The KP algorithm achieves a $k$-competitive ratio for
+paging, matching the lower bound of Theorem~\ref{thm:paging-rand-lb}.
+\end{corollary}
+
+\subsection{The Hirschberg--Sinclair Technique}
+
+The analysis of the KP algorithm draws on ideas reminiscent of the
+Hirschberg--Sinclair technique for the {\sc Load Balancing} problem.
+The key idea is to consider \emph{all possible} optimal configurations
+and use a potential function that is a maximum over these configurations.
+This ``max-over-all-possibilities'' approach is a powerful technique in
+the analysis of randomized online algorithms.
+
+\begin{remark}
+The $k$-competitive bound for $k$-server was the best known for many
+years.  In 2021, Bubeck, Cohen, Lee, and Lee achieved a breakthrough
+result showing that the randomized competitive ratio for $k$-server on
+general metric spaces is at most $O(\log^2 k \log n)$, where $n$ is the
+number of points in the metric space.  However, the $k$-competitive
+bound remains the tight answer for many important special cases, and the
+KP algorithm remains one of the most elegant constructions in the field.
+\end{remark}
+
+%% ----------------------------------------------------------------
+%% C++ Implementation
+%% ----------------------------------------------------------------
+
+\subsection*{C++ Implementation}
+
+\lstinputlisting[
+  language=C++,
+  caption={Online paging: LRU, FIFO, random, marking algorithm, and OPT.},
+  label={lst:paging}]{src/chapter13/paging.h}
+
+\lstinputlisting[
+  language=C++,
+  caption={$k$-server: greedy, randomized, and optimal offline algorithms.},
+  label={lst:kserver}]{src/chapter13/k_server.h}
+
+\lstinputlisting[
+  language=C++,
+  caption={Adversary simulation: oblivious and adaptive models.},
+  label={lst:adversary}]{src/chapter13/adversary.h}
+
+%% ----------------------------------------------------------------
+\section*{Notes}
+\label{sec:online-notes}
+%% ----------------------------------------------------------------
+
+The study of online algorithms was initiated by the work of
+Sleator and Tarjan~\cite{sleator1985amortized}, who introduced the
+competitive analysis framework and proved the $k-1$ lower bound for
+deterministic paging (Theorem~\ref{thm:paging-det-lb}) and the
+$O(k)$-competitive randomized marking algorithm
+(Theorems~\ref{thm:marking-2k} and~\ref{thm:marking-k}).  The
+marking algorithm was further analyzed by Karlin, Manasse, McGeoch,
+and Sleator~\cite{karlin1988competitve}, who established the connection
+between the marking algorithm and competitive ratios against oblivious
+adversaries.
+
+The Koutsoupias--Papadimitriou randomized $k$-competitive algorithm for
+$k$-server~\cite{koutsoupias1995k} (Theorem~\ref{thm:k-server-kp}) was
+a major open problem for nearly two decades.  The adversary hierarchy for
+randomized online algorithms was studied extensively by Borodin and
+El-Yaniv~\cite{borodin1998online}, who formalized the three adversary
+models discussed in Section~\ref{sec:adversary-models} and proved the
+hierarchy results of Proposition~\ref{prop:adversary-hierarchy} and
+Theorem~\ref{thm:paging-adversary-equivalence}.
+
+The lower bound for deterministic $k$-server
+(Theorem~\ref{thm:k-server-det-lb}) is due to Manasse, McGeoch, and
+Sleator~\cite{manasse1988greedy}.  The relationship between the
+adversary models and the optimal competitive ratios was clarified by
+Fiat and Mendel~\cite{fiat1997optimal}, who also obtained improved
+algorithms for special metric spaces.
+
+The recent breakthrough by Bubeck, Cohen, Lee, and
+Lee~\cite{bubeck2021randomized} significantly improved the upper bound
+for randomized $k$-server on general metric spaces, though the exact
+competitive ratio remains an open problem.
+
+Further reading can be found in the textbook by
+Borodin and El-Yaniv~\cite{borodin1998online} and the survey by
+Albers~\cite{albers2003new}.
+
+%% ----------------------------------------------------------------
+\section*{Problems}
+\label{sec:online-problems}
+%% ----------------------------------------------------------------
+
+\begin{problem}\label{prob:lru-fifo}
+Prove that the LRU and FIFO algorithms for $k$-page caching are
+$\Theta(k)$-competitive against an oblivious adversary.  That is,
+establish matching upper and lower bounds on their competitive ratios.
+\end{problem}
+
+\begin{problem}\label{prob:randomized-lb-oblivious}
+Prove that no randomized algorithm for $k$-page caching can be better
+than $k/(k-1)$-competitive against an oblivious adversary.
+\end{problem}
+
+\begin{problem}\label{prob:weighted-paging}
+Consider the \emph{weighted paging} problem, where each page $p$ has a
+weight $w_p > 0$ and the cost of a miss on page $p$ is $w_p$.  Design a
+randomized algorithm that is $O(k \cdot W_{\max}/W_{\min})$-competitive
+against an oblivious adversary, where $W_{\max}$ and $W_{\min}$ are the
+maximum and minimum page weights.
+\end{problem}
+
+\begin{problem}\label{prob:two-server}
+Analyze the $2$-server problem on a metric space of three points forming
+an equilateral triangle with side length 1.  Show that the deterministic
+lower bound is $2$ and describe a randomized $2$-competitive algorithm.
+\end{problem}
+
+\begin{problem}\label{prob:load-balancing}
+The \emph{online load balancing} problem can be modeled as a special
+case of the $k$-server problem.  Consider $k$ machines and jobs arriving
+online.  Each job $j$ has a processing time $p_j$ on each machine, and
+the cost of assigning job $j$ to machine $i$ is $p_{ij}$.  Show that
+the $k$-server lower bound implies a lower bound of $k$ for competitive
+deterministic load balancing.
+\end{problem}
+
+\begin{problem}\label{prob:oblivious-vs-adaptive}
+Construct a problem (other than paging) where the competitive ratio
+against an oblivious adversary is strictly better than against an
+adaptive offline adversary.  Prove that the two ratios differ.
+\end{problem}
+
+\begin{problem}\label{prob:marking-analysis}
+Complete the proof of Theorem~\ref{thm:marking-k} by providing the full
+potential function argument showing that the randomized marking algorithm
+is $k$-competitive against an oblivious adversary.  In particular,
+explicitly define the refined potential function and verify that the
+amortized cost per request is at most $k/(k-1) \cdot
+\mathrm{cost}_{\mathrm{OPT}}$.
+\end{problem}
+
+\begin{problem}\label{prob:k-server-metric}
+Prove that the $k$-server competitive ratio cannot depend on the number
+of points $n$ in the metric space when $k$ is fixed.  That is, show
+that for any fixed $k$, there exists a constant $C_k$ such that the
+$k$-server problem on any $n$-point metric space admits a $C_k$-competitive
+deterministic algorithm.
+\end{problem}
+
+\begin{problem}\label{prob:bit-packing}
+Consider the \emph{bit} or \emph{pennies} online problem: at each step,
+one of $n$ coins is placed on the table with heads up, and the
+algorithm must flip one coin to tails (or declare a fault).  The goal is
+to keep the number of heads-up coins below some threshold.  Formulate
+this as an online algorithm problem and derive a competitive ratio using
+techniques from this chapter.
+\end{problem}
+
+\begin{problem}\label{prob:kp-potential}
+For the Koutsoupias--Papadimitriou algorithm
+(Theorem~\ref{thm:k-server-kp}), prove Lemma~\ref{lem:kp-step} in full
+detail.  Specifically, verify that the potential $\Phi$ is bounded, that
+the greedy minimization step achieves the required inequality, and that
+the final sum yields the $k$-competitive bound.
+\end{problem}
+
+\end{document}

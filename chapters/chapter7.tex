@@ -1,0 +1,511 @@
+\documentclass[twoside,12pt]{book}
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage{mathpazo}
+\usepackage{amsmath,amssymb,amsthm}
+\usepackage{graphicx}
+\usepackage{listings}
+\usepackage{xcolor}
+\usepackage{hyperref}
+\usepackage{enumitem}
+\usepackage{tikz}
+\usepackage{algorithm}
+\usepackage{algpseudocode}
+\usepackage{booktabs}
+\usepackage{geometry}
+\usepackage{fancyhdr}
+\usepackage{titlesec}
+\geometry{papersize={6in,9in},margin=0.75in,top=0.75in,bottom=0.75in,inner=0.9in,outer=0.65in,headheight=14pt}
+\pagestyle{fancy}
+\fancyhf{}
+\fancyhead[LE]{\small\textit{7. Algebraic Techniques}}
+\fancyhead[RO]{\small\textit{Randomized Algorithms}}
+\fancyfoot[C]{\thepage}
+\renewcommand{\headrulewidth}{0.4pt}
+\definecolor{codegray}{rgb}{0.45,0.45,0.45}
+\lstdefinestyle{cppstyle}{basicstyle=\ttfamily\scriptsize,keywordstyle=\bfseries,commentstyle=\itshape\color{codegray},numbers=left,numberstyle=\tiny\color{codegray},numbersep=8pt,frame=single,framerule=0.4pt,rulecolor=\color{codegray},backgroundcolor=\color{gray!5},breaklines=true,tabsize=4,showstringspaces=false,language=C++}
+\lstset{style=cppstyle}
+\theoremstyle{plain}
+\newtheorem{theorem}{Theorem}[chapter]
+\newtheorem{lemma}[theorem]{Lemma}
+\newtheorem{corollary}[theorem]{Corollary}
+\newtheorem{proposition}[theorem]{Proposition}
+\theoremstyle{definition}
+\newtheorem{definition}[theorem]{Definition}
+\newtheorem{example}[theorem]{Example}
+\newtheorem{remark}[theorem]{Remark}
+\theoremstyle{remark}
+\newtheorem{exercise}[theorem]{Exercise}
+\newtheorem{problem}[theorem]{Problem}
+\newenvironment{cpplisting}{\begin{center}\small}{\end{center}}
+\begin{document}
+
+\chapter*{7 Algebraic Techniques}
+\addcontentsline{toc}{chapter}{7 Algebraic Techniques}
+\markboth{7 Algebraic Techniques}{Randomized Algorithms}
+
+Many computational problems can be cast as algebraic questions: Does a given polynomial evaluate to zero? Do two matrices multiply to a claimed product? Do two strings match? Algebraic techniques exploit the structure of polynomials, matrices, and finite fields to give randomized algorithms that are dramatically faster than their deterministic counterparts. The central idea behind most of these algorithms is \emph{fingerprinting}: replacing a complex object with a simple numeric fingerprint computed at a random point, so that equality (or identity) can be checked efficiently with high probability.
+
+This chapter develops the theory of algebraic fingerprinting, beginning with Freivalds' celebrated algorithm for verifying matrix multiplication and building toward interactive proof systems and the PCP theorem.
+
+%% ============================================================
+\section{Fingerprinting and Freivalds' Technique}
+\label{sec:freivalds}
+%% ============================================================
+
+The problem of \emph{verifying} a computation is often easier than performing it. Given two $n \times n$ matrices $A$ and $B$ and a claimed product $C$, we wish to test whether $A \cdot B = C$. The naive approach requires $O(n^3)$ time to compute the product and compare, but randomized verification can be done in $O(n^2)$ time.
+
+\begin{definition}[Fingerprint]
+A \emph{fingerprint} of an object $X$ is a short summary $f(X)$ that can be computed efficiently. If $f(X) = f(Y)$, then $X = Y$ with high probability, and if $X \neq Y$, then $f(X) \neq f(Y)$ with high probability.
+\end{definition}
+
+\begin{algorithm}[H]
+\caption{Freivalds' Algorithm}
+\label{alg:freivalds}
+\begin{algorithmic}[1]
+\Require matrices $A, B, C \in \mathbb{Z}^{n \times n}$, number of rounds $t$
+\Ensure \textsc{Yes} if $AB = C$, \textsc{No} otherwise
+\For{$k = 1, 2, \ldots, t$}
+  \State Choose $\mathbf{r} \in \{0, 1\}^n$ uniformly at random
+  \State Compute $\mathbf{v} = B\mathbf{r}$ \Comment{$O(n^2)$}
+  \State Compute $\mathbf{w} = A\mathbf{v}$ \Comment{$O(n^2)$}
+  \State Compute $\mathbf{u} = C\mathbf{r}$ \Comment{$O(n^2)$}
+  \If{$\mathbf{w} \neq \mathbf{u}$}
+    \State \Return \textsc{No}
+  \EndIf
+\EndFor
+\State \Return \textsc{Yes}
+\end{algorithmic}
+\end{algorithm}
+
+The key observation is that for any $\mathbf{r} \in \{0,1\}^n$, the matrix-vector products $A(B\mathbf{r})$ and $C\mathbf{r}$ each cost $O(n^2)$ time. If $AB = C$, then $A(B\mathbf{r}) = C\mathbf{r}$ for every $\mathbf{r}$. If $AB \neq C$, then the error matrix $D = AB - C$ is nonzero, and we need to bound the probability that $D\mathbf{r} = \mathbf{0}$.
+
+\begin{theorem}[Freivalds, 1979]
+\label{thm:freivalds}
+Let $A, B, C$ be $n \times n$ matrices over $\mathbb{Z}$ with entries bounded in absolute value by $M$. If $AB \neq C$, and $\mathbf{r}$ is chosen uniformly at random from $\{0, 1\}^n$, then
+\[
+\Pr[A(B\mathbf{r}) = C\mathbf{r}] \leq \frac{1}{2}.
+\]
+After $t$ independent rounds, the probability of a false positive is at most $2^{-t}$.
+\end{theorem}
+
+\begin{proof}
+Let $D = AB - C \neq \mathbf{0}$. There exists some row $i$ such that row $i$ of $D$ is nonzero. Let $d_i$ denote this row. Then $\Pr[d_i \cdot \mathbf{r} = 0]$ where the sum is over entries of $d_i$ and $\mathbf{r}$. Since $\mathbf{r}$ is uniform over $\{0,1\}^n$, at least one entry $d_{ij} \neq 0$, and the sum $d_i \cdot \mathbf{r}$ takes at least two distinct values with equal probability as $r_j$ flips. Therefore $\Pr[d_i \cdot \mathbf{r} = 0] \leq 1/2$.
+
+Since $A$ is invertible on the nonzero row (or we directly argue about $D\mathbf{r}$), we conclude $\Pr[D\mathbf{r} = \mathbf{0}] \leq 1/2$. The probability that all $t$ rounds agree is at most $(1/2)^t$.
+\end{proof}
+
+\begin{example}
+\label{ex:freivalds}
+Consider verifying a $3 \times 3$ matrix product $AB = C$. Each round costs $O(n^2) = O(9)$ operations versus the $O(n^3) = O(27)$ operations for computing the product. With 20 rounds, the error probability is below $10^{-6}$.
+\end{example}
+
+The generalization to arbitrary fields is straightforward: choose $\mathbf{r}$ from $\{0, 1\}^n$ (or from $\mathbb{F}^n$) and argue identically. The only requirement is that $D \neq 0$ implies some row is nonzero, which forces a nonzero inner product with positive probability.
+
+\subsection*{Implementation}
+
+\begin{cpplisting}
+\begin{lstlisting}[title={Freivalds' algorithm --- \texttt{src/chapter7/freivalds.h}}]
+bool freivalds_verify(const vector<vector<long long>>& A,
+                      const vector<vector<long long>>& B,
+                      const vector<vector<long long>>& C,
+                      int rounds, mt19937& rng);
+\end{lstlisting}
+\end{cpplisting}
+
+
+%% ============================================================
+\section{Verifying Polynomial Identities}
+\label{sec:poly-identity}
+%% ============================================================
+
+A closely related algebraic problem is \emph{polynomial identity testing} (PIT): given two polynomials $p$ and $q$, determine whether $p(x_1, \ldots, x_n) \equiv q(x_1, \ldots, x_n)$.
+
+\begin{theorem}[Schwartz--Zippel Lemma]
+\label{thm:schwartz-zippel}
+Let $p(x_1, \ldots, x_n)$ be a nonzero polynomial of total degree $d$ over a field $\mathbb{F}$, and let $S \subseteq \mathbb{F}$ be a finite set. If $r_1, \ldots, r_n$ are chosen independently and uniformly from $S$, then
+\[
+\Pr[p(r_1, \ldots, r_n) = 0] \leq \frac{d}{|S|}.
+\]
+\end{theorem}
+
+\begin{proof}
+We proceed by induction on $n$. For $n = 1$, write $p(x) = a_d x^d + \cdots + a_1 x + a_0$ with $a_d \neq 0$. By the fundamental theorem of algebra, $p$ has at most $d$ roots, so $\Pr[p(r) = 0] \leq d/|S|$.
+
+For the inductive step, write $p$ as a polynomial in $x_1$ with coefficients that are polynomials in $x_2, \ldots, x_n$:
+\[
+p(x_1, \ldots, x_n) = \sum_{j=0}^{d} p_j(x_2, \ldots, x_n) \cdot x_1^j.
+\]
+Since $p$ is nonzero, at least one $p_j$ is nonzero. Let $j^*$ be the largest index with $p_{j^*} \neq 0$; this $p_{j^*}$ has total degree at most $d - j^*$ in $x_2, \ldots, x_n$. By induction,
+\[
+\Pr[p_{j^*}(r_2, \ldots, r_n) = 0] \leq \frac{d - j^*}{|S|} \leq \frac{d}{|S|}.
+\]
+Conditioned on $p_{j^*}(r_2, \ldots, r_n) \neq 0$, the polynomial in $x_1$ has degree $j^*$, so it has at most $j^*$ roots. Thus
+\[
+\Pr[p(r_1, \ldots, r_n) = 0] \leq \frac{d - j^*}{|S|} + \frac{j^*}{|S|} = \frac{d}{|S|}.\qedhere
+\]
+\end{proof}
+
+\begin{corollary}
+\label{cor:pit}
+Two polynomials $p$ and $q$ of degree at most $d$ in $n$ variables over $\mathbb{F}$ can be compared by evaluating both at a random point from $S^n$. If $|S| > d$, the error probability is at most $d/|S|$ per round.
+\end{corollary}
+
+\begin{example}
+To verify that $(x_1 + x_2 + \cdots + x_n)^2 = \sum_{i} x_i^2 + 2\sum_{i < j} x_i x_j$, we evaluate both sides at a random point $(r_1, \ldots, r_n) \in S^n$. With $|S| = 1000$ and degree $d = 2$, a single evaluation gives error at most $0.002$.
+\end{example}
+
+The Schwartz--Zippel lemma is the workhorse behind algebraic fingerprinting. It applies to any polynomial that can be evaluated efficiently, including polynomials encoding matrix products, graph properties, and combinatorial structures.
+
+\subsection*{Implementation}
+
+\begin{cpplisting}
+\begin{lstlisting}[title={Polynomial identity testing --- \texttt{src/chapter7/polynomial.h}}]
+bool polynomial_identity_test(const vector<int>& p_coeffs,
+                              const vector<int>& q_coeffs,
+                              int field_size, int rounds, mt19937& rng);
+long long poly_eval(const vector<int>& coeffs, long long x, long long mod);
+\end{lstlisting}
+\end{cpplisting}
+
+
+%% ============================================================
+\section{Perfect Matchings in Graphs}
+\label{sec:perfect-matchings}
+%% ============================================================
+
+A \emph{perfect matching} in a graph $G = (V, E)$ is a set of edges such that every vertex is incident to exactly one edge in the set. The decision problem ``Does $G$ have a perfect matching?'' is solvable in polynomial time by the Edmonds blossom algorithm ($O(n^4)$), but algebraic techniques provide a cleaner and faster randomized approach.
+
+\begin{definition}[Tutte Matrix]
+Let $G = (V, E)$ be a graph on $n$ vertices (assume $n$ is even). The \emph{Tutte matrix} $T$ is an $n \times n$ skew-symmetric matrix defined by:
+\[
+T_{ij} = \begin{cases}
+x_{ij} & \text{if } (i,j) \in E \text{ and } i < j, \\
+-x_{ij} & \text{if } (i,j) \in E \text{ and } i > j, \\
+0 & \text{otherwise},
+\end{cases}
+\]
+where $x_{ij}$ are formal indeterminates.
+\end{definition}
+
+The determinant of the Tutte matrix is the square of the \emph{Pfaffian}, and $\det(T) \neq 0$ if and only if $G$ has a perfect matching.
+
+\begin{theorem}
+\label{thm:perfect-matching}
+Let $G$ be a graph on $n$ vertices. There exists a randomized algorithm that determines whether $G$ has a perfect matching in $O(n^\omega)$ time with error probability at most $1/2$, where $\omega$ is the matrix multiplication exponent.
+\end{theorem}
+
+\begin{proof}
+Construct the Tutte matrix $T$ of $G$, replacing each indeterminate $x_{ij}$ with a random value from a sufficiently large field $\mathbb{F}$. Compute $\det(T)$ over $\mathbb{F}$ in $O(n^\omega)$ time.
+
+If $G$ has no perfect matching, then $\det(T) = 0$ as a polynomial, so $\det(T_{\text{rand}}) = 0$ always. If $G$ has a perfect matching, then $\det(T)$ is a nonzero polynomial (it equals the square of the Pfaffian). By the Schwartz--Zippel lemma, with random substitution the probability that the determinant evaluates to zero is small (at most $d/|\mathbb{F}|$ where $d$ is the degree, $n$). Choosing $|\mathbb{F}|$ sufficiently large ensures the error is at most $1/2$.
+\end{proof}
+
+The algebraic approach connects to Ryser's formula for the permanent:
+\[
+\operatorname{perm}(A) = \sum_{S \subseteq [n]} (-1)^{n - |S|} \prod_{i=1}^{n} \sum_{j \in S} a_{ij},
+\]
+which can be used to count perfect matchings in bipartite graphs. The randomized approach evaluates this expression at random points, trading exact counting for efficient approximation.
+
+
+%% ============================================================
+\section{Verifying Equality of Strings}
+\label{sec:string-equality}
+%% ============================================================
+
+Given two strings $S$ and $T$ of length $n$ over alphabet $\Sigma$, we wish to test whether $S = T$. The deterministic approach requires $\Theta(n)$ time. Randomized fingerprinting achieves the same with high probability using $O(n)$ preprocessing and $O(1)$ comparison time.
+
+\begin{definition}[String Fingerprint]
+View a string $S = s_1 s_2 \cdots s_n$ as a polynomial:
+\[
+f_S(x) = s_1 + s_2 x + s_3 x^2 + \cdots + s_n x^{n-1}.
+\]
+The \emph{Karp--Rabin fingerprint} of $S$ is
+\[
+\phi_S(x) = f_S(x) \bmod p,
+\]
+where $p$ is a randomly chosen prime and $x$ is a randomly chosen value.
+\end{definition}
+
+\begin{theorem}[Karp--Rabin String Fingerprinting]
+\label{thm:kr-fingerprint}
+Two strings $S$ and $T$ of length $n$ over alphabet $\Sigma$ can be compared using $O(n)$ preprocessing and $O(1)$ comparison time. If $S \neq T$, the fingerprint collision probability is at most $n/|\mathbb{F}|$ where $\mathbb{F}$ is the field of computation.
+\end{theorem}
+
+\begin{proof}
+If $S \neq T$, then $f_S \neq f_T$ as polynomials (they differ in at least one coefficient). The polynomial $f_S - f_T$ has degree at most $n - 1$. By the Schwartz--Zippel lemma, $\Pr[f_S(x) \equiv f_T(x) \pmod{p}] \leq (n-1)/p$ when $x$ and $p$ are chosen appropriately. Choosing $p$ from primes in $[n^2, 2n^2]$ ensures the error is $O(1/n)$.
+\end{proof}
+
+The key advantage of the Karp--Rabin fingerprint is that it supports efficient \emph{rolling}: when the string shifts by one position, the fingerprint can be updated in $O(1)$ time.
+
+\begin{example}
+For $S = \texttt{abcde}$, the fingerprint with base $B = 256$ and modulus $p = 10^9 + 7$ is:
+\[
+\phi_S = (97 \cdot 256^4 + 98 \cdot 256^3 + 99 \cdot 256^2 + 100 \cdot 256 + 101) \bmod p.
+\]
+Shifting to $\texttt{bcdef}$ costs one subtraction, one multiplication, and one addition modulo $p$.
+\end{example}
+
+
+%% ============================================================
+\section{A Comparison of Fingerprinting Techniques}
+\label{sec:fingerprint-comparison}
+%% ============================================================
+
+Different fingerprinting techniques offer different tradeoffs in error probability, computation time, and applicability.
+
+\begin{table}[H]
+\centering
+\caption{Comparison of algebraic fingerprinting techniques.}
+\label{tab:fingerprint-comparison}
+\begin{tabular}{@{}lccc@{}}
+\toprule
+\textbf{Technique} & \textbf{Error per round} & \textbf{Round cost} & \textbf{Application} \\
+\midrule
+Freivalds' (matrix verify) & $1/2$ & $O(n^2)$ & Matrix multiplication \\
+Schwartz--Zippel (PIT) & $d/|S|$ & $O(M)$ & Polynomial identity \\
+Tutte matrix (matching) & $d/|\mathbb{F}|$ & $O(n^\omega)$ & Perfect matching \\
+Karp--Rabin (strings) & $n/p$ & $O(1)$ after $O(n)$ & String equality \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\paragraph{Error probability.}
+Freivalds' algorithm has a clean error bound of exactly $1/2$ per round (for $\{0,1\}$-valued $\mathbf{r}$). The Schwartz--Zippel bound $d/|S|$ depends on the degree and field size: for low-degree polynomials over large fields, the error can be made exponentially small with a single round. For string fingerprinting, the modulus $p$ is chosen to make $n/p$ negligible.
+
+\paragraph{Field size.}
+Larger fields reduce error but increase the cost of arithmetic. For Freivalds' algorithm, binary $\{0,1\}$ vectors suffice (each round costs $O(n^2)$ with small constants). For PIT and matching, the field must be larger than the polynomial degree, but not overwhelmingly so.
+
+\paragraph{Deterministic vs.\ randomized.}
+For matrix multiplication verification, the best deterministic algorithm requires $\Omega(n^2)$ time (matching Freivalds'), but the constant factors are worse. For PIT, no deterministic polynomial-time algorithm is known for general multivariate polynomials given in succinct form, making randomization essential.
+
+
+%% ============================================================
+\section{Pattern Matching}
+\label{sec:pattern-matching}
+%% ============================================================
+
+The \emph{pattern matching} problem asks: given a text $T$ of length $n$ and a pattern $P$ of length $m$, find all occurrences of $P$ in $T$. The Karp--Rabin algorithm applies fingerprinting to solve this efficiently.
+
+\begin{algorithm}[H]
+\caption{Karp--Rabin Pattern Matching}
+\label{alg:karp-rabin}
+\begin{algorithmic}[1]
+\Require text $T[0 \ldots n-1]$, pattern $P[0 \ldots m-1]$
+\Ensure all positions $i$ where $T[i \ldots i+m-1] = P$
+\State Compute $\phi_P = f_P(B) \bmod p$ \Comment{pattern fingerprint}
+\State Compute $\phi_{T_0} = f_{T[0..m-1]}(B) \bmod p$ \Comment{first window}
+\State $h = B^{m-1} \bmod p$ \Comment{highest power}
+\For{$i = 0, 1, \ldots, n - m$}
+  \If{$\phi_{T_i} = \phi_P$}
+    \State \Comment{Candidate match---verify explicitly}
+    \If{$T[i \ldots i+m-1] = P$}
+      \State \Return $i$
+    \EndIf
+  \EndIf
+  \If{$i < n - m$}
+    \State $\phi_{T_{i+1}} = (B \cdot (\phi_{T_i} - T[i] \cdot h) + T[i+m]) \bmod p$
+  \EndIf
+\EndFor
+\State \Return \textsc{No match}
+\end{algorithmic}
+\end{algorithm}
+
+\begin{theorem}
+\label{thm:karp-rabin}
+The Karp--Rabin algorithm finds all occurrences of a pattern $P$ of length $m$ in a text $T$ of length $n$ in expected $O(n + m)$ time. The expected number of spurious fingerprint matches is $O(n/p)$.
+\end{theorem}
+
+\begin{proof}
+The preprocessing to compute the pattern fingerprint and the initial text window fingerprint takes $O(m)$ time. Each subsequent window is updated in $O(1)$ time using the rolling hash, giving $O(n)$ total for all windows.
+
+Each of the $n - m + 1$ windows has a fingerprint collision with the pattern fingerprint with probability at most $m/p$ (by the Schwartz--Zippel lemma applied to the difference polynomial of degree $m-1$). The expected number of spurious matches is $(n - m + 1) \cdot m/p$, which is $O(n)$ when $p = \Theta(m)$. Each spurious match costs $O(m)$ for verification, but the total expected verification cost is $O(n \cdot m / p) = O(n)$ when $p = \Theta(m^2)$.
+
+Combining: $O(m)$ preprocessing $+$ $O(n)$ rolling $+$ $O(n)$ expected verification $= O(n + m)$ expected time.
+\end{proof}
+
+\begin{remark}
+The Karp--Rabin algorithm is particularly well-suited for the \emph{multiple pattern matching} problem, where one searches for several patterns simultaneously. Each pattern gets its own fingerprint, and the text window fingerprint is compared against all pattern fingerprints (using a hash table) in $O(1)$ expected time per window.
+\end{remark}
+
+\subsection*{Implementation}
+
+\begin{cpplisting}
+\begin{lstlisting}[title={Rabin--Karp search --- \texttt{src/chapter7/rabin\_karp.h}}]
+vector<int> rabin_karp_search(const string& text, const string& pattern);
+long long string_fingerprint(const string& s, long long base, long long mod);
+\end{lstlisting}
+\end{cpplisting}
+
+
+%% ============================================================
+\section{Interactive Proof Systems}
+\label{sec:interactive-proofs}
+%% ============================================================
+
+The algebraic techniques above can be viewed as special cases of a more general framework: \emph{interactive proof systems}. In an interactive proof, a computationally powerful \emph{prover} convinces a polynomial-time \emph{verifier} that a statement is true, using an interactive protocol.
+
+\begin{definition}[Interactive Proof System]
+An interactive proof system for a language $L$ consists of a polynomial-time verifier $V$ and a (possibly computationally unbounded) prover $P$ such that:
+\begin{enumerate}[label=(\roman*)]
+\item \textbf{Completeness:} If $x \in L$, then $\Pr[V \text{ accepts after interacting with } P] \geq 2/3$.
+\item \textbf{Soundness:} If $x \notin L$, then for every prover $P^*$, $\Pr[V \text{ accepts after interacting with } P^*] \leq 1/3$.
+\end{enumerate}
+The probability is over the verifier's random coins.
+\end{definition}
+
+\begin{theorem}[Shamir, 1992]
+$\mathrm{IP} = \mathrm{PSPACE}$.
+\end{theorem}
+
+This remarkable result shows that the class of languages with interactive proofs is exactly the class of languages decidable in polynomial space. We state the theorem without proof and illustrate the framework with two examples.
+
+\subsection*{Graph Isomorphism}
+
+\begin{theorem}
+Graph non-isomorphism is in $\mathrm{IP}$.
+\end{theorem}
+
+\begin{proof}
+The protocol proceeds as follows:
+\begin{enumerate}
+\item The verifier sends a random isomorphic copy $H$ of $G_1$ or $G_2$ to the prover.
+\item The prover responds with $i \in \{1, 2\}$ indicating which graph $H$ is isomorphic to.
+\item The verifier checks the response.
+\end{enumerate}
+If $G_1 \not\cong G_2$, the prover can always determine the correct answer. If $G_1 \cong G_2$, no prover can distinguish the two cases, so the verifier catches cheating with probability $1/2$.
+\end{proof}
+
+\subsection*{Quadratic Residuosity}
+
+A number $a$ is a \emph{quadratic residue} modulo $n$ if there exists $x$ with $x^2 \equiv a \pmod{n}$. Deciding quadratic residuosity modulo a composite $n$ is believed to be hard, yet the prover can convince the verifier.
+
+\begin{theorem}
+Quadratic residuosity is in $\mathrm{IP}$.
+\end{theorem}
+
+The protocol uses the fact that the Legendre symbol (or Jacobi symbol) can be computed without knowing the factorization, but determining actual residuosity requires the factors. The prover uses knowledge of the square root to convince the verifier.
+
+\subsection*{Connection to Freivalds' Algorithm}
+
+Freivalds' algorithm can be viewed as a one-round interactive proof for the language $\{ (A, B, C) : AB = C \}$. The verifier picks a random vector $\mathbf{r}$, sends it to the prover (or computes locally), and checks $A(B\mathbf{r}) = C\mathbf{r}$. The prover has no advantage because the verification is done locally. This is an \emph{Arthur--Merlin} protocol (public coins).
+
+
+%% ============================================================
+\section{PCP and Efficient Proof Verification}
+\label{sec:pcp}
+%% ============================================================
+
+The theory of interactive proofs leads to a profound connection between proof verification and approximation hardness: the PCP theorem.
+
+\begin{definition}[PCP]
+A language $L$ is in $\mathrm{PCP}(r(n), q(n))$ if there exists a polynomial-time verifier that uses $O(r(n))$ random bits and reads $O(q(n))$ bits of a proof string, such that:
+\begin{enumerate}[label=(\roman*)]
+\item If $x \in L$, there exists a proof that makes $V$ accept with probability 1.
+\item If $x \notin L$, no proof makes $V$ accept with probability greater than $1/2$.
+\end{enumerate}
+\end{definition}
+
+\begin{theorem}[PCP Theorem, Arora--Safra 1992; Arora--Lund--Motwani--Sudam--Szegedy--Håstad 1998]
+$\mathrm{NP} = \mathrm{PCP}(O(\log n), O(1))$.
+\end{theorem}
+
+This states that any NP proof can be ``encoded'' so that a verifier needs only $O(\log n)$ random bits and needs to inspect only $O(1)$ bits of the encoded proof, yet can still verify it with high probability.
+
+\subsection*{Consequences for Approximation}
+
+The PCP theorem has immediate consequences for the hardness of approximation. The most famous:
+
+\begin{theorem}[Hardness of MAX-3SAT]
+If $\mathrm{P} \neq \mathrm{NP}$, there exists a constant $\epsilon > 0$ such that no polynomial-time algorithm can approximate MAX-3SAT to within a factor of $(1 - \epsilon)$.
+\end{theorem}
+
+More precisely, the PCP theorem implies that it is NP-hard to satisfy more than a $(7/8 + \epsilon)$ fraction of clauses in a 3-SAT formula, even though a random assignment achieves $7/8$.
+
+\subsection*{Overview of PCP Construction}
+
+The PCP theorem is proved by combining several techniques:
+\begin{enumerate}
+\item \textbf{Algebraic encoding:} Encode the NP witness using error-correcting codes (e.g., Hadamard or Reed--Muller codes).
+\item \textbf{Low-degree testing:} Verify that the proof is close to a low-degree polynomial.
+\item \textbf{Random line picking:} The verifier picks random lines in a high-dimensional hypercube and checks consistency of the proof along these lines.
+\end{enumerate}
+
+The connection to algebraic fingerprinting is deep: the same Schwartz--Zippel machinery that powers polynomial identity testing is used in the low-degree testing step of the PCP proof.
+
+\begin{remark}
+The PCP theorem is one of the most important results in computational complexity theory, resolving long-standing questions about the limits of efficient approximation and connecting proof theory, coding theory, and algorithms.
+\end{remark}
+
+
+%% ============================================================
+\section*{Notes}
+%% ============================================================
+
+\begin{itemize}[leftmargin=1.5em]
+\item \textbf{Freivalds' algorithm} was introduced by R\=usins Freivalds in 1979. The original paper ``Fast probabilistic algorithms for verification of polynomial identities'' appeared in \emph{Journal of Algebra}. The algorithm is notable for its simplicity and practical efficiency.
+
+\item \textbf{The Schwartz--Zippel lemma} was independently discovered by Jacob Schwartz (1980, ``Probabilistic algorithms for fast solutions of sparse polynomial equations'') and Richard Zippel (1979, ``Probabilistic algorithms for sparse polynomials''). It remains one of the most widely used tools in randomized algorithms.
+
+\item \textbf{Karp and Rabin} introduced their fingerprinting and pattern matching algorithms in their 1987 paper ``Efficient randomized pattern-matching algorithms.'' The rolling hash technique has become a standard tool in string algorithms and is used in practice (e.g., in diff tools and plagiarism detection).
+
+\item \textbf{Tutte matrices} were introduced by W.\ T.\ Tutte in 1947. The algebraic approach to matchings was developed further by Lov\'asz (1979) and Micciancio (2000). The $O(n^\omega)$ randomized algorithm for perfect matching is due to Rabin and Vazirani (1989).
+
+\item \textbf{Interactive proofs} were introduced by Goldwasser, Micali, and Rackoff (1985) and independently by Babai (1985). The result $\mathrm{IP} = \mathrm{PSPACE}$ was proved by Adi Shamir in 1992.
+
+\item \textbf{The PCP theorem} is attributed to Arora and Safra (1992) and Arora, Lund, Motwani, Sudan, Szegedy, and Håstad (1998). The connection to inapproximability was established in the same body of work. A self-contained proof can be found in Arora and Barak's \emph{Computational Complexity: A Modern Approach} (2009).
+\end{itemize}
+
+
+%% ============================================================
+\section*{Problems}
+%% ============================================================
+
+\begin{problem}[7.1]
+Implement Freivalds' algorithm and test it on the following matrices:
+\[
+A = \begin{pmatrix} 1 & 2 \\ 3 & 4 \end{pmatrix}, \quad
+B = \begin{pmatrix} 5 & 6 \\ 7 & 8 \end{pmatrix}, \quad
+C = \begin{pmatrix} 19 & 22 \\ 43 & 50 \end{pmatrix}.
+\]
+Verify that your implementation correctly returns \textsc{Yes} for $AB = C$ and \textsc{No} for $AB \neq C$ (replace $C_{11}$ with 20). How many rounds are needed to achieve error below $10^{-9}$?
+\end{problem}
+
+\begin{problem}[7.2]
+Prove that Freivalds' algorithm can be generalized to rectangular matrices: if $A$ is $m \times n$, $B$ is $n \times p$, and $C$ is $m \times p$, then the verification still runs in $O(m \cdot \max(n, p))$ time per round.
+\end{problem}
+
+\begin{problem}[7.3]
+Use the Schwartz--Zippel lemma to prove that polynomial identity testing for a univariate polynomial of degree $d$ over $\mathbb{Z}$ can be done with error at most $1/d$ using a single evaluation point from $\{1, 2, \ldots, d^2\}$.
+\end{problem}
+
+\begin{problem}[7.4]
+Design a randomized algorithm to test whether two $n \times n$ matrices commute (i.e., $AB = BA$). What is the error probability per round? Analyze the time complexity.
+\end{problem}
+
+\begin{problem}[7.5]
+Modify the Karp--Rabin algorithm to solve the \emph{longest common substring} problem: given two strings $S$ and $T$, find the longest string that is a substring of both. Hint: Use binary search on the length and Karp--Rabin fingerprinting.
+\end{problem}
+
+\begin{problem}[7.6]
+Prove that the graph non-isomorphism protocol described in Section~\ref{sec:interactive-proofs} achieves soundness error exactly $1/2$. How can the error be reduced to $2^{-k}$ using $k$ rounds of interaction?
+\end{problem}
+
+\begin{problem}[7.7]
+Consider the following protocol for checking equality of two $n$-bit strings $S$ and $T$ with a single bit of interaction: The verifier sends a random bit $b$ to the prover, who responds with $b \oplus (S = T ? 0 : 1)$. Does this protocol have perfect completeness? What is the soundness error? Is this protocol in $\mathrm{IP}$?
+\end{problem}
+
+\begin{problem}[7.8]
+A polynomial $p(x_1, \ldots, x_n)$ is given in \emph{arithmetic circuit form} (a DAG of additions and multiplications). Prove that evaluating $p$ at a random point from $S^n$ and checking whether the result is zero is a correct polynomial identity test. What is the running time in terms of the circuit size?
+\end{problem}
+
+\begin{problem}[7.9]
+Explain why the PCP theorem implies that it is NP-hard to distinguish between 3-SAT instances where $(1-\epsilon)$ fraction of clauses are satisfiable and instances where at most $7/8 + \epsilon$ fraction are satisfiable.
+\end{problem}
+
+\begin{problem}[7.10]
+\textbf{(Research)} The Valiant--Vazirani theorem states that if $\mathrm{P} \neq \mathrm{NP}$, then NP cannot be solved in randomized polynomial time even with one-sided error. Explain the relationship between this result and the fact that graph isomorphism is in $\mathrm{IP}$ but not known to be in $\mathrm{NP}$ or $\mathrm{coNP}$.
+\end{problem}
+
+
+\end{document}
