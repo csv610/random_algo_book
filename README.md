@@ -2,48 +2,44 @@
 
 ![Front Page](frontpage.png)
 
-C++ implementations of randomized algorithms and probabilistic techniques. Complete, compilable source code with empirical validation of theoretical results.
+A comprehensive treatment of randomized algorithms, covering foundational theory, probabilistic analysis, and practical applications across computational domains.
 
-## Overview
+## About
 
-This repository provides working implementations of randomized algorithms across key domains: graph algorithms, computational geometry, selection, and complexity theory. Each implementation accompanies theoretical analysis with practical demonstration.
+Randomized algorithms employ randomness as a computational resource, achieving performance or simplicity unattainable by deterministic methods. This work presents the theory and analysis of randomized algorithms, with supporting implementations for empirical validation.
 
 ## Chapter 1: Introduction
 
-### Algorithms and Techniques
+### Topics Covered
 
 #### 1.1 Min-Cut Algorithm (Karger)
-- **Implementation**: `src/chapter1/min_cut.h`
-- **Method**: Randomized edge contraction
-- **Analysis**: Success probability ≥ 2/n² per trial; failure probability decreases exponentially with repetition
+Randomized edge contraction for computing minimum cuts in graphs. Analysis of success probability and failure bounds through repeated independent trials.
 
 #### 1.2 Las Vegas and Monte Carlo Paradigms
-- **Implementation**: `src/chapter1/las_vegas_monte_carlo.h`
-- **Las Vegas**: Randomized QuickSort — deterministic correctness, stochastic runtime
-- **Monte Carlo**: Pi estimation (two-sided error), min-cut (one-sided error)
-- **Conversion**: Monte Carlo to Las Vegas via verification
+Classification of randomized algorithms by correctness and runtime guarantees. Las Vegas algorithms produce correct results with stochastic runtime; Monte Carlo algorithms provide bounded error with deterministic runtime. Includes conversion techniques between paradigms.
 
 #### 1.3 Binary Planar Partitions
-- **Implementation**: `src/chapter1/binary_planar_partition.h`
-- **Application**: Hidden line elimination in computer graphics
-- **Method**: RandAuto — randomized auto-partition algorithm
-- **Complexity**: Expected size O(n log n) via linearity of expectation
+Randomized construction of binary space partitions for hidden line elimination. Application of linearity of expectation to bound expected partition size.
 
-#### 1.4 Probabilistic Recurrence
-- **Implementation**: `src/chapter1/probabilistic_recurrence.h`
-- **Algorithm**: Randomized selection (kth smallest element)
-- **Complexity**: Expected O(n) time, O(log n) recursion depth
-- **Distribution**: Geometric distribution analysis
+#### 1.4 Probabilistic Recurrence Relations
+Analysis of randomized selection algorithms through recurrence relations. Geometric distribution and its role in expected-case complexity.
 
 #### 1.5 Computational Complexity Classes
-- **Content**: Theoretical discussion (P, NP, RP, co-RP, ZPP, BPP, PP)
-- **Hierarchy**: P ⊆ RP ⊆ NP ⊆ PSPACE ⊆ EXP ⊆ NEXP
+Theoretical framework for randomized complexity: P, NP, RP, co-RP, ZPP, BPP, PP. Relationships between deterministic, randomized, and nondeterministic computation.
 
-### Utilities
+## Repository Structure
 
-- **Random Number Generation**: `src/chapter1/random_utils.h` — seeded PRNG for reproducible experiments
+```
+src/chapter1/
+├── random_utils.h           # Random number generation
+├── min_cut.h                # Karger's Min-Cut Algorithm
+├── las_vegas_monte_carlo.h  # Las Vegas and Monte Carlo examples
+├── binary_planar_partition.h # Binary Planar Partitions
+├── probabilistic_recurrence.h # Selection and recurrence analysis
+└── main.cpp                 # Demonstrations and validation
+```
 
-## Build Instructions
+## Building and Running
 
 ### Make
 ```bash
@@ -65,25 +61,10 @@ g++ -std=c++17 -O2 -o chapter1 src/chapter1/main.cpp -Isrc/chapter1
 ./chapter1
 ```
 
-## Output
-
-Each algorithm includes empirical validation comparing theoretical predictions with measured results:
-
-| Section | Algorithm | Validation |
-|---------|-----------|------------|
-| 1.1 | Karger's Min-Cut | Single trial vs. n²/2 trials; failure probability analysis |
-| 1.2 | QuickSort / Pi Estimation | Correctness guarantee; error convergence |
-| 1.3 | RandAuto | 3-segment partition; sailor problem (indicator variables) |
-| 1.4 | Randomized Selection | Recursive call count; geometric distribution fit |
-
 ## Key Concepts
 
-1. **Randomization** — Simplifies algorithm design (min-cut vs. network flow)
-2. **Error Reduction** — Independent repetition reduces failure probability exponentially
-3. **Linearity of Expectation** — Applies without independence requirement
-4. **Geometric Distribution** — Foundation of randomized algorithm analysis
-5. **Probabilistic Method** — Constructive existence proofs
-
-## License
-
-See repository for license details.
+1. **Randomization** — Algorithmic design using probabilistic choice
+2. **Concentration Bounds** — Chernoff, Hoeffding, and moment inequalities
+3. **Linearity of Expectation** — Linearity without independence requirement
+4. **Geometric Distribution** — Waiting time analysis in repeated trials
+5. **Probabilistic Method** — Existence proofs via randomized construction
