@@ -99,8 +99,7 @@ private:
     }
 };
 
-// Amnesiac Algorithm: each man proposes uniformly at random
-// (ignoring past rejections)
+// Coupon-Collector Algorithm: each man proposes uniformly at random (ignoring past rejections)
 int amnesiac_algorithm(int n, int max_proposals, std::mt19937& rng) {
     std::uniform_int_distribution<int> dist(0, n - 1);
     std::vector<bool> woman_received(n, false);

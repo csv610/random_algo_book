@@ -91,7 +91,7 @@ int count_satisfying_assignments_exact(const DNF& dnf, int n) {
 // We want m = |S_1 | S_2 | ... | S_k|.
 //
 // Key insight: |S_i| = 2^(n - l_i) where l_i = distinct variables in C_i.
-// Let W_i = |S_i| and W = Sigma W_i.
+// Let W_i = |S_i| and W = Sum_{i} W_i.
 //
 // Algorithm (importance sampling):
 //   1. Pick clause i with probability  W_i / W.
@@ -99,7 +99,7 @@ int count_satisfying_assignments_exact(const DNF& dnf, int n) {
 //   3. Let c(x) = number of clauses satisfied by x.
 //   4. Estimate = W / c(x).
 //
-// Proof:  Pr[outputting x] = Sigma_{i: x\inS_i} (W_i/W).(1/|S_i|) = c(x)/W.
+// Proof:  Pr[outputting x] = Sum_{i: x in S_i} (W_i/W).(1/|S_i|) = c(x)/W.
 //         E[W/c(x)] = Sigma_x Pr[x].(W/c(x)) = Sigma_x (c(x)/W).(W/c(x)) = m.
 // ---------------------------------------------------------------------------
 

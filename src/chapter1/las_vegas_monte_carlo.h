@@ -38,7 +38,7 @@ void randomized_quicksort(std::vector<int>& arr, int low, int high) {
     }
 }
 
-// Las Vegas algorithm: always correct, running time is O(n log n) expected
+// Las Vegas algorithm: expected running time O(n log n); output is always correct
 void demonstrate_las_vegas() {
     std::cout << "=== Las Vegas Algorithm: Randomized QuickSort ===\n\n";
     

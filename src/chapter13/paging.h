@@ -374,8 +374,8 @@ void demonstrate_paging() {
 
     // ---- Competitive ratio: adversarial sequence ----
     std::println("--- Competitive Ratio: Adversarial Sequences ---");
-    std::println("For k-page cache, an adversary can force k-regret.");
-    std::println("LRU and FIFO are k-competitive but NOT (k-1)-competitive.\n");
+    std::println("For a k-page cache, an adversary can force any deterministic algorithm to incur k times the optimal cost.");
+    std::println("LRU and FIFO are k-competitive but not (k-1)-competitive.\n");
 
     // Construct adversary's preferred sequence for k=3
     // Cyclic sequence of 4 pages: forces LRU/FIFO to miss every other request
@@ -458,7 +458,7 @@ void demonstrate_paging() {
     }
 
     std::println("--- Theoretical Results ---");
-    std::println("  LRU:    k-competitive (optimal among deterministic algorithms)");
+    std::println("  LRU:    k-competitive (tight among deterministic algorithms)");
     std::println("  FIFO:   k-competitive");
     std::println("  Random: H_k-competitive (expected), ~ ln(k) for large k");
     std::println("  Marking: H_k-competitive (expected), randomized");

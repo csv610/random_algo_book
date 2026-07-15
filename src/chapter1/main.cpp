@@ -12,7 +12,6 @@ using namespace chapter1;
 void print_header() {
     std::cout << "+==============================================================+\n";
     std::cout << "|        RANDOMIZED ALGORITHMS - CHAPTER 1 IMPLEMENTATION    |\n";
-    std::cout << "|        Based on Motwani & Raghavan's Textbook              |\n";
     std::cout << "+==============================================================+\n\n";
 }
 
@@ -66,10 +65,10 @@ int main() {
     std::cout << "Key Concepts Demonstrated:\n\n";
     
     std::cout << "1. RANDOMIZED MIN-CUT (Karger's Algorithm)\n";
-    std::cout << "   - Simple randomized algorithm for finding min-cut\n";
+    std::cout << "   - Randomized algorithm for minimum cut\n";
     std::cout << "   - Probability of success: >= 2/n^2 per trial\n";
     std::cout << "   - After n^2/2 trials, failure probability < 1/e\n";
-    std::cout << "   - Much simpler than deterministic network flow algorithms\n\n";
+    std::cout << "   - Deterministic alternatives require network flow techniques\n\n";
     
     std::cout << "2. LAS VEGAS vs MONTE CARLO\n";
     std::cout << "   - Las Vegas: Always correct, running time is random\n";
@@ -81,7 +80,7 @@ int main() {
     std::cout << "   - Applications in computer graphics (hidden line elimination)\n";
     std::cout << "   - RandAuto algorithm: expected size O(n log n)\n";
     std::cout << "   - Uses linearity of expectation (no independence required)\n";
-    std::cout << "   - Probabilistic method: proves existence of good partition\n\n";
+    std::cout << "   - Probabilistic method: proves existence of a partition with O(n log n) expected size\n\n";
     
     std::cout << "4. PROBABILISTIC RECURRENCE\n";
     std::cout << "   - Find algorithm: expected O(n) time\n";

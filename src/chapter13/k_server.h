@@ -75,7 +75,7 @@ ServerState min_server_move(ServerState state, int request,
 }
 
 // ============================================================
-// Randomized: pick a server with probability ~ 1/distance
+// Randomized: select a server with probability inversely proportional to its distance
 // ============================================================
 
 ServerState random_server_move(ServerState state, int request,
@@ -410,7 +410,7 @@ void demonstrate_k_server() {
     std::println("  k-Server Conjecture: no randomized algorithm is k/(k-1)-competitive");
     std::println("  Deterministic lower bound: k (Manasse-McGeoch-Sleator)");
     std::println("  Randomized lower bound: k (Bartal)");
-    std::println("  The k-server problem is the canonical online problem\n");
+    std::println("  The k-server problem is a fundamental problem in online algorithm design.\n");
 }
 
 } // namespace randalgo

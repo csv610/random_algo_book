@@ -19,7 +19,7 @@
 namespace randalgo {
 
 // ---------------------------------------------------------------------------
-// Simplified PRAM (Parallel Random Access Machine) simulation
+// PRAM (Parallel Random Access Machine) simulation
 // ---------------------------------------------------------------------------
 
 class PRAM {
@@ -106,7 +106,7 @@ public:
 
         print_list(next_cur, rank);
 
-        // Parallel pointer jumping: repeat until all ranks are final.
+        // Parallel pointer jumping: repeat until each node's successor is the tail.
         // In the PRAM model this takes O(log n) steps.
         int max_steps = static_cast<int>(std::ceil(std::log2(n + 1)));
         for (int step = 0; step < max_steps; ++step) {

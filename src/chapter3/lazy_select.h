@@ -75,7 +75,7 @@ SelectResult lazy_select(std::vector<int>& S, int k, std::mt19937& rng) {
     }
 }
 
-// Simple deterministic selection (for comparison)
+// Deterministic median selection (for comparison)
 int deterministic_select(std::vector<int>& S, int k) {
     std::vector<int> copy = S;
     std::nth_element(copy.begin(), copy.begin() + k - 1, copy.end());
@@ -129,7 +129,7 @@ void demonstrate_lazy_select() {
     std::cout << "Comparison with deterministic selection:\n";
     std::cout << "  Deterministic: 3n comparisons worst case\n";
     std::cout << "  LazySelect:    2n + o(n) expected\n";
-    std::cout << "  Speedup factor approaches 1.5x for large n\n\n";
+    std::cout << "  The ratio of costs approaches 3/2 as n grows\n\n";
 }
 
 }  // namespace chapter3

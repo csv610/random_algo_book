@@ -216,11 +216,11 @@ void demonstrate_routing() {
                   << "\n";
     }
 
-    std::cout << "\nKey observations:\n";
-    std::cout << "  - Max congestion grows as O(ln n / ln ln n), much slower than n\n";
+    std::cout << "\nSummary of results:\n";
+    std::cout << "  - Max congestion grows as O(ln n / ln ln n), sublinear in n\n";
     std::cout << "  - The Chernoff bound accurately predicts the concentration\n";
     std::cout << "  - Most processors see only 0 or 1 packets; few see many\n";
-    std::cout << "  - Random routing achieves near-optimal load balancing\n";
+    std::cout << "  - Random routing achieves load balancing near the theoretical minimum\n";
 }
 
 } // namespace chapter4

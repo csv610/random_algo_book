@@ -194,10 +194,10 @@ void demonstrate_lovasz() {
     std::cout << "Max ratio (Pr[A_i] / RHS): " << result.max_ratio << "\n";
 
     std::cout << "\nKey takeaways:\n";
-    std::cout << "  - LLL is powerful when events have limited dependencies\n";
+    std::cout << "  - LLL applies when each event has bounded dependency on others\n";
     std::cout << "  - Symmetric form: ep(d+1) <= 1 is easy to verify\n";
     std::cout << "  - Asymmetric form: choose x_i to maximize the product term\n";
-    std::cout << "  - Applications: satisfiability, coloring, embedding problems\n";
+    std::cout << "  - Applications include satisfiability, graph coloring, and discrepancy problems\n";
 }
 
 } // namespace chapter5

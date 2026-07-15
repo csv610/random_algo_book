@@ -224,7 +224,7 @@ void demonstrate_apsp() {
                      n, fw_ms, mps_ms, verify_apsp(fw, mps) ? "YES" : "NO");
     }
 
-    // Test 3: Unweighted graph with Seidel's approach
+    // Test 3: Boolean matrix multiplication approach (Seidel's algorithm)
     std::println("\nTest 3: Unweighted graph (Seidel's boolean approach)");
     {
         constexpr int n = 20;

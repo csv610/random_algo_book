@@ -323,17 +323,15 @@ double volume_rejection_sampling(const Polytope& p,
 // ---------------------------------------------------------------------------
 // Volume estimation via Dyer-Frieze-Kannan-style sequential shrinking
 //
-// High-level idea:
-//   1. Start with a large ball B_0 containing the polytope K.
-//   2. At each step t, we have a ball B_t.
-//   3. Sample points from B_t using hit-and-run.
-//   4. Construct a shrunken ball B_{t+1} = B_t & H where H is a random
-//      half-space through the center of B_t that contains most of K.
-//   5. The ratio vol(B_{t+1})/vol(B_t) is estimated from the sampling.
-//   6. Final estimate = vol(B_0) x PROD ratios.
+// High-level description:
+// The Dyer-Frieze-Kannan algorithm proceeds in phases.
+// Each phase estimates the volume ratio between successive inscribed ellipsoids.
+// In each phase, sample points via hit-and-run from the current body,
+// then compute a shrunken ball containing most of the body.
+// The ratio vol(B_{t+1})/vol(B_t) is estimated from the sampling.
+// Final estimate = vol(B_0) x PROD ratios.
 //
-// For simplicity, we use a variant where we repeatedly shrink a ball
-// by a factor estimated from random samples.
+// This implementation uses a sequential-shrinking variant.
 // ---------------------------------------------------------------------------
 
 double volume_convex_body_approx(const Polytope& p, std::mt19937& rng,

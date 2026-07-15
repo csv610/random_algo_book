@@ -189,8 +189,8 @@ inline void demonstrate_random_walk() {
                   << std::setw(11) << phi_path << " |"
                   << std::setw(17) << mixing_time_bound(16, phi_path) << "\n";
 
-        std::cout << "\n  Higher conductance => faster mixing.\n";
-        std::cout << "  Complete graph mixes in O(1) steps; path requires O(n^2).\n\n";
+        std::cout << "\n  A larger conductance implies a smaller mixing time bound.\n";
+        std::cout << "  The complete graph mixes in O(1) steps; the path requires Theta(n^2).\n\n";
     }
 }
 

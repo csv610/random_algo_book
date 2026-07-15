@@ -395,8 +395,8 @@ void demonstrate_adversary() {
         std::println("");
     }
 
-    std::println("--- Key Insights ---");
-    std::println("  1. Oblivious adversary: worst-case over ALL input sequences");
+    std::println("--- Summary ---");
+    std::println("  1. Oblivious adversary: worst-case over all input sequences");
     std::println("  2. Adaptive adversary: worst-case over sequences that adapt to algorithm");
     std::println("  3. Randomization buys immunity against oblivious adversaries");
     std::println("  4. Against adaptive adversaries, randomization helps less");

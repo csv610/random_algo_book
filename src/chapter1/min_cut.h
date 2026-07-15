@@ -9,7 +9,7 @@
 
 namespace chapter1 {
 
-// Graph represented as adjacency list with edge weights (for multigraph support)
+// Graph represented as adjacency list with edge multiplicities
 struct Graph {
     int n;  // number of vertices
     std::unordered_map<int, std::unordered_map<int, int>> adj;  // adj[u][v] = edge count
@@ -25,7 +25,7 @@ struct Graph {
         int count = 0;
         for (const auto& [u, neighbors] : adj) {
             for (const auto& [v, w] : neighbors) {
-                if (u < v) count += w;  // count each edge once
+                if (u < v) count += w;  // count each unordered pair once
             }
         }
         return count;
@@ -58,7 +58,7 @@ int karger_min_cut(Graph& graph) {
     
     // Contract edges until only 2 vertices remain
     while (vertices.size() > 2) {
-        // Pick a random edge
+        // Select a uniformly random edge
         auto edges = Graph(n);
         edges.adj = adj;
         auto all_edges = edges.get_edges();
@@ -96,7 +96,7 @@ int karger_min_cut(Graph& graph) {
     return 0;
 }
 
-// Run Karger's algorithm multiple times and return the minimum cut found
+// Return the minimum cut over num_trials independent runs of Karger's algorithm
 int karger_min_cut_repeated(Graph& graph, int num_trials) {
     int min_cut = INT_MAX;
     

@@ -223,7 +223,7 @@ Multigraph random_multigraph(int n, int num_edges) {
 void demonstrate_min_cut() {
     std::println("=== Minimum Cut Algorithms ===\n");
 
-    // Test 1: Small known graph
+    // Test 1: Six-vertex graph with known min-cut value
     std::println("Test 1: Small graph (known min-cut)");
     {
         Multigraph G(6);

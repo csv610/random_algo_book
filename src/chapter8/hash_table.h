@@ -10,7 +10,7 @@
 
 namespace chapter8 {
 
-// Large prime for hash function
+// Mersenne prime 2^31 - 1, used as modulus in hash functions
 static constexpr long long HASH_PRIME = 2147483647LL; // 2^31 - 1
 
 class UniversalHashTable {
@@ -87,7 +87,7 @@ public:
     }
 };
 
-// Two-level FKS perfect hashing
+// Fredman-Komlos-Szemeredi scheme: O(n) space with O(1) worst-case lookup
 class PerfectHashTable {
 private:
     struct SecondaryTable {

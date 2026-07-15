@@ -119,9 +119,8 @@ void demonstrate_adleman() {
     }
     std::cout << "\n";
 
-    std::cout << "Key insight: Non-uniform advice depends only on input length,\n";
-    std::cout << "not the input itself. This makes P/poly strictly larger than BPP\n";
-    std::cout << "(unless polynomial hierarchies collapse).\n\n";
+    std::cout << "Key insight: the advice depends only on |x|, not x itself.\n";
+    std::cout << "Under standard complexity assumptions, P/poly is strictly larger than BPP.\n\n";
 }
 
 }  // namespace chapter2

@@ -269,12 +269,12 @@ void demonstrate_martingales() {
         }
     }
 
-    std::cout << "\nKey observations:\n";
+    std::cout << "\nSummary:\n";
     std::cout << "  - Azuma-Hoeffding provides exponential tails for martingales\n";
     std::cout << "  - The bound depends on sum(c_i^2), not just n\n";
     std::cout << "  - Non-uniform differences can yield tighter bounds\n";
     std::cout << "  - Doob martingales connect function concentration to martingale theory\n";
-    std::cout << "  - Bounded differences condition is key: changing one input changes output by <= c_i\n";
+    std::cout << "  - Bounded differences condition: changing one input changes output by <= c_i\n";
 }
 
 } // namespace chapter4

@@ -276,9 +276,9 @@ double kkt_mst_rec(const WeightedGraph& G, int recursion_depth = 0) {
     WeightedGraph H = sample_graph(G, 0.5);
 
     // Step 2: Recursively find MST of H
-    // (We use Kruskal on H since it's smaller; the recursion is in the full KKT)
-    // For a practical implementation, we just use Kruskal on H
-    // The key insight is that the F-light edges are few
+    // In practice, compute MST(H) directly via Kruskal; the full recursion is in the theoretical description
+    // This implementation uses Kruskal for the MST(H) subproblem
+    // The F-light edges are O(n) in expectation (Lemma 10.4)
 
     // Find MST of H via Kruskal
     auto h_edges = H.edges;

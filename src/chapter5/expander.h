@@ -193,7 +193,7 @@ void demonstrate_expander() {
     std::cout << "\nKey observations:\n";
     std::cout << "  - Random d-regular graphs are expanders w.h.p. for fixed d >= 3\n";
     std::cout << "  - |lambda_2| typically well below the Ramanujan bound 2*sqrt(d-1)\n";
-    std::cout << "  - Larger n gives more consistent expansion (concentration)\n";
+    std::cout << "  - As n increases, the spectral gap concentrates around its expectation\n";
     std::cout << "  - The spectral gap d - |lambda_2| controls expansion via Cheeger inequality\n";
 }
 

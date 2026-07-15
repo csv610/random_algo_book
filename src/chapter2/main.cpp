@@ -8,7 +8,6 @@ using namespace chapter2;
 void print_header() {
     std::cout << "+==============================================================+\n";
     std::cout << "|        RANDOMIZED ALGORITHMS - CHAPTER 2 IMPLEMENTATION    |\n";
-    std::cout << "|        Based on Motwani & Raghavan's Textbook              |\n";
     std::cout << "+==============================================================+\n\n";
 }
 
@@ -44,7 +43,7 @@ int main() {
     std::cout << "   - Randomized algorithm: O(n^0.793) expected\n";
     std::cout << "   - Deterministic lower bound: O(n) worst case\n";
     std::cout << "   - Las Vegas algorithm: always correct\n";
-    std::cout << "   - Key idea: random order foils adversary\n\n";
+    std::cout << "   - Randomized evaluation order prevents the adversary from forcing worst-case behavior\n\n";
 
     std::cout << "2. MINIMAX PRINCIPLE\n";
     std::cout << "   - Two-person zero-sum games\n";

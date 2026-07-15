@@ -11,7 +11,6 @@ using namespace chapter3;
 void print_header() {
     std::cout << "+==============================================================+\n";
     std::cout << "|        RANDOMIZED ALGORITHMS - CHAPTER 3 IMPLEMENTATION    |\n";
-    std::cout << "|        Based on Motwani & Raghavan's Textbook              |\n";
     std::cout << "+==============================================================+\n\n";
 }
 
@@ -67,7 +66,7 @@ int main() {
 
     std::cout << "3. LAZY SELECT\n";
     std::cout << "   - Randomized selection: expected 2n + o(n) comparisons\n";
-    std::cout << "   - Beats deterministic 3n worst case\n";
+    std::cout << "   - Reduces the worst case from 3n to 2n + o(n) comparisons\n";
     std::cout << "   - Succeeds w.h.p. on first pass\n\n";
 
     std::cout << "4. TWO-POINT SAMPLING\n";

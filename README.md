@@ -2,32 +2,32 @@
 
 ![Front Page](frontpage.png)
 
-A comprehensive treatment of randomized algorithms, covering foundational theory, probabilistic analysis, and practical applications across computational domains.
-
 ## About
 
-Randomized algorithms employ randomness as a computational resource, achieving performance or simplicity unattainable by deterministic methods. This work presents the theory and analysis of randomized algorithms, with supporting implementations for empirical validation.
+This book examines randomized algorithms: algorithms that make random choices during execution. It covers theoretical foundations, probabilistic analysis, and applications in computer science.
+
+Randomized algorithms use randomness to solve problems. They can be simpler or faster than deterministic alternatives for certain problems. This work presents their analysis with supporting implementations.
 
 ## Chapter 1: Introduction
 
-### Topics Covered
+### Topics
 
 #### 1.1 Min-Cut Algorithm (Karger)
-Randomized edge contraction for computing minimum cuts in graphs. Analysis of success probability and failure bounds through repeated independent trials.
+A randomized algorithm for finding minimum cuts in graphs. Uses edge contraction with random selection. Analysis includes success probability and failure bounds.
 
-#### 1.2 Las Vegas and Monte Carlo Paradigms
-Classification of randomized algorithms by correctness and runtime guarantees. Las Vegas algorithms produce correct results with stochastic runtime; Monte Carlo algorithms provide bounded error with deterministic runtime. Includes conversion techniques between paradigms.
+#### 1.2 Las Vegas and Monte Carlo Algorithms
+Two classes of randomized algorithms. Las Vegas algorithms always return correct results but have variable runtime. Monte Carlo algorithms have fixed runtime but may return incorrect results with bounded probability.
 
 #### 1.3 Binary Planar Partitions
-Randomized construction of binary space partitions for hidden line elimination. Application of linearity of expectation to bound expected partition size.
+Randomized construction of binary space partitions. Application: hidden line elimination in computer graphics. Analysis uses linearity of expectation.
 
 #### 1.4 Probabilistic Recurrence Relations
-Analysis of randomized selection algorithms through recurrence relations. Geometric distribution and its role in expected-case complexity.
+Analysis of randomized algorithms through recurrence relations. Studies expected running time and recursion depth. Uses geometric distribution.
 
-#### 1.5 Computational Complexity Classes
-Theoretical framework for randomized complexity: P, NP, RP, co-RP, ZPP, BPP, PP. Relationships between deterministic, randomized, and nondeterministic computation.
+#### 1.5 Complexity Classes
+Randomized complexity classes: RP, co-RP, ZPP, BPP. Relationships to P and NP.
 
-## Repository Structure
+## Source Code
 
 ```
 src/chapter1/
@@ -39,7 +39,7 @@ src/chapter1/
 └── main.cpp                 # Demonstrations and validation
 ```
 
-## Building and Running
+## Building
 
 ### Make
 ```bash
@@ -63,8 +63,8 @@ g++ -std=c++17 -O2 -o chapter1 src/chapter1/main.cpp -Isrc/chapter1
 
 ## Key Concepts
 
-1. **Randomization** — Algorithmic design using probabilistic choice
-2. **Concentration Bounds** — Chernoff, Hoeffding, and moment inequalities
-3. **Linearity of Expectation** — Linearity without independence requirement
-4. **Geometric Distribution** — Waiting time analysis in repeated trials
-5. **Probabilistic Method** — Existence proofs via randomized construction
+1. **Randomization** — Use of random choices in algorithms
+2. **Concentration Bounds** — Chernoff, Hoeffding inequalities
+3. **Linearity of Expectation** — Expectation of sum equals sum of expectations
+4. **Geometric Distribution** — Number of trials until first success
+5. **Probabilistic Method** — Proving existence through random construction

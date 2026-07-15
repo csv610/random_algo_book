@@ -83,9 +83,7 @@ inline Matching random_maximal_matching(const Graph& g) {
 }
 
 // ---------------------------------------------------------------------------
-// Maximum matching via augmenting paths (Hopcroft-Karp style for
-// general graphs using BFS to find shortest augmenting paths).
-// This is a simplified implementation suitable for moderate-size graphs.
+// Maximum matching via breadth-first augmenting paths (restricted to moderate-size graphs)
 // ---------------------------------------------------------------------------
 
 inline Matching blossom_matching(const Graph& g) {

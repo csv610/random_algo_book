@@ -129,7 +129,7 @@ void demonstrate_minimax() {
     std::cout << "  For any input distribution D on instances:\n";
     std::cout << "    E_{x~D}[T_A(x)] >= min_{A deterministic} E_{x~D}[T_A(x)]\n";
     std::cout << "  for any randomized algorithm A.\n";
-    std::cout << "  This gives a LOWER BOUND on randomized algorithms.\n\n";
+    std::cout << "  This provides a lower bound on the expected cost of any randomized algorithm.\n\n";
 }
 
 }  // namespace chapter2

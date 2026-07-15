@@ -116,7 +116,7 @@ inline bool verify_matching(const Graph& g, const Matching& m) {
 }
 
 // ---------------------------------------------------------------------------
-// Luby's Maximal Independent Set -- parallel version
+// Luby's Maximal Independent Set Algorithm (Parallel)
 // ---------------------------------------------------------------------------
 
 inline IndependentSet mis_luby_parallel(const Graph& g) {
