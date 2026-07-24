@@ -18,6 +18,7 @@
 
 # Build directory
 build/
+build_cmake/
 
 # Editor files
 *.swp
