@@ -4978,7 +4978,7 @@ $d = 0$ is at most $2n \cdot n = O(n^2)$.
 \end{proof}
 
 \begin{cpplisting}
-\lstinputlisting[language=C++]{src/chapter6/main.cpp}
+\lstinputlisting[language=C++]{src/chapter7/main.cpp}
 \end{cpplisting}
 
 The key insight is that the random walk performs a biased random walk on
@@ -5666,7 +5666,7 @@ The generalization to arbitrary fields is straightforward: choose $\mathbf{r}$ f
 \subsection*{Implementation}
 
 \begin{cpplisting}
-\begin{lstlisting}[title={Freivalds' algorithm --- \texttt{src/chapter7/freivalds.h}}]
+\begin{lstlisting}[title={Freivalds' algorithm --- \texttt{src/chapter8/freivalds.h}}]
 bool freivalds_verify(const vector<vector<long long>>& A,
                       const vector<vector<long long>>& B,
                       const vector<vector<long long>>& C,
@@ -5721,7 +5721,7 @@ The Schwartz--Zippel lemma is the workhorse behind algebraic fingerprinting. It 
 \subsection*{Implementation}
 
 \begin{cpplisting}
-\begin{lstlisting}[title={Polynomial identity testing --- \texttt{src/chapter7/polynomial.h}}]
+\begin{lstlisting}[title={Polynomial identity testing --- \texttt{src/chapter8/polynomial.h}}]
 bool polynomial_identity_test(const vector<int>& p_coeffs,
                               const vector<int>& q_coeffs,
                               int field_size, int rounds, mt19937& rng);
@@ -5892,7 +5892,7 @@ The Karp--Rabin algorithm is particularly well-suited for the \emph{multiple pat
 \subsection*{Implementation}
 
 \begin{cpplisting}
-\begin{lstlisting}[title={Rabin--Karp search --- \texttt{src/chapter7/rabin\_karp.h}}]
+\begin{lstlisting}[title={Rabin--Karp search --- \texttt{src/chapter8/rabin\_karp.h}}]
 vector<int> rabin_karp_search(const string& text, const string& pattern);
 long long string_fingerprint(const string& s, long long base, long long mod);
 \end{lstlisting}
@@ -6225,7 +6225,7 @@ Each operation traverses a single root-to-leaf path (for search, split) or perfo
 \end{proof}
 
 \begin{cpplisting}
-\textbf{C++ implementation:} See \texttt{src/chapter8/treap.h} for a complete implementation
+\textbf{C++ implementation:} See \texttt{src/chapter9/treap.h} for a complete implementation
 of a treap supporting insert, search, remove, and height measurement.
 \end{cpplisting}
 
@@ -6331,7 +6331,7 @@ Cache performance & Moderate & Good & Moderate \\
 \end{table}
 
 \begin{cpplisting}
-\textbf{C++ implementation:} See \texttt{src/chapter8/skip\_list.h} for a complete
+\textbf{C++ implementation:} See \texttt{src/chapter9/skip\_list.h} for a complete
 implementation of a skip list with configurable maximum level and geometric promotion.
 \end{cpplisting}
 
@@ -6426,7 +6426,7 @@ and for an unsuccessful search:
 These bounds hold under the \emph{simple uniform hashing} assumption: each key is equally likely to hash to any slot, independently of other keys.
 
 \begin{cpplisting}
-\textbf{C++ implementation:} See \texttt{src/chapter8/hash\_table.h} for a complete
+\textbf{C++ implementation:} See \texttt{src/chapter9/hash\_table.h} for a complete
 implementation of a universal hash table with chaining and the multiply-shift hash family.
 \end{cpplisting}
 
@@ -6495,7 +6495,7 @@ The correct approach uses a different table size strategy. Set the table size to
 \end{proof}
 
 \begin{cpplisting}
-\textbf{C++ implementation:} See \texttt{src/chapter8/hash\_table.h} for an implementation
+\textbf{C++ implementation:} See \texttt{src/chapter9/hash\_table.h} for an implementation
 of FKS-style two-level perfect hashing with dynamic resizing.
 \end{cpplisting}
 
@@ -7265,7 +7265,7 @@ With the best known matrix multiplication exponent $\omega < 2.373$, Seidel's al
 \lstinputlisting[
   language=C++,
   caption={All-pairs shortest paths: Floyd--Warshall baseline and randomized reduction.},
-  label={lst:apsp}]{src/chapter10/apsp.h}
+  label={lst:apsp}]{src/chapter11/apsp.h}
 
 %% ============================================================
 \section{The Min-Cut Problem}
@@ -7445,7 +7445,7 @@ The Karger--Stein algorithm is one of the most elegant examples of the ``trade t
 \lstinputlisting[
   language=C++,
   caption={Karger's contraction algorithm and the Karger--Stein recursive variant.},
-  label={lst:mincut}]{src/chapter10/min_cut.h}
+  label={lst:mincut}]{src/chapter11/min_cut.h}
 
 %% ============================================================
 \section{Minimum Spanning Trees}
@@ -7564,7 +7564,7 @@ The KKT algorithm is remarkable for several reasons:
 \lstinputlisting[
   language=C++,
   caption={Karger--Klein--Tarjan randomized linear-time MST algorithm.},
-  label={lst:mst}]{src/chapter10/mst.h}
+  label={lst:mst}]{src/chapter11/mst.h}
 
 %% ============================================================
 \addcontentsline{toc}{section}{Notes}
@@ -8344,12 +8344,12 @@ Subsequent work has improved the running time. Lov\'{a}sz and Vempala (2003) ach
 \lstinputlisting[
   language=C++,
   caption={DNF counting using the Karp--Luby algorithm.},
-  label={lst:dnf-counting}]{src/chapter11/dnf_counting.h}
+  label={lst:dnf-counting}]{src/chapter12/dnf_counting.h}
 
 \lstinputlisting[
   language=C++,
   caption={Volume estimation via hit-and-run and DFK annealing.},
-  label={lst:volume}]{src/chapter11/volume.h}
+  label={lst:volume}]{src/chapter12/volume.h}
 
 %% ============================================================
 \addcontentsline{toc}{section}{Notes}
@@ -9254,17 +9254,17 @@ The randomized protocol achieves $O(1)$-round agreement when repeated a constant
 \lstinputlisting[
   language=C++,
   caption={PRAM simulation: parallel prefix sum, list ranking, connected components.},
-  label={lst:pram}]{src/chapter12/pram_simulation.h}
+  label={lst:pram}]{src/chapter13/pram_simulation.h}
 
 \lstinputlisting[
   language=C++,
   caption={Luby's maximal independent set algorithm and vertex coloring.},
-  label={lst:mis}]{src/chapter12/mis.h}
+  label={lst:mis}]{src/chapter13/mis.h}
 
 \lstinputlisting[
   language=C++,
   caption={Random and maximum matching algorithms.},
-  label={lst:matchings}]{src/chapter12/matchings.h}
+  label={lst:matchings}]{src/chapter13/matchings.h}
 
 \addcontentsline{toc}{section}{Notes}
 \section*{Notes}
@@ -10104,17 +10104,17 @@ KP algorithm remains one of the most elegant constructions in the field.
 \lstinputlisting[
   language=C++,
   caption={Online paging: LRU, FIFO, random, marking algorithm, and OPT.},
-  label={lst:paging}]{src/chapter13/paging.h}
+  label={lst:paging}]{src/chapter14/paging.h}
 
 \lstinputlisting[
   language=C++,
   caption={$k$-server: greedy, randomized, and optimal offline algorithms.},
-  label={lst:kserver}]{src/chapter13/k_server.h}
+  label={lst:kserver}]{src/chapter14/k_server.h}
 
 \lstinputlisting[
   language=C++,
   caption={Adversary simulation: oblivious and adaptive models.},
-  label={lst:adversary}]{src/chapter13/adversary.h}
+  label={lst:adversary}]{src/chapter14/adversary.h}
 
 %% ----------------------------------------------------------------
 \addcontentsline{toc}{section}{Notes}
@@ -10909,17 +10909,17 @@ The AKS test is based on the following characterization of primes: $n$ is prime 
 \lstinputlisting[
   language=C++,
   caption={Number theory: modular exponentiation, GCD, CRT, Euler's totient.},
-  label={lst:number-theory}]{src/chapter14/number_theory.h}
+  label={lst:number-theory}]{src/chapter15/number_theory.h}
 
 \lstinputlisting[
   language=C++,
   caption={Cryptographic algorithms: RSA, Miller--Rabin, Solovay--Strassen, Jacobi symbol.},
-  label={lst:crypto}]{src/chapter14/crypto.h}
+  label={lst:crypto}]{src/chapter15/crypto.h}
 
 \lstinputlisting[
   language=C++,
   caption={Polynomials over $\mathbb{Z}_p$ and the Schwartz--Zippel identity test.},
-  label={lst:polynomial}]{src/chapter14/polynomial.h}
+  label={lst:polynomial}]{src/chapter15/polynomial.h}
 
 %% ============================================================
 \addcontentsline{toc}{section}{Notes}
