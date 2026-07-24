@@ -1,37 +1,38 @@
-#include "treap.h"
-#include "skip_list.h"
-#include "hash_table.h"
 #include <iostream>
+#include <iomanip>
 #include <string>
-#include <chrono>
+#include "freivalds.h"
+#include "polynomial.h"
+#include "rabin_karp.h"
 
 void print_header(const std::string& title) {
-    std::cout << "\n";
-    std::cout << "========================================\n";
+    std::cout << std::string(60, '=') << "\n";
     std::cout << "  " << title << "\n";
-    std::cout << "========================================\n\n";
+    std::cout << std::string(60, '=') << "\n\n";
 }
 
 void print_section(const std::string& title) {
-    std::cout << "\n--- " << title << " ---\n\n";
+    std::cout << "\n" << std::string(50, '-') << "\n";
+    std::cout << "  " << title << "\n";
+    std::cout << std::string(50, '-') << "\n\n";
 }
 
 int main() {
-    std::cout << "Chapter 8: Data Structures\n";
-    std::cout << "Randomized Algorithms - C++ Implementations\n";
+    print_header("Chapter 7: Algebraic Techniques");
+    std::cout << "Randomized Algorithms - Implementation Demos\n\n";
 
-    print_header("8.2 Random Treaps");
-    chapter8::demonstrate_treap();
+    print_section("7.1 Freivalds' Matrix Multiplication Verification");
+    chapter8::demonstrate_freivalds();
 
-    print_header("8.3 Skip Lists");
-    chapter8::demonstrate_skip_list();
+    print_section("7.2 Polynomial Identity Testing (Schwartz-Zippel)");
+    chapter8::demonstrate_polynomial();
 
-    print_header("8.4 - 8.5 Hash Tables");
-    chapter8::demonstrate_hashing();
+    print_section("7.6 Rabin-Karp Pattern Matching");
+    chapter8::demonstrate_rabin_karp();
 
-    std::cout << "\n========================================\n";
-    std::cout << "  All demonstrations complete.\n";
-    std::cout << "========================================\n";
+    std::cout << "\n" << std::string(60, '=') << "\n";
+    std::cout << "  All demos completed.\n";
+    std::cout << std::string(60, '=') << "\n";
 
     return 0;
 }

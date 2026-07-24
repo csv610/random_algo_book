@@ -1,4 +1,5 @@
 \documentclass[twoside,12pt]{book}
+
 \usepackage[utf8]{inputenc}
 \usepackage[T1]{fontenc}
 \usepackage{mathpazo}
@@ -6,7 +7,6 @@
 \usepackage{graphicx}
 \usepackage{listings}
 \usepackage{xcolor}
-\usepackage{hyperref}
 \usepackage{enumitem}
 \usepackage{tikz}
 \usepackage{algorithm}
@@ -15,16 +15,45 @@
 \usepackage{geometry}
 \usepackage{fancyhdr}
 \usepackage{titlesec}
-\geometry{papersize={6in,9in},margin=0.75in,top=0.75in,bottom=0.75in,inner=0.9in,outer=0.65in,headheight=14pt}
+\usepackage[colorlinks=true, linkcolor=blue, citecolor=blue, urlcolor=blue, plainpages=false, pdfpagelabels]{hyperref}
+
+\geometry{
+  papersize={6in,9in},
+  margin=0.75in,
+  top=0.75in,bottom=0.75in,
+  inner=0.85in,outer=0.65in,
+  headheight=14pt
+}
+
 \pagestyle{fancy}
 \fancyhf{}
-\fancyhead[LE]{\small\textit{8. Data Structures}}
+\fancyhead[LE]{\small\textit{8. Algebraic Techniques}}
 \fancyhead[RO]{\small\textit{Randomized Algorithms}}
 \fancyfoot[C]{\thepage}
 \renewcommand{\headrulewidth}{0.4pt}
+
 \definecolor{codegray}{rgb}{0.45,0.45,0.45}
-\lstdefinestyle{cppstyle}{basicstyle=\ttfamily\scriptsize,keywordstyle=\bfseries,commentstyle=\itshape\color{codegray},numbers=left,numberstyle=\tiny\color{codegray},numbersep=8pt,frame=single,framerule=0.4pt,rulecolor=\color{codegray},backgroundcolor=\color{gray!5},breaklines=true,tabsize=4,showstringspaces=false,language=C++}
+\lstdefinestyle{cppstyle}{
+  basicstyle=\ttfamily\scriptsize,
+  keywordstyle=\bfseries,
+  commentstyle=\itshape\color{codegray},
+  numbers=left,
+  numberstyle=\tiny\color{codegray},
+  numbersep=8pt,
+  frame=single,
+  framerule=0.4pt,
+  rulecolor=\color{codegray},
+  backgroundcolor=\color{gray!5},
+  breaklines=true,
+  tabsize=4,
+  showstringspaces=false,
+  language=C++,
+  morekeywords={nullptr,size_t,auto,const,constexpr,
+    unordered_map,vector,pair,mt19937,
+    uniform_int_distribution,INT_MAX}
+}
 \lstset{style=cppstyle}
+
 \theoremstyle{plain}
 \newtheorem{theorem}{Theorem}[chapter]
 \newtheorem{lemma}[theorem]{Lemma}
@@ -38,492 +67,481 @@
 \newtheorem{exercise}[theorem]{Exercise}
 \newtheorem{problem}[theorem]{Problem}
 \newenvironment{cpplisting}{\begin{center}\small}{\end{center}}
+
+\newcommand{\Exp}{\operatorname{\mathbb{E}}}
+\newcommand{\Var}{\operatorname{Var}}
+\newcommand{\Cov}{\operatorname{Cov}}
+
 \begin{document}
 
-\chapter*{8 Data Structures}
-\addcontentsline{toc}{chapter}{8 Data Structures}
-\markboth{8 Data Structures}{Randomized Algorithms}
+\chapter*{8 Algebraic Techniques}
+\addcontentsline{toc}{chapter}{8 Algebraic Techniques}
+\markboth{8 Algebraic Techniques}{Randomized Algorithms}
+\label{ch:algebraic}
 
-Data structures are the backbone of efficient computation. The ability to maintain a dynamically changing collection of elements while supporting fast search, insertion, and deletion is fundamental to nearly every area of computer science. In this chapter we study how randomization can be used to design data structures that are both simple and provably efficient, often matching or surpassing the performance of their deterministic counterparts while requiring far less structural bookkeeping.
+Many computational problems can be cast as algebraic questions: Does a given polynomial evaluate to zero? Do two matrices multiply to a claimed product? Do two strings match? Algebraic techniques exploit the structure of polynomials, matrices, and finite fields to give randomized algorithms that are dramatically faster than their deterministic counterparts. The central idea behind most of these algorithms is \emph{fingerprinting}: replacing a complex object with a simple numeric fingerprint computed at a random point, so that equality (or identity) can be checked efficiently with high probability.
 
-The key insight is that random choices, made independently at insert time, can replace the complex rebalancing logic required by deterministic balanced trees. We study three major paradigms: \emph{randomized balanced search trees} (treaps), \emph{randomized balanced lists} (skip lists), and \emph{hashing} (both universal and perfect). Each paradigm trades different resources---pointer overhead, space, or preprocessing---for expected constant or logarithmic time per operation.
+This chapter develops the theory of algebraic fingerprinting, beginning with Freivalds' celebrated algorithm for verifying matrix multiplication and building toward interactive proof systems and the PCP theorem.
 
 %% ============================================================
-\section{The Fundamental Data-structuring Problem}
-\label{sec:fundamental-data-structuring}
+\section{Fingerprinting and Freivalds' Technique}
+\label{sec:freivalds}
 %% ============================================================
 
-A \emph{dictionary} (also called a \emph{dynamic set}) is a data structure that maintains a set $S$ of elements drawn from some universe $\mathcal{U}$, supporting the following operations:
+The problem of \emph{verifying} a computation is often easier than performing it. Given two $n \times n$ matrices $A$ and $B$ and a claimed product $C$, we wish to test whether $A \cdot B = C$. The naive approach requires $O(n^3)$ time to compute the product and compare, but randomized verification can be done in $O(n^2)$ time.
 
-\begin{itemize}[nosep]
-    \item \textbf{Insert}$(x)$: Add element $x$ to $S$ (if not already present).
-    \item \textbf{Delete}$(x)$: Remove element $x$ from $S$ (if present).
-    \item \textbf{Search}$(x)$: Return a pointer to the element $x$ in $S$, or report that $x \notin S$.
-\end{itemize}
+\begin{definition}[Fingerprint]
+A \emph{fingerprint} of an object $X$ is a short summary $f(X)$ that can be computed efficiently. If $f(X) = f(Y)$, then $X = Y$ with high probability, and if $X \neq Y$, then $f(X) \neq f(Y)$ with high probability.
+\end{definition}
 
-When elements carry keys from a totally ordered universe, the dictionary problem becomes the \emph{dynamic dictionary with ordered keys}, and we additionally support \emph{successor} and \emph{predecessor} queries.
+\begin{algorithm}[H]
+\caption{Freivalds' Algorithm}
+\label{alg:freivalds}
+\begin{algorithmic}[1]
+\Require matrices $A, B, C \in \mathbb{Z}^{n \times n}$, number of rounds $t$
+\Ensure \textsc{Yes} if $AB = C$, \textsc{No} otherwise
+\For{$k = 1, 2, \ldots, t$}
+  \State Choose $\mathbf{r} \in \{0, 1\}^n$ uniformly at random
+  \State Compute $\mathbf{v} = B\mathbf{r}$ \Comment{$O(n^2)$}
+  \State Compute $\mathbf{w} = A\mathbf{v}$ \Comment{$O(n^2)$}
+  \State Compute $\mathbf{u} = C\mathbf{r}$ \Comment{$O(n^2)$}
+  \If{$\mathbf{w} \neq \mathbf{u}$}
+    \State \Return \textsc{No}
+  \EndIf
+\EndFor
+\State \Return \textsc{Yes}
+\end{algorithmic}
+\end{algorithm}
 
-\begin{theorem}[Comparison-based lower bound]
-Any dictionary data structure that supports insert, delete, and search on $n$ elements using only comparisons between keys must perform $\Omega(\log n)$ comparisons per operation in the worst case, in any comparison tree model.
+The key observation is that for any $\mathbf{r} \in \{0,1\}^n$, the matrix-vector products $A(B\mathbf{r})$ and $C\mathbf{r}$ each cost $O(n^2)$ time. If $AB = C$, then $A(B\mathbf{r}) = C\mathbf{r}$ for every $\mathbf{r}$. If $AB \neq C$, then the error matrix $D = AB - C$ is nonzero, and we need to bound the probability that $D\mathbf{r} = \mathbf{0}$.
+
+\begin{theorem}[Freivalds, 1979]
+\label{thm:freivalds}
+Let $A, B, C$ be $n \times n$ matrices over $\mathbb{Z}$ with entries bounded in absolute value by $M$. If $AB \neq C$, and $\mathbf{r}$ is chosen uniformly at random from $\{0, 1\}^n$, then
+\[
+\Pr[A(B\mathbf{r}) = C\mathbf{r}] \leq \frac{1}{2}.
+\]
+After $t$ independent rounds, the probability of a false positive is at most $2^{-t}$.
 \end{theorem}
 
-This lower bound is tight: \emph{balanced binary search trees} (such as AVL trees, red--black trees, or B-trees) achieve $O(\log n)$ worst-case time per operation by maintaining explicit balance information through rotations and augmentations. However, the engineering complexity of maintaining perfect balance deterministically is substantial.
+\begin{proof}
+Let $D = AB - C \neq \mathbf{0}$. There exists some row $i$ such that row $i$ of $D$ is nonzero. Let $d_i$ denote this row. Then $\Pr[d_i \cdot \mathbf{r} = 0]$ where the sum is over entries of $d_i$ and $\mathbf{r}$. Since $\mathbf{r}$ is uniform over $\{0,1\}^n$, at least one entry $d_{ij} \neq 0$, and the sum $d_i \cdot \mathbf{r}$ takes at least two distinct values with equal probability as $r_j$ flips. Therefore $\Pr[d_i \cdot \mathbf{r} = 0] \leq 1/2$.
 
-\subsection{The randomized approach}
-
-Randomized data structures achieve the same $O(\log n)$ \emph{expected} time per operation by making random decisions that ``happen to'' maintain balance with high probability, without any explicit balancing mechanism.
-
-\begin{definition}[High probability]
-An event $E_n$ holds \emph{with high probability} (w.h.p.) if for every constant $c > 0$, there exists a constant $n_0$ such that $\Pr[E_n] \geq 1 - n^{-c}$ for all $n \geq n_0$.
-\end{definition}
-
-The randomization approach has several advantages:
-\begin{enumerate}[nosep]
-    \item \textbf{Simplicity:} No complex rebalancing logic is needed.
-    \item \textbf{No worst-case input:} No adversary can consistently force $\Omega(n)$ time on every operation, since the random choices are made at runtime and are hidden from the input.
-    \item \textbf{Worst-case avoidance:} Randomization ``smooths out'' the input distribution, ensuring expected logarithmic performance regardless of the sequence of operations.
-\end{enumerate}
-
-The following three sections develop randomized data structures for the dictionary problem: treaps (Section~\ref{sec:treaps}), skip lists (Section~\ref{sec:skip-lists}), and hash tables (Sections~\ref{sec:hash-tables}--\ref{sec:perfect-hashing}).
-
-%% ============================================================
-\section{Random Treaps}
-\label{sec:treaps}
-%% ============================================================
-
-A \emph{treap} (tree + heap) is a randomized binary search tree that combines the binary search tree property on keys with the heap property on randomly assigned priorities. The treap was introduced by Aragon and Seidel~\cite{aron1989}.
-
-\begin{definition}[Treap]
-A \emph{treap} on $n$ elements is a binary tree $T$ where each node $v$ stores a key $k(v)$ and a priority $p(v)$. The tree satisfies:
-\begin{enumerate}[nosep]
-    \item \textbf{BST property:} For every node $v$, all keys in the left subtree of $v$ are less than $k(v)$, and all keys in the right subtree are greater than $k(v)$.
-    \item \textbf{Heap property:} For every node $v$ (other than the root), $p(v) < p(\text{parent}(v))$. That is, priorities form a min-heap.
-\end{enumerate}
-\end{definition}
-
-The key observation is that once the keys are fixed, there is exactly one binary tree shape that satisfies both the BST property and the heap property simultaneously. Since the priorities are assigned uniformly at random from a sufficiently large range, every permutation of priorities is equally likely, and hence every valid tree shape is equally likely.
+Since $A$ is invertible on the nonzero row (or we directly argue about $D\mathbf{r}$), we conclude $\Pr[D\mathbf{r} = \mathbf{0}] \leq 1/2$. The probability that all $t$ rounds agree is at most $(1/2)^t$.
+\end{proof}
 
 \begin{example}
-Consider the keys $\{1, 2, 3, 4, 5\}$ with random priorities. If the priorities assigned are $(1: 5, 2: 3, 3: 1, 4: 4, 5: 2)$, the treap has node 3 as root (priority 1, the minimum), with left subtree $\{1, 2\}$ and right subtree $\{4, 5\}$. Within the left subtree, node 2 (priority 2) is the root, with 1 as its left child.
+\label{ex:freivalds}
+Consider verifying a $3 \times 3$ matrix product $AB = C$. Each round costs $O(n^2) = O(9)$ operations versus the $O(n^3) = O(27)$ operations for computing the product. With 20 rounds, the error probability is below $10^{-6}$.
 \end{example}
 
-\subsection{Search}
+The generalization to arbitrary fields is straightforward: choose $\mathbf{r}$ from $\{0, 1\}^n$ (or from $\mathbb{F}^n$) and argue identically. The only requirement is that $D \neq 0$ implies some row is nonzero, which forces a nonzero inner product with positive probability.
 
-Searching in a treap is identical to searching in a standard BST: compare the search key with the current node's key, go left if smaller, right if larger, and stop when the key is found or a null pointer is reached.
-
-\begin{algorithm}[H]
-\caption{Treap Search}
-\begin{algorithmic}[1]
-\Function{TreapSearch}{$v, k$}
-    \If{$v = \text{null}$}
-        \State \Return{null}
-    \EndIf
-    \If{$k = k(v)$}
-        \State \Return{$v$}
-    \ElsIf{$k < k(v)$}
-        \State \Return{TreapSearch($v.\text{left}, k$)}
-    \Else
-        \State \Return{TreapSearch($v.\text{right}, k$)}
-    \EndIf
-\EndFunction
-\end{algorithmic}
-\end{algorithm}
-
-\subsection{Insertion}
-
-To insert a new element with key $k$ and a freshly generated random priority $p$, we perform a standard BST insertion to find the correct leaf position for $k$, then \emph{rotate} upward whenever the new node's priority is smaller than its parent's priority.
-
-\begin{algorithm}[H]
-\caption{Treap Insertion}
-\begin{algorithmic}[1]
-\Function{TreapInsert}{$T, k$}
-    \State $p \gets$ random priority
-    \State $T \gets$ BST-Insert($T, k, p$)
-    \State $v \gets$ node containing $k$
-    \While{$v \neq \text{root}$ \textbf{and} $p(v) < p(v.\text{parent})$}
-        \If{$v = v.\text{parent}.\text{left}$}
-            \State Right-Rotate($v.\text{parent}$)
-        \Else
-            \State Left-Rotate($v.\text{parent}$)
-        \EndIf
-    \EndWhile
-    \State \Return{$T$}
-\EndFunction
-\end{algorithmic}
-\end{algorithm}
-
-Each rotation takes $O(1)$ time and maintains the BST property. The total number of rotations is at most the depth of the inserted node in the BST, which is $O(n)$ in the worst case but $O(\log n)$ in expectation.
-
-\subsection{Deletion}
-
-Deletion in a treap uses rotations to push the target node down to a leaf, then removes it. Specifically, if we wish to delete node $v$:
-\begin{enumerate}[nosep]
-    \item While $v$ has two children, rotate it with the child that has the smaller priority.
-    \item When $v$ has at most one child, splice $v$ out of the tree.
-\end{enumerate}
-
-\subsection{Join and Split}
-
-Treaps support two additional operations that are useful for more complex data structures:
-
-\begin{definition}[Join and Split]
-\begin{itemize}[nosep]
-    \item \textbf{Join}$(T_1, T_2)$: Given two treaps $T_1$ and $T_2$ where all keys in $T_1$ are less than all keys in $T_2$, merge them into a single treap.
-    \item \textbf{Split}$(T, k)$: Given a treap $T$ and a key $k$, split $T$ into two treaps $T_1$ and $T_2$ where all keys in $T_1$ are $\leq k$ and all keys in $T_2$ are $> k$.
-\end{itemize}
-\end{definition}
-
-\textbf{Join} is implemented by comparing the priorities of the two roots. If the root of $T_1$ has the smaller priority, its right subtree is recursively joined with $T_2$; otherwise, the root of $T_2$'s left subtree is recursively joined with $T_1$. This process follows a single root-to-leaf path, taking $O(\log n)$ expected time.
-
-\textbf{Split} is implemented by descending through the tree: at each node, if $k$ is less than the node's key, the node and its left subtree go to $T_1$, and we split the right subtree; otherwise, the node and its right subtree go to $T_2$, and we split the left subtree. Split takes $O(\log n)$ expected time.
-
-\subsection{Analysis}
-
-The efficiency of treaps hinges on the following observation: the treap is structurally identical to a BST built by inserting elements in order of increasing priority.
-
-\begin{theorem}\label{thm:treap}
-The expected height of a treap on $n$ nodes is $O(\log n)$. Furthermore, the expected cost of each treap operation (insert, delete, search) is $O(\log n)$.
-\end{theorem}
-
-\begin{proof}
-Consider a fixed set of $n$ keys with priorities drawn uniformly at random from $\{1, 2, \ldots, N\}$ for $N \gg n$. The treap shape is the same as the BST obtained by inserting the keys in priority order. The depth of any node $v$ in the treap is exactly the number of elements that are ancestors of $v$, which equals the number of elements whose priority is smaller than $p(v)$ among those in $v$'s subtree. This is a standard property of random BSTs.
-
-By the well-known analysis of random BSTs (see~\cite{devroye1988}), the expected depth of any node is at most $2 \ln n + O(1)$, and the expected height is $O(\log n)$. Specifically, the probability that the height exceeds $c \log n$ is at most $n^{1-c}$, so the height is $O(\log n)$ with high probability for any constant $c > 1$.
-
-Each operation traverses a single root-to-leaf path (for search, split) or performs at most as many rotations as the depth of the affected node (for insert, delete). Therefore, each operation costs $O(\log n)$ in expectation.
-\end{proof}
+\subsection*{Implementation}
 
 \begin{cpplisting}
-\textbf{C++ implementation:} See \texttt{src/chapter8/treap.h} for a complete implementation
-of a treap supporting insert, search, remove, and height measurement.
+\begin{lstlisting}[title={Freivalds' algorithm --- \texttt{src/chapter7/freivalds.h}}]
+bool freivalds_verify(const vector<vector<long long>>& A,
+                      const vector<vector<long long>>& B,
+                      const vector<vector<long long>>& C,
+                      int rounds, mt19937& rng);
+\end{lstlisting}
 \end{cpplisting}
 
+
 %% ============================================================
-\section{Skip Lists}
-\label{sec:skip-lists}
+\section{Verifying Polynomial Identities}
+\label{sec:poly-identity}
 %% ============================================================
 
-A \emph{skip list} is a randomized data structure invented by Pugh~\cite{pugh1990} that achieves $O(\log n)$ expected search time using a layered system of linked lists. Skip lists can be viewed as a probabilistic alternative to balanced trees, trading worst-case guarantees for simplicity and excellent practical performance.
+A closely related algebraic problem is \emph{polynomial identity testing} (PIT): given two polynomials $p$ and $q$, determine whether $p(x_1, \ldots, x_n) \equiv q(x_1, \ldots, x_n)$.
 
-\begin{definition}[Skip list]
-A \emph{skip list} for a set $S = \{s_1 < s_2 < \cdots < s_n\}$ of $n$ sorted elements is a collection of linked lists $L_0, L_1, \ldots, L_h$, where:
-\begin{enumerate}[nosep]
-    \item $L_0$ contains all $n$ elements of $S$ in sorted order (the ``base'' list).
-    \item $L_i$ is a random subset of $L_{i-1}$ for each $i \geq 1$.
-    \item Each element in $L_i$ (for $i \geq 1$) is independently promoted to $L_{i+1}$ with probability $1/2$.
-    \item A sentinel $-\infty$ is the first element of every list, and $+\infty$ is the last.
-\end{enumerate}
-\end{definition}
-
-Each node in the skip list contains:
-\begin{itemize}[nosep]
-    \item A \emph{key} (the element value).
-    \item An array of \emph{forward pointers}, one per level, pointing to the next element at that level.
-    \item The \emph{level} of the node: the highest level at which it appears.
-\end{itemize}
-
-\subsection{Search}
-
-Search in a skip list starts at the topmost level of the sentinel and proceeds rightward and downward:
-
-\begin{algorithm}[H]
-\caption{Skip List Search}
-\begin{algorithmic}[1]
-\Function{SkipSearch}{$\text{head}, k$}
-    \State $v \gets \text{head}$
-    \State $i \gets \text{top level}$
-    \While{$i \geq 0$}
-        \While{$v.\text{forward}[i].\text{key} < k$}
-            \State $v \gets v.\text{forward}[i]$
-        \EndWhile
-        \State $i \gets i - 1$
-    \EndWhile
-    \State $v \gets v.\text{forward}[0]$
-    \If{$v.\text{key} = k$}
-        \State \Return{$v$}
-    \Else
-        \State \Return{null}
-    \EndIf
-\EndFunction
-\end{algorithmic}
-\end{algorithm}
-
-The key insight is that at level $i$, each step ``skips'' over approximately $2^i$ elements. The expected number of steps at level $i$ is $O(1)$ (since each forward pointer skips an expected 2 elements at the next level down). Summing over $O(\log n)$ levels gives $O(\log n)$ expected search time.
-
-\subsection{Insertion and Deletion}
-
-Insertion and deletion follow the same pattern as search: we locate the correct position using the same search procedure, maintaining an update vector of the last node seen at each level. We then splice in (or remove) the new (or deleted) node at each level, adjusting forward pointers.
-
-The level of a new node is determined by \emph{coin flips}: flip a fair coin until it comes up tails; the number of heads plus one is the node's level. This gives a geometric distribution with parameter $1/2$:
+\begin{theorem}[Schwartz--Zippel Lemma]
+\label{thm:schwartz-zippel}
+Let $p(x_1, \ldots, x_n)$ be a nonzero polynomial of total degree $d$ over a field $\mathbb{F}$, and let $S \subseteq \mathbb{F}$ be a finite set. If $r_1, \ldots, r_n$ are chosen independently and uniformly from $S$, then
 \[
-\Pr[\text{level} = i] = 2^{-i}, \quad i \geq 1.
+\Pr[p(r_1, \ldots, r_n) = 0] \leq \frac{d}{|S|}.
 \]
-
-\subsection{Analysis}
-
-\begin{theorem}\label{thm:skip-list}
-The expected search time in a skip list of $n$ elements is $O(\log n)$, and the expected space is $O(n)$.
 \end{theorem}
 
 \begin{proof}
-Let $N_i$ denote the expected number of elements examined at level $i$ during a search. At level $i$, each step moves to the next element in $L_i$, and the expected distance between consecutive elements in $L_i$ is $2$ (since each element in $L_{i-1}$ is promoted to $L_i$ with probability $1/2$). Therefore, the expected number of steps at level $i$ is at most $n/2^i$ (the number of elements in $L_i$) divided by the expected gap size.
+We proceed by induction on $n$. For $n = 1$, write $p(x) = a_d x^d + \cdots + a_1 x + a_0$ with $a_d \neq 0$. By the fundamental theorem of algebra, $p$ has at most $d$ roots, so $\Pr[p(r) = 0] \leq d/|S|$.
 
-A cleaner argument proceeds by backwards analysis. At each level, the expected number of forward pointer traversals is $O(1)$. The maximum level is $\Theta(\log n)$ with high probability, since the probability that any element reaches level $c \log n$ is at most $n \cdot 2^{-c \log n} = n^{1-c}$.
-
-For the space: the expected number of nodes at level $i$ is $n/2^i$. Summing over all levels:
+For the inductive step, write $p$ as a polynomial in $x_1$ with coefficients that are polynomials in $x_2, \ldots, x_n$:
 \[
-\sum_{i=0}^{\infty} \frac{n}{2^i} = 2n = O(n).
+p(x_1, \ldots, x_n) = \sum_{j=0}^{d} p_j(x_2, \ldots, x_n) \cdot x_1^j.
+\]
+Since $p$ is nonzero, at least one $p_j$ is nonzero. Let $j^*$ be the largest index with $p_{j^*} \neq 0$; this $p_{j^*}$ has total degree at most $d - j^*$ in $x_2, \ldots, x_n$. By induction,
+\[
+\Pr[p_{j^*}(r_2, \ldots, r_n) = 0] \leq \frac{d - j^*}{|S|} \leq \frac{d}{|S|}.
+\]
+Conditioned on $p_{j^*}(r_2, \ldots, r_n) \neq 0$, the polynomial in $x_1$ has degree $j^*$, so it has at most $j^*$ roots. Thus
+\[
+\Pr[p(r_1, \ldots, r_n) = 0] \leq \frac{d - j^*}{|S|} + \frac{j^*}{|S|} = \frac{d}{|S|}.\qedhere
 \]
 \end{proof}
 
-\begin{remark}
-Skip lists have excellent practical performance due to their cache-friendly sequential access patterns. In practice, skip lists often outperform balanced trees despite their lack of worst-case guarantees.
-\end{remark}
+\begin{corollary}
+\label{cor:pit}
+Two polynomials $p$ and $q$ of degree at most $d$ in $n$ variables over $\mathbb{F}$ can be compared by evaluating both at a random point from $S^n$. If $|S| > d$, the error probability is at most $d/|S|$ per round.
+\end{corollary}
 
-\subsection{Comparison with balanced BSTs}
+\begin{example}
+To verify that $(x_1 + x_2 + \cdots + x_n)^2 = \sum_{i} x_i^2 + 2\sum_{i < j} x_i x_j$, we evaluate both sides at a random point $(r_1, \ldots, r_n) \in S^n$. With $|S| = 1000$ and degree $d = 2$, a single evaluation gives error at most $0.002$.
+\end{example}
+
+The Schwartz--Zippel lemma is the workhorse behind algebraic fingerprinting. It applies to any polynomial that can be evaluated efficiently, including polynomials encoding matrix products, graph properties, and combinatorial structures.
+
+\subsection*{Implementation}
+
+\begin{cpplisting}
+\begin{lstlisting}[title={Polynomial identity testing --- \texttt{src/chapter7/polynomial.h}}]
+bool polynomial_identity_test(const vector<int>& p_coeffs,
+                              const vector<int>& q_coeffs,
+                              int field_size, int rounds, mt19937& rng);
+long long poly_eval(const vector<int>& coeffs, long long x, long long mod);
+\end{lstlisting}
+\end{cpplisting}
+
+
+%% ============================================================
+\section{Perfect Matchings in Graphs}
+\label{sec:perfect-matchings}
+%% ============================================================
+
+A \emph{perfect matching} in a graph $G = (V, E)$ is a set of edges such that every vertex is incident to exactly one edge in the set. The decision problem ``Does $G$ have a perfect matching?'' is solvable in polynomial time by the Edmonds blossom algorithm ($O(n^4)$), but algebraic techniques provide a cleaner and faster randomized approach.
+
+\begin{definition}[Tutte Matrix]
+Let $G = (V, E)$ be a graph on $n$ vertices (assume $n$ is even). The \emph{Tutte matrix} $T$ is an $n \times n$ skew-symmetric matrix defined by:
+\[
+T_{ij} = \begin{cases}
+x_{ij} & \text{if } (i,j) \in E \text{ and } i < j, \\
+-x_{ij} & \text{if } (i,j) \in E \text{ and } i > j, \\
+0 & \text{otherwise},
+\end{cases}
+\]
+where $x_{ij}$ are formal indeterminates.
+\end{definition}
+
+The determinant of the Tutte matrix is the square of the \emph{Pfaffian}, and $\det(T) \neq 0$ if and only if $G$ has a perfect matching.
+
+\begin{theorem}
+\label{thm:perfect-matching}
+Let $G$ be a graph on $n$ vertices. There exists a randomized algorithm that determines whether $G$ has a perfect matching in $O(n^\omega)$ time with error probability at most $1/2$, where $\omega$ is the matrix multiplication exponent.
+\end{theorem}
+
+\begin{proof}
+Construct the Tutte matrix $T$ of $G$, replacing each indeterminate $x_{ij}$ with a random value from a sufficiently large field $\mathbb{F}$. Compute $\det(T)$ over $\mathbb{F}$ in $O(n^\omega)$ time.
+
+If $G$ has no perfect matching, then $\det(T) = 0$ as a polynomial, so $\det(T_{\text{rand}}) = 0$ always. If $G$ has a perfect matching, then $\det(T)$ is a nonzero polynomial (it equals the square of the Pfaffian). By the Schwartz--Zippel lemma, with random substitution the probability that the determinant evaluates to zero is small (at most $d/|\mathbb{F}|$ where $d$ is the degree, $n$). Choosing $|\mathbb{F}|$ sufficiently large ensures the error is at most $1/2$.
+\end{proof}
+
+The algebraic approach connects to Ryser's formula for the permanent:
+\[
+\operatorname{perm}(A) = \sum_{S \subseteq [n]} (-1)^{n - |S|} \prod_{i=1}^{n} \sum_{j \in S} a_{ij},
+\]
+which can be used to count perfect matchings in bipartite graphs. The randomized approach evaluates this expression at random points, trading exact counting for efficient approximation.
+
+
+%% ============================================================
+\section{Verifying Equality of Strings}
+\label{sec:string-equality}
+%% ============================================================
+
+Given two strings $S$ and $T$ of length $n$ over alphabet $\Sigma$, we wish to test whether $S = T$. The deterministic approach requires $\Theta(n)$ time. Randomized fingerprinting achieves the same with high probability using $O(n)$ preprocessing and $O(1)$ comparison time.
+
+\begin{definition}[String Fingerprint]
+View a string $S = s_1 s_2 \cdots s_n$ as a polynomial:
+\[
+f_S(x) = s_1 + s_2 x + s_3 x^2 + \cdots + s_n x^{n-1}.
+\]
+The \emph{Karp--Rabin fingerprint} of $S$ is
+\[
+\phi_S(x) = f_S(x) \bmod p,
+\]
+where $p$ is a randomly chosen prime and $x$ is a randomly chosen value.
+\end{definition}
+
+\begin{theorem}[Karp--Rabin String Fingerprinting]
+\label{thm:kr-fingerprint}
+Two strings $S$ and $T$ of length $n$ over alphabet $\Sigma$ can be compared using $O(n)$ preprocessing and $O(1)$ comparison time. If $S \neq T$, the fingerprint collision probability is at most $n/|\mathbb{F}|$ where $\mathbb{F}$ is the field of computation.
+\end{theorem}
+
+\begin{proof}
+If $S \neq T$, then $f_S \neq f_T$ as polynomials (they differ in at least one coefficient). The polynomial $f_S - f_T$ has degree at most $n - 1$. By the Schwartz--Zippel lemma, $\Pr[f_S(x) \equiv f_T(x) \pmod{p}] \leq (n-1)/p$ when $x$ and $p$ are chosen appropriately. Choosing $p$ from primes in $[n^2, 2n^2]$ ensures the error is $O(1/n)$.
+\end{proof}
+
+The key advantage of the Karp--Rabin fingerprint is that it supports efficient \emph{rolling}: when the string shifts by one position, the fingerprint can be updated in $O(1)$ time.
+
+\begin{example}
+For $S = \texttt{abcde}$, the fingerprint with base $B = 256$ and modulus $p = 10^9 + 7$ is:
+\[
+\phi_S = (97 \cdot 256^4 + 98 \cdot 256^3 + 99 \cdot 256^2 + 100 \cdot 256 + 101) \bmod p.
+\]
+Shifting to $\texttt{bcdef}$ costs one subtraction, one multiplication, and one addition modulo $p$.
+\end{example}
+
+
+%% ============================================================
+\section{A Comparison of Fingerprinting Techniques}
+\label{sec:fingerprint-comparison}
+%% ============================================================
+
+Different fingerprinting techniques offer different tradeoffs in error probability, computation time, and applicability.
 
 \begin{table}[H]
 \centering
+\caption{Comparison of algebraic fingerprinting techniques.}
+\label{tab:fingerprint-comparison}
 \begin{tabular}{@{}lccc@{}}
 \toprule
-\textbf{Feature} & \textbf{Treap} & \textbf{Skip List} & \textbf{AVL Tree} \\
+\textbf{Technique} & \textbf{Error per round} & \textbf{Round cost} & \textbf{Application} \\
 \midrule
-Search (expected) & $O(\log n)$ & $O(\log n)$ & $O(\log n)$ \\
-Search (worst) & $O(n)$ & $O(n)$ & $O(\log n)$ \\
-Insert (expected) & $O(\log n)$ & $O(\log n)$ & $O(\log n)$ \\
-Space & $O(n)$ & $O(n)$ & $O(n)$ \\
-Simplicity & High & Very High & Low \\
-Cache performance & Moderate & Good & Moderate \\
+Freivalds' (matrix verify) & $1/2$ & $O(n^2)$ & Matrix multiplication \\
+Schwartz--Zippel (PIT) & $d/|S|$ & $O(M)$ & Polynomial identity \\
+Tutte matrix (matching) & $d/|\mathbb{F}|$ & $O(n^\omega)$ & Perfect matching \\
+Karp--Rabin (strings) & $n/p$ & $O(1)$ after $O(n)$ & String equality \\
 \bottomrule
 \end{tabular}
-\caption{Comparison of randomized and deterministic balanced tree structures.}
 \end{table}
 
-\begin{cpplisting}
-\textbf{C++ implementation:} See \texttt{src/chapter8/skip\_list.h} for a complete
-implementation of a skip list with configurable maximum level and geometric promotion.
-\end{cpplisting}
+\paragraph{Error probability.}
+Freivalds' algorithm has a clean error bound of exactly $1/2$ per round (for $\{0,1\}$-valued $\mathbf{r}$). The Schwartz--Zippel bound $d/|S|$ depends on the degree and field size: for low-degree polynomials over large fields, the error can be made exponentially small with a single round. For string fingerprinting, the modulus $p$ is chosen to make $n/p$ negligible.
+
+\paragraph{Field size.}
+Larger fields reduce error but increase the cost of arithmetic. For Freivalds' algorithm, binary $\{0,1\}$ vectors suffice (each round costs $O(n^2)$ with small constants). For PIT and matching, the field must be larger than the polynomial degree, but not overwhelmingly so.
+
+\paragraph{Deterministic vs.\ randomized.}
+For matrix multiplication verification, the best deterministic algorithm requires $\Omega(n^2)$ time (matching Freivalds'), but the constant factors are worse. For PIT, no deterministic polynomial-time algorithm is known for general multivariate polynomials given in succinct form, making randomization essential.
+
 
 %% ============================================================
-\section{Hash Tables}
-\label{sec:hash-tables}
+\section{Pattern Matching}
+\label{sec:pattern-matching}
 %% ============================================================
 
-Hash tables provide a fundamentally different approach to the dictionary problem: rather than maintaining sorted order, they map elements directly to positions in an array using a hash function. With a good hash function, each operation takes $O(1)$ \emph{expected} time, which is optimal.
-
-\begin{definition}[Hash function]
-A \emph{hash function} $h: \mathcal{U} \to \{0, 1, \ldots, m-1\}$ maps elements from a universe $\mathcal{U}$ to an array of $m$ slots. The quality of the hash function is determined by how uniformly it distributes elements across the array.
-\end{definition}
-
-\subsection{Universal hash families}
-
-The idea of universal hashing, introduced by Carter and Wegman~\cite{carter1979}, is to choose the hash function randomly from a family of hash functions at the beginning of the computation, before any elements are known.
-
-\begin{definition}[Universal hash family]
-A family $\mathcal{H}$ of hash functions from $\mathcal{U}$ to $\{0, 1, \ldots, m-1\}$ is called \emph{universal} if for all $x \neq y$ in $\mathcal{U}$:
-\[
-\Pr_{h \in \mathcal{H}}[h(x) = h(y)] \leq \frac{1}{m}.
-\]
-That is, for any two distinct elements, the probability of a collision is at most $1/m$.
-\end{definition}
-
-\begin{definition}[Pairwise independent hash family]
-A family $\mathcal{H}$ is \emph{pairwise independent} (or \emph{2-universal}) if for all $x \neq y$ and all $a, b \in \{0, \ldots, m-1\}$:
-\[
-\Pr_{h \in \mathcal{H}}[h(x) = a \text{ and } h(y) = b] = \frac{1}{m^2}.
-\]
-\end{definition}
-
-A standard universal hash family is the \emph{multiply-shift} family. Let $p$ be a prime larger than $|\mathcal{U}|$. For $a \in \{1, \ldots, p-1\}$ and $b \in \{0, \ldots, p-1\}$, define:
-\[
-h_{a,b}(x) = ((ax + b) \bmod p) \bmod m.
-\]
-The family $\mathcal{H} = \{h_{a,b} : a \in \{1, \ldots, p-1\}, b \in \{0, \ldots, p-1\}\}$ is universal.
-
-\begin{theorem}\label{thm:universal-hash}
-If $\mathcal{H}$ is a universal hash family and $n$ elements are hashed into an array of size $m$ using a randomly chosen $h \in \mathcal{H}$, then the expected number of collisions is at most $n^2/(2m)$.
-\end{theorem}
-
-\begin{proof}
-The number of collisions is $\sum_{i < j} \mathbf{1}[h(x_i) = h(x_j)]$. By linearity of expectation and universality:
-\[
-\mathbb{E}[\text{collisions}] = \sum_{i < j} \Pr[h(x_i) = h(x_j)] \leq \binom{n}{2} \cdot \frac{1}{m} < \frac{n^2}{2m}.
-\]
-\end{proof}
-
-\subsection{Collision resolution}
-
-Since the hash function maps a larger universe to a smaller array, collisions (two elements hashing to the same slot) are inevitable. There are two primary approaches:
-
-\paragraph{Chaining.} Each slot $j$ contains a linked list (or other collection) of all elements with $h(x) = j$. A search at slot $j$ scans this list. If the hash function is universal and $m = \Theta(n)$, the expected length of each chain is $O(1)$, giving $O(1)$ expected search time.
-
-\paragraph{Open addressing.} All elements are stored directly in the array. When a collision occurs, we probe a sequence of alternative slots (determined by a probe sequence) until an empty slot is found. With uniform hashing, the expected number of probes is $O(1/(1-\alpha))$, where $\alpha = n/m$ is the \emph{load factor}.
+The \emph{pattern matching} problem asks: given a text $T$ of length $n$ and a pattern $P$ of length $m$, find all occurrences of $P$ in $T$. The Karp--Rabin algorithm applies fingerprinting to solve this efficiently.
 
 \begin{algorithm}[H]
-\caption{Hash Table with Chaining}
+\caption{Karp--Rabin Pattern Matching}
+\label{alg:karp-rabin}
 \begin{algorithmic}[1]
-\Function{HashInsert}{$T, x$}
-    \State $j \gets h(x)$
-    \State Prepend $x$ to $T[j]$
-\EndFunction
-\State
-\Function{HashSearch}{$T, x$}
-    \State $j \gets h(x)$
-    \State Search for $x$ in $T[j]$
-    \State \Return{result of search}
-\EndFunction
+\Require text $T[0 \ldots n-1]$, pattern $P[0 \ldots m-1]$
+\Ensure all positions $i$ where $T[i \ldots i+m-1] = P$
+\State Compute $\phi_P = f_P(B) \bmod p$ \Comment{pattern fingerprint}
+\State Compute $\phi_{T_0} = f_{T[0..m-1]}(B) \bmod p$ \Comment{first window}
+\State $h = B^{m-1} \bmod p$ \Comment{highest power}
+\For{$i = 0, 1, \ldots, n - m$}
+  \If{$\phi_{T_i} = \phi_P$}
+    \State \Comment{Candidate match---verify explicitly}
+    \If{$T[i \ldots i+m-1] = P$}
+      \State \Return $i$
+    \EndIf
+  \EndIf
+  \If{$i < n - m$}
+    \State $\phi_{T_{i+1}} = (B \cdot (\phi_{T_i} - T[i] \cdot h) + T[i+m]) \bmod p$
+  \EndIf
+\EndFor
+\State \Return \textsc{No match}
 \end{algorithmic}
 \end{algorithm}
 
-\begin{theorem}\label{thm:hash-table}
-With universal hashing and chaining, the expected time per operation (insert, search, delete) is $O(1 + n/m)$. Choosing $m = \Theta(n)$ gives $O(1)$ expected time per operation.
+\begin{theorem}
+\label{thm:karp-rabin}
+The Karp--Rabin algorithm finds all occurrences of a pattern $P$ of length $m$ in a text $T$ of length $n$ in expected $O(n + m)$ time. The expected number of spurious fingerprint matches is $O(n/p)$.
 \end{theorem}
 
-\subsection{Linear probing}
+\begin{proof}
+The preprocessing to compute the pattern fingerprint and the initial text window fingerprint takes $O(m)$ time. Each subsequent window is updated in $O(1)$ time using the rolling hash, giving $O(n)$ total for all windows.
 
-In linear probing, when a collision occurs at slot $j$, we examine slots $j+1, j+2, \ldots$ (wrapping around) until an empty slot is found. Linear probing has excellent cache performance due to sequential memory access, but its analysis is more complex.
+Each of the $n - m + 1$ windows has a fingerprint collision with the pattern fingerprint with probability at most $m/p$ (by the Schwartz--Zippel lemma applied to the difference polynomial of degree $m-1$). The expected number of spurious matches is $(n - m + 1) \cdot m/p$, which is $O(n)$ when $p = \Theta(m)$. Each spurious match costs $O(m)$ for verification, but the total expected verification cost is $O(n \cdot m / p) = O(n)$ when $p = \Theta(m^2)$.
 
-The expected number of probes for a successful search with load factor $\alpha < 1$ is:
-\[
-\frac{1}{2}\left(1 + \frac{1}{1-\alpha}\right),
-\]
-and for an unsuccessful search:
-\[
-\frac{1}{2}\left(1 + \frac{1}{(1-\alpha)^2}\right).
-\]
+Combining: $O(m)$ preprocessing $+$ $O(n)$ rolling $+$ $O(n)$ expected verification $= O(n + m)$ expected time.
+\end{proof}
 
-These bounds hold under the \emph{simple uniform hashing} assumption: each key is equally likely to hash to any slot, independently of other keys.
+\begin{remark}
+The Karp--Rabin algorithm is particularly well-suited for the \emph{multiple pattern matching} problem, where one searches for several patterns simultaneously. Each pattern gets its own fingerprint, and the text window fingerprint is compared against all pattern fingerprints (using a hash table) in $O(1)$ expected time per window.
+\end{remark}
+
+\subsection*{Implementation}
 
 \begin{cpplisting}
-\textbf{C++ implementation:} See \texttt{src/chapter8/hash\_table.h} for a complete
-implementation of a universal hash table with chaining and the multiply-shift hash family.
+\begin{lstlisting}[title={Rabin--Karp search --- \texttt{src/chapter7/rabin\_karp.h}}]
+vector<int> rabin_karp_search(const string& text, const string& pattern);
+long long string_fingerprint(const string& s, long long base, long long mod);
+\end{lstlisting}
 \end{cpplisting}
 
+
 %% ============================================================
-\section{Hashing with $O(1)$ Search Time}
-\label{sec:perfect-hashing}
+\section{Interactive Proof Systems}
+\label{sec:interactive-proofs}
 %% ============================================================
 
-Universal hashing provides $O(1)$ \emph{expected} time per operation, but not worst-case bounds. The \emph{perfect hashing} problem asks for a hash table that achieves $O(1)$ \emph{worst-case} search time using $O(n)$ space.
+The algebraic techniques above can be viewed as special cases of a more general framework: \emph{interactive proof systems}. In an interactive proof, a computationally powerful \emph{prover} convinces a polynomial-time \emph{verifier} that a statement is true, using an interactive protocol.
 
-\subsection{FKS perfect hashing}
+\begin{definition}[Interactive Proof System]
+An interactive proof system for a language $L$ consists of a polynomial-time verifier $V$ and a (possibly computationally unbounded) prover $P$ such that:
+\begin{enumerate}[label=(\roman*)]
+\item \textbf{Completeness:} If $x \in L$, then $\Pr[V \text{ accepts after interacting with } P] \geq 2/3$.
+\item \textbf{Soundness:} If $x \notin L$, then for every prover $P^*$, $\Pr[V \text{ accepts after interacting with } P^*] \leq 1/3$.
+\end{enumerate}
+The probability is over the verifier's random coins.
+\end{definition}
 
-The seminal result of Fredman, Koml\'{o}s, and Szemer\'{e}di~\cite{fredman1984} achieves this via a two-level hashing scheme:
+\begin{theorem}[Shamir, 1992]
+$\mathrm{IP} = \mathrm{PSPACE}$.
+\end{theorem}
 
-\begin{definition}[FKS perfect hashing]
-The FKS scheme uses two levels of hashing:
-\begin{enumerate}[nosep]
-    \item \textbf{Level 1:} A primary hash function $h_1: \mathcal{U} \to \{0, 1, \ldots, m-1\}$ with $m = n$ is chosen from a universal family. This maps elements to $n$ ``buckets.''
-    \item \textbf{Level 2:} For each bucket $i$ containing $n_i$ elements, a secondary hash function $h_i: \text{bucket}_i \to \{0, 1, \ldots, n_i^2 - 1\}$ is chosen from a universal family. The secondary table for bucket $i$ has size $n_i^2$.
+This remarkable result shows that the class of languages with interactive proofs is exactly the class of languages decidable in polynomial space. We state the theorem without proof and illustrate the framework with two examples.
+
+\subsection*{Graph Isomorphism}
+
+\begin{theorem}
+Graph non-isomorphism is in $\mathrm{IP}$.
+\end{theorem}
+
+\begin{proof}
+The protocol proceeds as follows:
+\begin{enumerate}
+\item The verifier sends a random isomorphic copy $H$ of $G_1$ or $G_2$ to the prover.
+\item The prover responds with $i \in \{1, 2\}$ indicating which graph $H$ is isomorphic to.
+\item The verifier checks the response.
+\end{enumerate}
+If $G_1 \not\cong G_2$, the prover can always determine the correct answer. If $G_1 \cong G_2$, no prover can distinguish the two cases, so the verifier catches cheating with probability $1/2$.
+\end{proof}
+
+\subsection*{Quadratic Residuosity}
+
+A number $a$ is a \emph{quadratic residue} modulo $n$ if there exists $x$ with $x^2 \equiv a \pmod{n}$. Deciding quadratic residuosity modulo a composite $n$ is believed to be hard, yet the prover can convince the verifier.
+
+\begin{theorem}
+Quadratic residuosity is in $\mathrm{IP}$.
+\end{theorem}
+
+The protocol uses the fact that the Legendre symbol (or Jacobi symbol) can be computed without knowing the factorization, but determining actual residuosity requires the factors. The prover uses knowledge of the square root to convince the verifier.
+
+\subsection*{Connection to Freivalds' Algorithm}
+
+Freivalds' algorithm can be viewed as a one-round interactive proof for the language $\{ (A, B, C) : AB = C \}$. The verifier picks a random vector $\mathbf{r}$, sends it to the prover (or computes locally), and checks $A(B\mathbf{r}) = C\mathbf{r}$. The prover has no advantage because the verification is done locally. This is an \emph{Arthur--Merlin} protocol (public coins).
+
+
+%% ============================================================
+\section{PCP and Efficient Proof Verification}
+\label{sec:pcp}
+%% ============================================================
+
+The theory of interactive proofs leads to a profound connection between proof verification and approximation hardness: the PCP theorem.
+
+\begin{definition}[PCP]
+A language $L$ is in $\mathrm{PCP}(r(n), q(n))$ if there exists a polynomial-time verifier that uses $O(r(n))$ random bits and reads $O(q(n))$ bits of a proof string, such that:
+\begin{enumerate}[label=(\roman*)]
+\item If $x \in L$, there exists a proof that makes $V$ accept with probability 1.
+\item If $x \notin L$, no proof makes $V$ accept with probability greater than $1/2$.
 \end{enumerate}
 \end{definition}
 
-The key insight is that the secondary hash function is chosen \emph{after} the bucket is known, so we can search for a hash function that maps the $n_i$ elements to distinct positions (a \emph{perfect hash function} for that bucket).
-
-\begin{theorem}\label{thm:fks}
-With probability at least $1/2$, a randomly chosen primary hash function in the FKS scheme maps every bucket $i$ to at most $O(n_i^2)$ total secondary table space. The total space is $O(n)$ with high probability, and search time is $O(1)$ worst-case.
+\begin{theorem}[PCP Theorem, Arora--Safra 1992; Arora--Lund--Motwani--Sudam--Szegedy--Håstad 1998]
+$\mathrm{NP} = \mathrm{PCP}(O(\log n), O(1))$.
 \end{theorem}
 
-\begin{proof}
-The total secondary table space is $\sum_{i=0}^{m-1} n_i^2$. By the Cauchy--Schwarz inequality:
-\[
-\sum_{i=0}^{m-1} n_i^2 \geq \frac{(\sum n_i)^2}{m} = \frac{n^2}{m} = n.
-\]
-The question is whether the total space is $O(n)$ in expectation.
+This states that any NP proof can be ``encoded'' so that a verifier needs only $O(\log n)$ random bits and needs to inspect only $O(1)$ bits of the encoded proof, yet can still verify it with high probability.
 
-Let $X_{i,j,k}$ be the indicator that elements $x_j$ and $x_k$ (with $j \neq k$) hash to the same slot in bucket $i$. For a fixed pair of elements that both land in bucket $i$, the probability that they collide in the secondary hash table (of size $n_i^2$) is at most $1/n_i^2$. The expected total number of collisions across all buckets is:
-\[
-\mathbb{E}[\text{collisions}] = \sum_{i=0}^{m-1} \binom{n_i}{2} \cdot \frac{1}{n_i^2} < \sum_{i=0}^{m-1} \frac{1}{2} = \frac{m}{2} = \frac{n}{2}.
-\]
-Since the expected number of collisions is less than $n/2$, by the probabilistic method, there exists a choice of secondary hash functions with fewer than $n/2$ collisions, which implies a total secondary table size of $O(n)$.
+\subsection*{Consequences for Approximation}
 
-By trying $O(\log n)$ random primary hash functions, we can ensure the $O(n)$ bound holds with high probability. The search procedure: compute $h_1(x)$ to find the bucket, then compute $h_{h_1(x)}(x)$ to find the exact slot, both in $O(1)$ time.
-\end{proof}
+The PCP theorem has immediate consequences for the hardness of approximation. The most famous:
 
-\subsection{Dynamic perfect hashing}
-
-A limitation of FKS hashing is that it requires rebuilding when the number of elements changes significantly. \emph{Dynamic perfect hashing} addresses this by periodically rebuilding the entire table when the load factor deviates too far from 1. Specifically:
-
-\begin{itemize}[nosep]
-    \item When the number of elements exceeds $n$ (the table size), rebuild with a new table of size $\Theta(n^2)$ using a new primary hash function, then rehash all elements.
-    \item When the number of elements drops below $n/4$, rebuild with a table of size $\Theta(n)$ using a new primary hash function, then rehash all elements.
-\end{itemize}
-
-The amortized cost of each insert or delete is $O(1)$, and search is always $O(1)$ worst-case.
-
-\begin{theorem}\label{thm:dynamic-perfect}
-Dynamic perfect hashing achieves $O(1)$ worst-case search time and $O(1)$ amortized expected time per insertion and deletion, using $O(n)$ space.
+\begin{theorem}[Hardness of MAX-3SAT]
+If $\mathrm{P} \neq \mathrm{NP}$, there exists a constant $\epsilon > 0$ such that no polynomial-time algorithm can approximate MAX-3SAT to within a factor of $(1 - \epsilon)$.
 \end{theorem}
 
-\begin{proof}
-The rebuild cost when expanding from $n$ elements to $2n$ elements is $O(n^2)$ (the secondary table size). Amortized over $n$ insertions, this gives $O(n)$ per element, which is not $O(1)$.
+More precisely, the PCP theorem implies that it is NP-hard to satisfy more than a $(7/8 + \epsilon)$ fraction of clauses in a 3-SAT formula, even though a random assignment achieves $7/8$.
 
-To fix this, we use a more careful analysis. When we have $n$ elements and the table size is $m = \Theta(n^2)$, we rebuild when $n$ exceeds $m$. The rebuild cost is $O(n^2)$. We can charge this cost to the $n/2$ elements that were inserted since the last rebuild, giving an amortized cost of $O(n)$ per element, which is too high.
+\subsection*{Overview of PCP Construction}
 
-The correct approach uses a different table size strategy. Set the table size to $m = c \cdot n$ for a suitable constant $c$. Then the secondary table sizes satisfy $\sum n_i^2 = O(n)$ by the FKS analysis, and the rebuild cost is $O(n)$, giving $O(1)$ amortized cost.
-\end{proof}
+The PCP theorem is proved by combining several techniques:
+\begin{enumerate}
+\item \textbf{Algebraic encoding:} Encode the NP witness using error-correcting codes (e.g., Hadamard or Reed--Muller codes).
+\item \textbf{Low-degree testing:} Verify that the proof is close to a low-degree polynomial.
+\item \textbf{Random line picking:} The verifier picks random lines in a high-dimensional hypercube and checks consistency of the proof along these lines.
+\end{enumerate}
 
-\begin{cpplisting}
-\textbf{C++ implementation:} See \texttt{src/chapter8/hash\_table.h} for an implementation
-of FKS-style two-level perfect hashing with dynamic resizing.
-\end{cpplisting}
+The connection to algebraic fingerprinting is deep: the same Schwartz--Zippel machinery that powers polynomial identity testing is used in the low-degree testing step of the PCP proof.
+
+\begin{remark}
+The PCP theorem is one of the most important results in computational complexity theory, resolving long-standing questions about the limits of efficient approximation and connecting proof theory, coding theory, and algorithms.
+\end{remark}
+
 
 %% ============================================================
+\addcontentsline{toc}{section}{Notes}
 \section*{Notes}
 %% ============================================================
 
-\begin{enumerate}[nosep]
-    \item \textbf{Treaps} were introduced by Aragon and Seidel~\cite{aron1989}. Their analysis builds on the correspondence between treaps and random BSTs, which was studied by Devroye~\cite{devroye1988} and others. The join and split operations on treaps enable efficient implementations of persistent data structures and priority queues.
-    \item \textbf{Skip lists} were invented by Pugh~\cite{pugh1990} as a simpler alternative to balanced trees. The original paper includes extensive experimental comparisons. Variants include \emph{scoreable skip lists}, \emph{indexable skip lists}, and \emph{concurrent skip lists} for parallel computing.
-    \item \textbf{Universal hashing} was introduced by Carter and Wegman~\cite{carter1979}. The multiply-shift family $h_{a,b}(x) = ((ax+b) \bmod p) \bmod m$ is one of the simplest and most practical universal families. For a prime-free alternative, the \emph{multiply-mod-prime} family $h_a(x) = \lfloor m \cdot ((ax \bmod p)/p) \rfloor$ due to Dietzfelbinger et al.~\cite{dietzfelbinger1997} achieves similar guarantees.
-    \item \textbf{Perfect hashing} was achieved by Fredman, Koml\'{o}s, and Szemer\'{e}di~\cite{fredman1984}, who showed that $O(n)$ space and $O(1)$ worst-case search time are simultaneously achievable. Their paper is notable for its use of the probabilistic method. Dietzfelbinger et al.~\cite{dietzfelbinger1994} later gave a simpler and more practical construction.
-    \item \textbf{ cuckoo hashing} was introduced by Pagh and Rodler~\cite{pagh2004} and achieves $O(1)$ worst-case lookup time with $O(n)$ space using two hash functions. The analysis uses properties of random graphs.
-    \item \textbf{Bloom filters}~\cite{bloom1970} are a related probabilistic data structure that supports membership queries with a small false positive rate using $O(n)$ bits of space.
-\end{enumerate}
+\begin{itemize}[leftmargin=1.5em]
+\item \textbf{Freivalds' algorithm} was introduced by R\=usins Freivalds in 1979. The original paper ``Fast probabilistic algorithms for verification of polynomial identities'' appeared in \emph{Journal of Algebra}. The algorithm is notable for its simplicity and practical efficiency.
+
+\item \textbf{The Schwartz--Zippel lemma} was independently discovered by Jacob Schwartz (1980, ``Probabilistic algorithms for fast solutions of sparse polynomial equations'') and Richard Zippel (1979, ``Probabilistic algorithms for sparse polynomials''). It remains one of the most widely used tools in randomized algorithms.
+
+\item \textbf{Karp and Rabin} introduced their fingerprinting and pattern matching algorithms in their 1987 paper ``Efficient randomized pattern-matching algorithms.'' The rolling hash technique has become a standard tool in string algorithms and is used in practice (e.g., in diff tools and plagiarism detection).
+
+\item \textbf{Tutte matrices} were introduced by W.\ T.\ Tutte in 1947. The algebraic approach to matchings was developed further by Lov\'asz (1979) and Micciancio (2000). The $O(n^\omega)$ randomized algorithm for perfect matching is due to Rabin and Vazirani (1989).
+
+\item \textbf{Interactive proofs} were introduced by Goldwasser, Micali, and Rackoff (1985) and independently by Babai (1985). The result $\mathrm{IP} = \mathrm{PSPACE}$ was proved by Adi Shamir in 1992.
+
+\item \textbf{The PCP theorem} is attributed to Arora and Safra (1992) and Arora, Lund, Motwani, Sudan, Szegedy, and Håstad (1998). The connection to inapproximability was established in the same body of work. A self-contained proof can be found in Arora and Barak's \emph{Computational Complexity: A Modern Approach} (2009).
+\end{itemize}
+
 
 %% ============================================================
+\addcontentsline{toc}{section}{Problems}
 \section*{Problems}
 %% ============================================================
 
-\begin{problem}[8.1]
-Prove that the treap deletion algorithm (rotating a node down to a leaf, then removing it) maintains both the BST property and the heap property. What is the maximum number of rotations required to delete a node at depth $d$?
+\begin{problem}[7.1]
+Implement Freivalds' algorithm and test it on the following matrices:
+\[
+A = \begin{pmatrix} 1 & 2 \\ 3 & 4 \end{pmatrix}, \quad
+B = \begin{pmatrix} 5 & 6 \\ 7 & 8 \end{pmatrix}, \quad
+C = \begin{pmatrix} 19 & 22 \\ 43 & 50 \end{pmatrix}.
+\]
+Verify that your implementation correctly returns \textsc{Yes} for $AB = C$ and \textsc{No} for $AB \neq C$ (replace $C_{11}$ with 20). How many rounds are needed to achieve error below $10^{-9}$?
 \end{problem}
 
-\begin{problem}[8.2]
-Design a treap-based algorithm to find the $k$-th smallest element in $O(\log n)$ expected time. Hint: augment each node with the size of its subtree.
+\begin{problem}[7.2]
+Prove that Freivalds' algorithm can be generalized to rectangular matrices: if $A$ is $m \times n$, $B$ is $n \times p$, and $C$ is $m \times p$, then the verification still runs in $O(m \cdot \max(n, p))$ time per round.
 \end{problem}
 
-\begin{problem}[8.3]
-Analyze the expected number of levels in a skip list of $n$ elements. What is the probability that the maximum level exceeds $2 \log_2 n$?
+\begin{problem}[7.3]
+Use the Schwartz--Zippel lemma to prove that polynomial identity testing for a univariate polynomial of degree $d$ over $\mathbb{Z}$ can be done with error at most $1/d$ using a single evaluation point from $\{1, 2, \ldots, d^2\}$.
 \end{problem}
 
-\begin{problem}[8.4]
-Prove that the family $\mathcal{H}_{a,b} = \{h_{a,b}(x) = ((ax + b) \bmod p) \bmod m : a \in \{1, \ldots, p-1\}, b \in \{0, \ldots, p-1\}\}$ is a universal hash family when $p$ is prime and $m \leq p$.
+\begin{problem}[7.4]
+Design a randomized algorithm to test whether two $n \times n$ matrices commute (i.e., $AB = BA$). What is the error probability per round? Analyze the time complexity.
 \end{problem}
 
-\begin{problem}[8.5]
-Show that with universal hashing and chaining, the expected length of the longest chain is $O(\log n / \log \log n)$ when $m = n$. Hint: use the coupon collector's argument or the analysis of maximum load in balls-and-bins.
+\begin{problem}[7.5]
+Modify the Karp--Rabin algorithm to solve the \emph{longest common substring} problem: given two strings $S$ and $T$, find the longest string that is a substring of both. Hint: Use binary search on the length and Karp--Rabin fingerprinting.
 \end{problem}
 
-\begin{problem}[8.6]
-Analyze the expected number of probes for a successful search in a hash table with linear probing and load factor $\alpha$. Derive the formula $\frac{1}{2}(1 + 1/(1-\alpha))$.
+\begin{problem}[7.6]
+Prove that the graph non-isomorphism protocol described in Section~\ref{sec:interactive-proofs} achieves soundness error exactly $1/2$. How can the error be reduced to $2^{-k}$ using $k$ rounds of interaction?
 \end{problem}
 
-\begin{problem}[8.7]
-In the FKS perfect hashing scheme, explain why the secondary hash function for bucket $i$ can be chosen to be perfect (no collisions) among the $n_i$ elements. What is the expected number of trials?
+\begin{problem}[7.7]
+Consider the following protocol for checking equality of two $n$-bit strings $S$ and $T$ with a single bit of interaction: The verifier sends a random bit $b$ to the prover, who responds with $b \oplus (S = T ? 0 : 1)$. Does this protocol have perfect completeness? What is the soundness error? Is this protocol in $\mathrm{IP}$?
 \end{problem}
 
-\begin{problem}[8.8]
-Design a randomized data structure that supports insert, delete, and \emph{range counting}: given $a$ and $b$, return the number of elements in the set with keys in $[a, b]$. Your data structure should support each operation in $O(\log n)$ expected time.
+\begin{problem}[7.8]
+A polynomial $p(x_1, \ldots, x_n)$ is given in \emph{arithmetic circuit form} (a DAG of additions and multiplications). Prove that evaluating $p$ at a random point from $S^n$ and checking whether the result is zero is a correct polynomial identity test. What is the running time in terms of the circuit size?
 \end{problem}
 
-\begin{problem}[8.9]
-Implement a skip list and compare its performance (in terms of actual wall-clock time) with a std::map (a red--black tree) on random workloads of $10^6$ insertions, $10^6$ searches, and $10^6$ deletions. Which data structure is faster in practice, and by how much?
+\begin{problem}[7.9]
+Explain why the PCP theorem implies that it is NP-hard to distinguish between 3-SAT instances where $(1-\epsilon)$ fraction of clauses are satisfiable and instances where at most $7/8 + \epsilon$ fraction are satisfiable.
 \end{problem}
 
-\begin{problem}[8.10]
-\textbf{(Research)} A \emph{Cuckoo hash table} uses two hash functions $h_1$ and $h_2$ and stores each element $x$ in one of two positions: $h_1(x)$ or $h_2(x)$. When both positions are occupied, the existing element is ``kicked out'' to its alternate position. Prove that with $m = O(n)$ slots, the expected insertion time is $O(1)$, but that there is a constant probability of insertion failure when $m < n(1 + \epsilon)$ for some $\epsilon > 0$. How can multiple hash functions resolve this?
+\begin{problem}[7.10]
+\textbf{(Research)} The Valiant--Vazirani theorem states that if $\mathrm{P} \neq \mathrm{NP}$, then NP cannot be solved in randomized polynomial time even with one-sided error. Explain the relationship between this result and the fact that graph isomorphism is in $\mathrm{IP}$ but not known to be in $\mathrm{NP}$ or $\mathrm{coNP}$.
 \end{problem}
-
 
 \end{document}

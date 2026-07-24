@@ -1,36 +1,17 @@
-#include <iostream>
-#include <string>
-#include "paging.h"
-#include "k_server.h"
-#include "adversary.h"
-
-namespace {
-
-void print_header(const std::string& title) {
-    std::cout << "\n";
-    std::cout << "========================================\n";
-    std::cout << "  " << title << "\n";
-    std::cout << "========================================\n\n";
-}
-
-} // anonymous namespace
+#include "pram_simulation.h"
+#include "mis.h"
+#include "matchings.h"
+#include "../compat_print.h"
 
 int main() {
-    std::println("Chapter 13: Online Algorithms");
-    std::println("Randomized Algorithms - C++ Implementations\n");
+    println("+==============================================================+");
+    println("|       Chapter 12: Parallel and Distributed Algorithms       |");
+    println("+==============================================================+");
 
-    print_header("13.1 Paging Algorithms");
-    randalgo::demonstrate_paging();
+    randalgo::demonstrate_pram();
+    randalgo::demonstrate_mis();
+    randalgo::demonstrate_matchings();
 
-    print_header("13.2 The k-Server Problem");
-    randalgo::demonstrate_k_server();
-
-    print_header("13.3 Adversary Models");
-    randalgo::demonstrate_adversary();
-
-    std::cout << "\n========================================\n";
-    std::cout << "  All demonstrations complete.\n";
-    std::cout << "========================================\n";
-
+    println("\nDone.");
     return 0;
 }

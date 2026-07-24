@@ -1,6 +1,6 @@
-#include "convex_hull.h"
-#include "delaunay.h"
-#include "linear_programming.h"
+#include "treap.h"
+#include "skip_list.h"
+#include "hash_table.h"
 #include <iostream>
 #include <string>
 #include <chrono>
@@ -17,17 +17,17 @@ void print_section(const std::string& title) {
 }
 
 int main() {
-    std::cout << "Chapter 9: Geometric Algorithms and Linear Programming\n";
+    std::cout << "Chapter 8: Data Structures\n";
     std::cout << "Randomized Algorithms - C++ Implementations\n";
 
-    print_header("9.2 Convex Hull (Randomized Incremental)");
-    chapter9::demonstrate_convex_hull();
+    print_header("8.2 Random Treaps");
+    chapter9::demonstrate_treap();
 
-    print_header("9.5 Delaunay Triangulation (Incremental with Flips)");
-    chapter9::demonstrate_delaunay();
+    print_header("8.3 Skip Lists");
+    chapter9::demonstrate_skip_list();
 
-    print_header("9.10 Linear Programming (Seidel's Algorithm)");
-    chapter9::demonstrate_lp();
+    print_header("8.4 - 8.5 Hash Tables");
+    chapter9::demonstrate_hashing();
 
     std::cout << "\n========================================\n";
     std::cout << "  All demonstrations complete.\n";

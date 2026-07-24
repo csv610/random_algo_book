@@ -1,32 +1,36 @@
-#include <print>
+#include <iostream>
 #include <string>
+#include "paging.h"
+#include "k_server.h"
+#include "adversary.h"
 
-#include "number_theory.h"
-#include "crypto.h"
-#include "polynomial.h"
+namespace {
 
-static void print_header(const std::string& title) {
-    std::println("\n========================================");
-    std::println("  {}", title);
-    std::println("========================================\n");
+void print_header(const std::string& title) {
+    std::cout << "\n";
+    std::cout << "========================================\n";
+    std::cout << "  " << title << "\n";
+    std::cout << "========================================\n\n";
 }
 
+} // anonymous namespace
+
 int main() {
-    print_header("Chapter 14: Number Theory and Algebra");
+    println("Chapter 13: Online Algorithms");
+    println("Randomized Algorithms - C++ Implementations\n");
 
-    randalgo::demonstrate_number_theory();
+    print_header("13.1 Paging Algorithms");
+    randalgo::demonstrate_paging();
 
-    print_header("Chapter 14: Cryptographic Algorithms");
+    print_header("13.2 The k-Server Problem");
+    randalgo::demonstrate_k_server();
 
-    randalgo::demonstrate_crypto();
+    print_header("13.3 Adversary Models");
+    randalgo::demonstrate_adversary();
 
-    print_header("Chapter 14: Polynomial Operations");
-
-    randalgo::demonstrate_polynomial();
-
-    std::println("\n========================================");
-    std::println("  Chapter 14 Complete");
-    std::println("========================================\n");
+    std::cout << "\n========================================\n";
+    std::cout << "  All demonstrations complete.\n";
+    std::cout << "========================================\n";
 
     return 0;
 }

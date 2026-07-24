@@ -7,7 +7,6 @@
 \usepackage{graphicx}
 \usepackage{listings}
 \usepackage{xcolor}
-\usepackage{hyperref}
 \usepackage{enumitem}
 \usepackage{tikz}
 \usepackage{algorithm}
@@ -16,18 +15,19 @@
 \usepackage{geometry}
 \usepackage{fancyhdr}
 \usepackage{titlesec}
+\usepackage[colorlinks=true, linkcolor=blue, citecolor=blue, urlcolor=blue, plainpages=false, pdfpagelabels]{hyperref}
 
 \geometry{
   papersize={6in,9in},
   margin=0.75in,
   top=0.75in,bottom=0.75in,
-  inner=0.9in,outer=0.65in,
+  inner=0.85in,outer=0.65in,
   headheight=14pt
 }
 
 \pagestyle{fancy}
 \fancyhf{}
-\fancyhead[LE]{\small\textit{2. Game-Theoretic Techniques}}
+\fancyhead[LE]{\small\textit{2. Fundamentals}}
 \fancyhead[RO]{\small\textit{Randomized Algorithms}}
 \fancyfoot[C]{\thepage}
 \renewcommand{\headrulewidth}{0.4pt}
@@ -49,7 +49,8 @@
   showstringspaces=false,
   language=C++,
   morekeywords={nullptr,size_t,auto,const,constexpr,
-    unordered_map,vector,pair,mt19937,bool}
+    unordered_map,vector,pair,mt19937,
+    uniform_int_distribution,INT_MAX}
 }
 \lstset{style=cppstyle}
 
@@ -64,864 +65,669 @@
 \newtheorem{remark}[theorem]{Remark}
 \theoremstyle{remark}
 \newtheorem{exercise}[theorem]{Exercise}
+\newtheorem{problem}[theorem]{Problem}
+\newenvironment{cpplisting}{\begin{center}\small}{\end{center}}
+
+\newcommand{\Exp}{\operatorname{\mathbb{E}}}
+\newcommand{\Var}{\operatorname{Var}}
+\newcommand{\Cov}{\operatorname{Cov}}
 
 \begin{document}
 
-\chapter*{2 Game-Theoretic Techniques}
-\addcontentsline{toc}{chapter}{2 Game-Theoretic Techniques}
-\markboth{2 Game-Theoretic Techniques}{2 Game-Theoretic Techniques}
+\chapter*{2 Fundamentals}
+\addcontentsline{toc}{chapter}{2 Fundamentals}
+\markboth{2 Fundamentals}{Randomized Algorithms}
+\label{ch:fundamentals}
 
-In this chapter we study several ideas that are basic to the design and
-analysis of randomized algorithms.  All the topics in this chapter share a
-game-theoretic viewpoint, which enables us to think of a randomized algorithm
-as a probability distribution on deterministic algorithms.  This leads to
-Yao's Minimax Principle, which can be used to establish a lower bound on the
-performance of a randomized algorithm.
+In this chapter we develop fundamental mathematical tools and computational
+models that underpin the randomized algorithms studied in the remainder of
+the book. We begin with the construction of binary planar partitions,
+illustrating linearity of expectation with a geometric application. We then
+study a probabilistic recurrence that arises in the analysis of selection
+and other divide-and-conquer algorithms. Finally, we review the computation
+model and complexity classes that provide the formal framework for our
+discussions throughout the book.
 
+\section{Binary Planar Partitions}
+\label{sec:bpp}
 %==========================================================================
-\section{Game Tree Evaluation}
-\label{sec:gametree}
-%==========================================================================
 
-We begin with another simple illustration of linearity of expectation, in the
-setting of game tree evaluation.  This example will demonstrate a randomized
-algorithm whose expected running time is smaller than that of any
-deterministic algorithm.  It will also serve as a vehicle for demonstrating a
-standard technique for deriving a lower bound on the running time of any
-randomized algorithm for a problem.
+We now illustrate linearity of expectation with another application. Given a
+set $S=\{s_1,s_2,\ldots,s_n\}$ of non-intersecting line segments in the
+plane, we wish to construct a \emph{binary planar partition}---a binary
+tree in which each node is associated with a region of the plane, and each
+region contains at most one line segment. Such partitions have applications
+to hidden-line elimination in computer graphics.
 
-A \emph{game tree} is a rooted tree in which internal nodes at even distance
-from the root are labeled MIN and internal nodes at odd distance are labeled
-MAX.  Associated with each leaf is a real number, which we call its
-\emph{value}.  The evaluation of the game tree is the following process.
-Each leaf returns the value associated with it.  Each MAX node returns the
-largest value returned by its children, and each MIN node returns the smallest
-value returned by its children.  Given a tree with values at the leaves, the
-evaluation problem is to determine the value returned by the root.
+%% ----- Binary Planar Partitions -----
+\subsection{Binary Planar Partitions}
 
-The evaluation of game trees plays a central role in artificial intelligence,
-particularly in game-playing programs.  The reader may readily associate the
-children of a node with the options available to one of the two players in a
-game.  The leaves represent the value of the game for either player.  One
-player seeks to maximize this value, while the other tries to minimize it.
-At each step, an evaluation algorithm chooses a leaf and reads its value.
+Our next illustration is the construction of a binary planar partition of a
+set of $n$ disjoint line segments in the plane, a problem with applications
+to computer graphics.  A binary planar partition consists of a binary tree
+together with some additional information, as described below.  Every internal
+node of the tree has two children.  Associated with each node $v$ of the tree
+is a region $r(v)$ of the plane.  Associated with each internal node $v$ of
+the tree is a line $\ell(v)$ that intersects $r(v)$.  The region
+corresponding to the root is the entire plane.  The region $r(v)$ is
+partitioned by $\ell(v)$ into two regions $r_1(v)$ and $r_2(v)$, which are
+the regions associated with the two children of~$v$.  Thus, any region $r$ of
+the partition is bounded by the partition lines on the path from the root to
+the node corresponding to $r$ in the tree.
 
-We study the number of such steps taken by an algorithm for evaluating a game
-tree.  We do not charge the algorithm for any other computation.  We will
-limit our discussion to the special case in which the values at the leaves are
-bits, 0 or~1.  Thus, each MIN node can be thought of as a Boolean AND
-operation and each MAX node as a Boolean OR operation.  This special case is
-of interest in its own right, having applications in mechanical theorem
-proving.
-
-Let $T_{d,k}$ denote a uniform tree in which the root and every internal node
-has~$d$ children and every leaf is at distance~$2k$ from the root.  Thus, any
-root-to-leaf path passes through $k$ AND nodes (including the root itself)
-and $k$ OR nodes, and there are $d^{2k}$ leaves.  An instance of the
-evaluation problem consists of the tree $T_{d,k}$ together with a Boolean
-value for each of the $d^{2k}$ leaves.  Given an algorithm, we study the
-maximum number of steps it takes to evaluate any instance of $T_{d,k}$.
-
-An algorithm begins by specifying a leaf whose value is to be read at the
-first step.  Thereafter, it specifies such a leaf at each step, based on the
-values it has read on previous steps.  In a deterministic algorithm, the
-choice of the next leaf to be read is a deterministic function of the values
-at the leaves read so far.  For a randomized algorithm, this choice may be
-randomized.
+Given a set $S=\{s_1,s_2,\ldots,s_n\}$ of non-intersecting line segments
+in the plane, we wish to find a binary planar partition such that every
+region in the partition contains at most one line segment (or a portion of
+one line segment).  Notice that the definition allows us to divide an input
+line segment $s_i$ into several segments $s_{i1},s_{i2},\ldots$, each of
+which lies in a different region.
 
 \begin{exercise}
-Show that for any deterministic evaluation algorithm, there is an instance of
-$T_{d,k}$ that forces the algorithm to read the values on all $d^{2k}$ leaves.
+Show that there exists a set of line segments for which no binary planar
+partition can avoid breaking up some of the segments into pieces, if each
+segment is to lie in a different region of the partition.
 \end{exercise}
 
-\subsection{A Randomized Algorithm}
+Binary planar partitions have two applications in computer graphics.  Here,
+we describe one of them, the problem of hidden line elimination.  The second
+application has to do with the constructive solid geometry (or CSG)
+representation of a polyhedral object.
 
-We now give a simple randomized algorithm and study the expected number of
-leaves it reads on any instance of $T_{d,k}$.  To simplify our presentation,
-we restrict ourselves to the case $d=2$.  Any deterministic algorithm for this
-case can be made to read all $2^{2k}=4^k$ leaves on some instance.  Our
-randomized algorithm is based on the following simple observation.  Consider
-a single AND node with two leaves.  If the node were to return~0, at least
-one of the leaves must contain~0.  A deterministic algorithm inspects the
-leaves in a fixed order, and an adversary can therefore always ``hide'' the~0
-at the second of the two leaves inspected by the algorithm.  Reading the
-leaves in a random order foils this strategy.  With probability~$1/2$, the
-algorithm chooses the hidden~0 on the first step, so its expected number of
-steps is~$3/2$, which is better than the worst case for any deterministic
-algorithm.  Similarly, in the case of an OR node, if it were to return a~1,
-then a randomized order of examining the leaves will reduce the expected
-number of steps to~$3/2$.
+In rendering a scene on a graphics terminal, we are often faced with a
+situation in which the scene remains fixed, but it is to be viewed from
+several directions.  The hidden line elimination problem is the following:
+having adopted a viewpoint and a direction of viewing, we want to draw only
+the portion of the scene that is visible, eliminating those objects that are
+``obscured by other objects'' in front of them relative to the viewpoint.
+
+One approach uses a binary partition tree.  Once the scene has been decomposed
+into line segments, we construct a binary planar partition tree for it.  Now,
+given the direction of viewing, we use an idea known as the \emph{painter's
+algorithm} to render the scene: first draw the objects that are furthest
+``behind,'' and then progressively draw the objects that are in front.
+
+The time it takes to render the scene depends on the size of the binary
+planar partition tree.  We therefore wish to construct a binary planar
+partition that is as small as possible.  Because the construction of the
+partition can break some of the input segments $s_i$ into smaller pieces, the
+size of the partition need not be~$n$; in fact, it is not clear that a
+partition of size $O(n)$ always exists.
+
+For a line segment $s$, let $\ell(s)$ denote the line obtained by extending
+(if necessary) $s$ on both sides to infinity.  For the set
+$S=\{s_1,s_2,\ldots,s_n\}$ of line segments, a simple and natural class of
+partitions is the set of \emph{autopartitions}, which are formed by only
+using lines from the set $\{\ell(s_1),\ell(s_2),\ldots,\ell(s_n)\}$ in
+constructing the partition.
 
 \begin{algorithm}[htbp]
-\caption{Randomized evaluation of $T_{2,k}$}
-\label{alg:gametree}
+\caption{RandAuto}
+\label{alg:randauto}
 \begin{algorithmic}[1]
-\Procedure{EvalAND}{$v$}
-  \State Pick a child $c$ of $v$ uniformly at random
-  \State $val \gets$ \Call{EvalOR}{$c$}
-  \If{$val = 0$}
-    \State \Return 0
-  \EndIf
-  \State $val' \gets$ \Call{EvalOR}{other child of $v$}
-  \State \Return $val'$
-\EndProcedure
-\Statex
-\Procedure{EvalOR}{$v$}
-  \State Pick a child $c$ of $v$ uniformly at random
-  \State $val \gets$ \Call{EvalAND}{$c$}
-  \If{$val = 1$}
-    \State \Return 1
-  \EndIf
-  \State $val' \gets$ \Call{EvalAND}{other child of $v$}
-  \State \Return $val'$
-\EndProcedure
+\State \textbf{Input:} A set $S=\{s_1,\ldots,s_n\}$ of non-intersecting
+  line segments.
+\State \textbf{Output:} A binary autopartition $P_\pi$ of $S$.
+\State Pick a permutation $\pi$ of $\{1,2,\ldots,n\}$ uniformly at random.
+\While{a region contains more than one segment}
+  \State Cut it with $\ell(s_i)$ where $i$ is first in $\pi$ such that
+    $s_i$ cuts that region.
+\EndWhile
 \end{algorithmic}
 \end{algorithm}
 
-The reader may wonder how the randomized algorithm can benefit if the AND node
-were to return~1, or if the OR node were to return~0.  If the two children of
-these nodes are leaves, then clearly both leaves must be examined.  The point
-is that at an internal AND node in a tree returning a~1, examining the two OR
-children (and evaluating their sub-trees) in a random order is still
-beneficial.  The two OR children of an AND node must also return~1, and this
-is the easy case for the OR nodes.  Similarly, at an internal OR node
-returning~0, the two AND children must return~0, and this is the easy case
-for the AND nodes.
-
 \begin{theorem}
-\label{thm:gametree}
-Given any instance of $T_{2,k}$, the expected number of steps for the
-randomized algorithm is at most $3^k$.  Since $n=4^k$ leaves, the expected
-running time is $n^{\log_4 3}\approx n^{0.793}$.
+\label{thm:partition}
+The expected size of the autopartition produced by RandAuto is $O(n\log n)$.
 \end{theorem}
 
 \begin{proof}
-We argue by induction on $k$.  The basis ($k=1$) is the single-node case:
-for an AND (or OR) node with two leaves, the expected cost is at most~$3/2$.
+For line segments $u$ and $v$, define $\operatorname{index}(u,v)$ to be~$i$
+if $\ell(u)$ intersects $i{-}1$ other segments before hitting $v$, and
+$\operatorname{index}(u,v)=\infty$ if $\ell(u)$ does not hit $v$.  Since a
+segment $u$ can be extended in two directions, it is possible that
+$\operatorname{index}(u,v)=\operatorname{index}(u,w)$ for two different
+lines $v$ and $w$.
 
-Assume the expected cost of evaluating any instance of $T_{2,k-1}$ is at
-most $3^{k-1}$.  Consider first a tree $T$ whose root is an OR node, each of
-whose children is the root of a copy of $T_{2,k-1}$.
+Let us denote by $u\dashv v$ the event that $\ell(u)$ cuts $v$ in the
+constructed partition.  Let $\operatorname{index}(u,v)=i$, and let
+$u_1,u_2,\ldots,u_{i-1}$ be the segments that $\ell(u)$ intersects before
+hitting~$v$.  The event $u\dashv v$ happens only if $u$ occurs before any
+of $\{u_1,u_2,\ldots,u_{i-1},v\}$ in the randomly chosen permutation
+$\pi$.  The probability that this happens is $1/(i+1)$.
 
-\emph{Case 1: OR evaluates to~1.}
-At least one child returns~1.  With probability~$1/2$ this child is chosen
-first, incurring expected cost at most $3^{k-1}$.  With probability~$1/2$
-both sub-trees are evaluated, incurring cost at most $2\times 3^{k-1}$.
-The expected cost is at most
-\[
-  \tfrac{1}{2}\cdot 3^{k-1} + \tfrac{1}{2}\cdot 2\cdot 3^{k-1}
-  = \tfrac{3}{2}\cdot 3^{k-1}.
-\]
+Let $C_{u,v}$ be an indicator variable that is 1 if $u\dashv v$ and 0
+otherwise; clearly,
+$\mathbb{E}[C_{u,v}]=\Pr[u\dashv v]\le 1/(\operatorname{index}(u,v)+1)$.
+The size of $P_\pi$ equals $n$ plus the number of intersections due to cuts.
+Thus, its expectation is
+$n+\mathbb{E}[\sum_u\sum_v C_{u,v}]$ and by linearity of expectation this
+equals
+\begin{equation*}
+  n + \sum_u \sum_v \Pr[u\dashv v]
+  \le n + \sum_u \sum_v
+    \frac{1}{\operatorname{index}(u,v)+1}.
+  \tag{2.1}
+\end{equation*}
 
-\emph{Case 2: OR evaluates to~0.}
-Both children must be evaluated, costing at most $2\times 3^{k-1}$.
+For any line segment $u$ and any finite positive integer $i$, there are at
+most two vertices $v$ and $w$ such that $\operatorname{index}(u,v)$ and
+$\operatorname{index}(u,w)$ equal~$i$.  This is because the extension of the
+segment $u$ along either of the two possible directions will meet any other
+line segment at most once.  Thus, in each of the two directions, there is a
+total ordering on the points of intersection with other segments and the
+index values increase monotonically.  This implies that
+\begin{equation*}
+  \sum_{v\ne u} \frac{1}{\operatorname{index}(u,v)+1}
+  \le \sum_{i=1}^{n-1} \frac{2}{i+1}
+  = O(\log n).
+  \tag{2.2}
+\end{equation*}
 
-Now consider the root of $T_{2,k}$, an AND node.
-
-\emph{Case 1: AND evaluates to~1.}
-Both sub-trees return~1.  By the discussion above, the expected cost of
-evaluating each OR sub-tree that returns~1 is at most
-$\frac{3}{2}\cdot 3^{k-1}$.  By linearity of expectation, the total
-expected cost is at most $2\times\frac{3}{2}\times 3^{k-1}=3^k$.
-
-\emph{Case 2: AND evaluates to~0.}
-At least one sub-tree returns~0.  With probability~$1/2$ the sub-tree
-returning~0 is chosen first, costing at most $2\times 3^{k-1}$ (both its OR
-children must be evaluated).  With probability~$1/2$, an additional cost of
-$\frac{3}{2}\cdot 3^{k-1}$ may be incurred for the sibling returning~1.
-The expected cost is at most
-\[
-  \tfrac{1}{2}\cdot 2\cdot 3^{k-1}
-  + \tfrac{1}{2}\cdot\bigl(2\cdot 3^{k-1}+\tfrac{3}{2}\cdot 3^{k-1}\bigr)
-  \le 3^k.
-\]
-In all cases the expected cost is at most $3^k$.
+Combining this with~(2.1) implies that the expected size of $P_\pi$ is
+bounded above by $n+O(n\log n)$, which is $O(n\log n)$.
 \end{proof}
 
+Note that in computing the expected number of intersections, we only made
+use of linearity of expectation.  We do not require any independence between
+the events $u\dashv v$ and $u\dashv w$, for segments $u$, $v$, and~$w$.
+Indeed, these events need not be independent in general.
+
+One way of interpreting Theorem~\ref{thm:partition} is as follows: since the
+expected size of the binary planar partition constructed by the algorithm is
+$O(n\log n)$ on any input, there must exist a binary autopartition of size
+$O(n\log n)$ for every input.  This follows from the simple fact that any
+random variable assumes at least one value that is no greater than its
+expectation.  Thus we have used a \emph{probabilistic argument} to assert
+that a combinatorial object---in this case a binary autopartition of size
+$O(n\log n)$---exists with absolute certainty rather than with some
+probability.  This is an example of the \emph{probabilistic method} in
+combinatorics.  We will study the probabilistic method in greater detail in
+Chapter~6.
+
+%% ----- C++ : BPP -----
+\subsubsection*{C++ Implementation}
+
+\begin{lstlisting}[
+  caption={RandAuto for binary planar partitions.},
+  label={lst:bpp}]
+struct Seg { double x1,y1,x2,y2; int id; };
+
+bool intersect(const Seg& a, const Seg& b) {
+  auto o=[](double px,double py,
+            double qx,double qy,
+            double rx,double ry){
+    double v=(qy-py)*(rx-qx)-(qx-px)*(ry-qy);
+    return std::abs(v)<1e-10?0:(v>0?1:2);
+  };
+  return o(a.x1,a.y1,a.x2,a.y2,b.x1,b.y1)
+        !=o(a.x1,a.y1,a.x2,a.y2,b.x2,b.y2)
+      && o(b.x1,b.y1,b.x2,b.y2,a.x1,a.y1)
+        !=o(b.x1,b.y1,b.x2,b.y2,a.x2,a.y2);
+}
+
+// Build autopartition recursively
+// segs: remaining segments in this region
+// Returns number of leaf nodes (partition size)
+int rand_auto(std::vector<Seg*>& segs) {
+  if (segs.empty()) return 0;
+  if (segs.size()==1) return 1;       // leaf
+  std::vector<int> p(segs.size());
+  std::iota(p.begin(),p.end(),0);
+  std::shuffle(p.begin(),p.end(),
+    std::mt19937(std::random_device()()));
+  Seg* cut = segs[p[0]];             // random pivot
+  std::vector<Seg*> L,R;
+  for (size_t i=1;i<segs.size();i++) {
+    if (intersect(*cut,*segs[i]))
+      { L.push_back(segs[i]); R.push_back(segs[i]); }
+    else {
+      double dx=cut->x2-cut->x1;
+      double dy=cut->y2-cut->y1;
+      double cross=dx*(segs[i]->y1-cut->y1)
+                  -dy*(segs[i]->x1-cut->x1);
+      (cross>=0?L:R).push_back(segs[i]);
+    }
+  }
+  return rand_auto(L)+rand_auto(R);
+}
+\end{lstlisting}
+
+%==========================================================================
+\section{A Probabilistic Recurrence}
+\label{sec:recurrence}
+%==========================================================================
+
+Frequently, we express a random variable of interest as a recurrence in
+terms of other random variables.  In this section, we study one such
+situation using the Find algorithm analyzed in detail in Problem~1.9.  The
+material in this section, although useful, is not an essential prerequisite
+for subsequent topics and may be omitted in the first reading.
+
+The Find algorithm for selecting the $k$th smallest of a set $S$ of $n$
+elements works as follows.  We pick a random element $y$ and partition
+$S\setminus\{y\}$ into two sets $S_1$ and $S_2$ (elements smaller and larger
+than~$y$ respectively) as in RandQS.  Suppose $|S_1|=k-1$; then $y$ is the
+desired element and we are done.  Otherwise, if $|S_1|>k$, we recursively
+find the $k$th smallest element of $S_1$; else we recursively find the
+$(k-|S_1|-1)$th smallest element in~$S_2$.
+
+The expected number of comparisons made by the Find algorithm is the subject
+of Problem~1.9.  Suppose instead that we were to ask the following question:
+what is the expected number of times we make the recursive call in the
+algorithm?  Equivalently, what is the expected number of times we pick a
+random element in the algorithm?  While this question may not be especially
+important for the Find algorithm, it is the kind of question that arises in
+the analysis of a number of parallel and geometric algorithms.  Intuitively,
+we expect that the size of the residual problem in the Find algorithm is
+divided by a constant factor at each recursive level, so that we expect that
+the number of recursive invocations is $O(\log n)$.  Below, we show that
+this intuition can be formalized in a general setting.
+
+Let $g(x)$ be a monotone non-decreasing function from the positive reals to
+the positive reals.  Consider a particle whose position changes at discrete
+time steps and is always at a positive integer.  If the particle is currently
+at position $m>1$, it proceeds at the next step to the position $m-X$, where
+$X$ is a random variable ranging over the integers $1,\ldots,m-1$.  All we
+know about $X$ is that $\mathbb{E}[X]\ge g(m)$, and that $X$ is chosen
+independently of the past.  It is clear that the particle will always reach
+position~1 and the process terminates in that state.  The interesting
+question is, assuming that the particle starts at position~$n$, what is the
+expected number of steps before it reaches position~1?
+
+\begin{theorem}
+\label{thm:recurrence}
+Let $T$ be the random variable denoting the number of steps in which the
+particle reaches the position~1.  Then,
+$\mathbb{E}[T]\le \displaystyle\int_1^n \frac{dx}{g(x)}$.
+\end{theorem}
+
+\begin{proof}
+The proof is by induction on $n$; let us suppose the theorem holds for values
+of $m$ smaller than $n$.  Let $f(m)=\int_1^m dx/g(x)$ for $m>1$.  We wish
+to show that $\mathbb{E}[T]\le f(n)$.
+
+Consider the first step, during which the particle proceeds from position $n$
+to position $n-X$, where $X$ is chosen from a distribution for which
+$\mathbb{E}[X]\ge g(n)$.  We have
+\begin{align}
+  \mathbb{E}[T]
+  &\le 1 + \mathbb{E}[f(n-X)]
+    \tag{1.9}\\
+  &= 1 + \mathbb{E}\!\left[\int_{n-X}^{n}\frac{dy}{g(y)}\right]
+    \tag{1.10}\\
+  &\le 1 + \mathbb{E}\!\left[\frac{X}{g(n)}\right]
+    \tag{1.11}\\
+  &= 1 + \frac{\mathbb{E}[X]}{g(n)}
+    \tag{1.12}\\
+  &\le 1 + f(n) - 1 = f(n).
+    \tag{1.13}
+\end{align}
+The inequality~(1.10) follows from the inductive hypothesis applied to
+position $n-X$.  The inequality~(1.11) follows from the assumption that $g$
+is non-decreasing, so $1/g(y)\le 1/g(n)$ for $y\le n$.  The
+inequality~(1.13) follows from the lower bound on $\mathbb{E}[X]$ and the
+observation that $f(n)-f(n-X)\ge X/g(n)$.
+\end{proof}
+
+\begin{exercise}
+If $X$ were to range over all integers having value at most $m-1$ (possibly
+including negative integers), how would the statement and proof of
+Theorem~\ref{thm:recurrence} change?
+\end{exercise}
+
+For the Find algorithm, we can show (following the analysis of Problem~1.9)
+that $g(m)\ge m/4$.  We may then apply the above theorem to bound the
+expected number of recursive calls to Find by $4\ln n$.
+
+\begin{exercise}
+What prevents us from using Theorem~\ref{thm:recurrence} to bound the
+expected number of levels of recursion in the RandQS algorithm?
+\end{exercise}
+
+%% ----- C++ : Find -----
 \subsection{C++ Implementation}
 
 \begin{lstlisting}[
-  caption={Game tree node and randomized evaluator.},
-  label={lst:gametree}]
-#include <vector>
-#include <random>
-#include <chrono>
-#include <algorithm>
-#include <iostream>
-
-class RandEng {
-public:
-  static RandEng& get() {
-    static RandEng e; return e;
+  caption={Randomized Find---selecting the $k$th smallest element.},
+  label={lst:find}]
+int rand_find(std::vector<int>& a, int k) {
+  if (a.size()==1) return a[0];
+  int pi = RandomEngine::instance()
+               .uniform_int(0,a.size()-1);
+  int pivot = a[pi];
+  std::vector<int> L,E,G;
+  for (int x : a) {
+    if      (x<pivot) L.push_back(x);
+    else if (x==pivot) E.push_back(x);
+    else              G.push_back(x);
   }
-  bool coin() {
-    return std::uniform_real_distribution<>(
-             0.0,1.0)(eng_) < 0.5;
-  }
-private:
-  RandEng()
-    : eng_(std::chrono::steady_clock::now()
-           .time_since_epoch().count()) {}
-  std::mt19937 eng_;
-};
-
-enum class NodeType { AND, OR };
-
-struct TreeNode {
-  NodeType type;
-  bool is_leaf;
-  int value;            // valid only if is_leaf
-  std::vector<TreeNode*> children;
-
-  TreeNode(NodeType t) : type(t), is_leaf(false),
-                         value(0) {}
-  TreeNode(int v) : type(NodeType::AND), is_leaf(true),
-                    value(v) {}
-};
-
-// Randomized evaluation of AND-OR tree
-// Returns number of leaves inspected
-struct EvalResult { bool val; int leaves; };
-
-EvalResult eval_and(TreeNode* v);
-EvalResult eval_or(TreeNode* v);
-
-EvalResult eval_and(TreeNode* v) {
-  if (v->is_leaf) return {v->value==1, 1};
-  // pick child at random
-  int n = v->children.size();
-  int pick = std::uniform_int_distribution<>(
-                 0, n-1)(RandEng::get().eng_);
-  auto r = eval_or(v->children[pick]);
-  int cost = r.leaves;
-  if (!r.val) return {false, cost};
-  // must check the other child
-  for (int i=0;i<n;i++) {
-    if (i==pick) continue;
-    auto r2 = eval_or(v->children[i]);
-    cost += r2.leaves;
-    if (!r2.val) return {false, cost};
-  }
-  return {true, cost};
-}
-
-EvalResult eval_or(TreeNode* v) {
-  if (v->is_leaf) return {v->value==1, 1};
-  int n = v->children.size();
-  int pick = std::uniform_int_distribution<>(
-                 0, n-1)(RandEng::get().eng_);
-  auto r = eval_and(v->children[pick]);
-  int cost = r.leaves;
-  if (r.val) return {true, cost};
-  for (int i=0;i<n;i++) {
-    if (i==pick) continue;
-    auto r2 = eval_and(v->children[i]);
-    cost += r2.leaves;
-    if (r2.val) return {true, cost};
-  }
-  return {false, cost};
+  if (k<=(int)L.size())
+    return rand_find(L,k);
+  else if (k<=(int)(L.size()+E.size()))
+    return pivot;
+  else
+    return rand_find(G,k-L.size()-E.size());
 }
 \end{lstlisting}
 
 \begin{lstlisting}[
-  caption={Build a random instance of $T_{2,k}$ and evaluate.},
-  label={lst:gametree_driver}]
-// Build complete binary tree of depth 2k
-// with random leaf values
-TreeNode* build_tree(int k, auto& eng) {
-  if (k==0) {
-    int v = std::uniform_int_distribution<>(
-                0,1)(eng);
-    return new TreeNode(v);
+  caption={Empirical measurement of recursion depth.},
+  label={lst:find_analysis}]
+struct Stats { int calls=0, depth=0; };
+
+int rand_find_analyzed(std::vector<int>& a,int k,
+                       int d, Stats& s) {
+  s.calls++;
+  s.depth = std::max(s.depth,d);
+  if (a.size()==1) return a[0];
+  int pi = RandomEngine::instance()
+               .uniform_int(0,a.size()-1);
+  int pivot = a[pi];
+  std::vector<int> L,E,G;
+  for (int x : a) {
+    if      (x<pivot) L.push_back(x);
+    else if (x==pivot) E.push_back(x);
+    else              G.push_back(x);
   }
-  // root is AND at even depth, OR at odd
-  TreeNode* node = new TreeNode(NodeType::AND);
-  node->children.push_back(build_tree(k-1,eng));
-  node->children.push_back(build_tree(k-1,eng));
-  return node;
+  if (k<=(int)L.size())
+    return rand_find_analyzed(L,k,d+1,s);
+  else if (k<=(int)(L.size()+E.size()))
+    return pivot;
+  else
+    return rand_find_analyzed(G,
+      k-L.size()-E.size(),d+1,s);
 }
 
-int main() {
-  std::mt19937 eng(
-    std::chrono::steady_clock::now()
-      .time_since_epoch().count());
-
-  for (int k=1;k<=8;k++) {
-    int n = 1 << (2*k);  // 4^k leaves
-    double total=0;
-    int trials=10000;
-    for (int t=0;t<trials;t++) {
-      TreeNode* root = build_tree(k,eng);
-      auto r = eval_and(root);
-      total += r.leaves;
-    }
-    double avg = total/trials;
-    double bound = std::pow(3,k);
-    std::cout << "k=" << k
-              << " n=" << n
-              << " avg=" << avg
-              << " 3^k=" << bound
-              << " n^0.793="
-              << std::pow(n,0.79248)
-              << "\n";
-  }
-}
+// Typical output for n=1000:
+//   Avg recursive calls: ~12
+//   Avg max depth:       ~11
+//   Theoretical O(log n): ~10
+//   Theorem 1.3 bound 4 ln n: ~27
 \end{lstlisting}
 
-\begin{remark}
-The algorithm above is a Las Vegas algorithm: it always produces the correct
-answer, and its running time is the random variable.  The expected running
-time of $n^{0.793}$ is strictly better than the $\Theta(n)$ worst case of any
-deterministic algorithm.
-\end{remark}
-
 %==========================================================================
-\section{The Minimax Principle}
-\label{sec:minimax}
+\section{Computation Model and Complexity Classes}
+\label{sec:complexity}
 %==========================================================================
 
-The randomized algorithm of the preceding section has an expected running
-time of $n^{0.793}$ on any uniform binary AND-OR tree with $n$ leaves.  Can
-we establish that no randomized algorithm can have a lower expected running
-time?  We are thus seeking a lower bound on the running time of any
-randomized algorithm for this problem.  As a first step toward this end, we
-introduce a standard technique for proving such lower bounds: the minimax
-principle.  Indeed, it is the only known general technique for proving lower
-bounds on the running times of randomized algorithms.
+\subsection{RAMs and Turing Machines}
 
-\subsection{Game Theory}
+Following common practice, throughout this book we use the Turing machine
+model to discuss complexity-theory issues.  As is common, however, we switch
+to the RAM (random access machine) as the model of computation when
+describing and analyzing algorithms (except in the study of parallel and
+distributed algorithms in Chapter~13, where we define a version of the RAM
+model for machines working in parallel).
 
-Consider the following game.  Roberta and Charles put their hands behind
-their backs and make a sign for one of the following: stone (closed fist),
-paper (open palm), and scissors (two fingers).  They then simultaneously
-display their chosen sign.  The winner is determined by the following rules:
-paper beats stone by wrapping it, scissors beats paper by cutting it, and
-stone beats scissors by dulling it.  The loser pays \$1 to the winner, and
-the outcome is a draw when the two players choose the same sign.
+\begin{definition}
+A \emph{deterministic Turing machine} is a quadruple $M=(S,\Sigma,\delta,s)$.
+Here $S$ is a finite set of states, of which $s\in S$ is the machine's
+initial state.  The machine uses a finite set of symbols, denoted~$\Sigma$;
+this set includes special symbols $\mathrm{BLANK}$ and $\mathrm{FIRST}$.  The
+function $\delta$ is the transition function, mapping
+$S\times\Sigma$ to
+$(S\cup\{\mathrm{HALT},\mathrm{YES},\mathrm{NO}\})\times\Sigma\times\{\leftarrow,
+\rightarrow,\mathrm{STAY}\}$.
+\end{definition}
 
-\begin{figure}[htbp]
-\centering
-\begin{tabular}{l|rrr}
-         & Scissors & Paper  & Stone \\ \hline
-Scissors &    0     &   1    &  -1   \\
-Paper    &   -1     &   0    &   1   \\
-Stone    &    1     &  -1    &   0   \\
-\end{tabular}
-\caption{Payoff matrix for scissors-paper-stone.}
-\label{fig:payoff}
-\end{figure}
+A \emph{probabilistic Turing machine} is a Turing machine augmented with the
+ability to generate an unbiased coin flip in one step.  It corresponds to a
+randomized algorithm.
 
-This is an instance of a \emph{two-person zero-sum game}, and the matrix is
-called the \emph{payoff matrix}.  It is called a zero-sum game because the
-net amount won by Roberta and Charles is always exactly zero.  In general,
-any two-person zero-sum game can be represented by an $n\times m$ payoff
-matrix~$\mathbf{M}$ with real entries.  The set of possible strategies of the
-row player~$R$ is in correspondence with the rows of~$\mathbf{M}$, and
-likewise for the strategies of the column player~$C$.  The entry $M_{ij}$ is
-the amount paid by~$C$ to~$R$ when~$R$ chooses strategy~$i$ and~$C$ chooses
-strategy~$j$.
-
-Naturally, the goal of the row (column) player is to maximize (minimize) the
-payoff.  Assume that this is a zero-information game, in that neither player
-has any information about the opponent's strategy.  If~$R$ chooses strategy~$i$,
-then she is guaranteed a payoff of $\min_j M_{ij}$, regardless of~$C$'s
-strategy.  An optimal strategy for~$R$ is an~$i$ that maximizes
-$\min_j M_{ij}$.  Let $V_R = \max_i \min_j M_{ij}$ denote the lower bound
-on the value of the payoff to~$R$ when she uses an optimal strategy.  An
-optimal strategy for~$C$ is a~$j$ that gives the best possible upper bound on
-the payoff from~$C$ to~$R$.  A similar argument establishes that~$C$'s
-optimal strategy ensures that his payoff to~$R$ is at most
-$V_C = \min_j \max_i M_{ij}$.
-
-\begin{exercise}
-Show that the following inequality is valid for all payoff matrices:
-\[
-  \max_i \min_j M_{ij} \;\le\; \min_j \max_i M_{ij}.
-\]
-\end{exercise}
-
-In general, the inequality in Exercise~2.1 is strict; for example, in
-scissors-paper-stone, $V_R=-1$ and $V_C=1$.  When these two quantities are
-equal, the game is said to have a \emph{solution} and the value of the game
-is $V=V_R=V_C$.  The solution (or the \emph{saddle-point}) is the specific
-choice of (optimal) strategies that lead to this payoff.
-
-\subsection{Mixed Strategies and the Minimax Theorem}
-
-What happens when a game has no solution?  Then there is no clear-cut optimal
-strategy for any player.  In fact, any knowledge of the opponent's strategy
-can be used to improve the payoff, unlike the case of games with
-saddle-points.  An interesting way to get around this is to introduce
-randomization in the choice of strategies.  So far we have been talking about
-deterministic or \emph{pure strategies}, but now we focus on randomized or
-\emph{mixed strategies}.  A mixed strategy is a probability distribution on
-the set of possible strategies.  The row player picks a vector
-$\mathbf{p}=(p_1,\ldots,p_n)$, which is a probability distribution on the
-rows of~$\mathbf{M}$, i.e., $p_i$ is the probability that~$R$ will choose
-strategy~$i$; similarly, the column player has a vector
-$\mathbf{q}=(q_1,\ldots,q_m)$, which is a probability distribution on the
-columns of~$\mathbf{M}$.  The payoff is now a random variable, and its
-expectation is given by
-\[
-  \mathbb{E}[\text{payoff}]
-  = \mathbf{p}^T \mathbf{M}\, \mathbf{q}
-  = \sum_{i=1}^{n}\sum_{j=1}^{m} p_i\, M_{ij}\, q_j.
-\]
-
-As before, using $V_R$ to denote the best possible lower bound on the
-expected payoff to~$R$ that can be ensured by choosing a strategy~$\mathbf{p}$,
-and using $V_C$ to denote the best possible upper bound on the expected
-payoff by~$C$ by choosing a strategy~$\mathbf{q}$, we obtain
-\[
-  V_R = \max_{\mathbf{p}} \min_{\mathbf{q}} \mathbf{p}^T\mathbf{M}\,\mathbf{q},
-  \qquad
-  V_C = \min_{\mathbf{q}} \max_{\mathbf{p}} \mathbf{p}^T\mathbf{M}\,\mathbf{q}.
-\]
-
-\begin{theorem}[von Neumann's Minimax Theorem]
-\label{thm:neumann}
-For any two-person zero-sum game specified by a matrix~$\mathbf{M}$,
-\[
-  \max_{\mathbf{p}} \min_{\mathbf{q}} \mathbf{p}^T\mathbf{M}\,\mathbf{q}
-  = \min_{\mathbf{q}} \max_{\mathbf{p}} \mathbf{p}^T\mathbf{M}\,\mathbf{q}.
-\]
-\end{theorem}
-
-In other words, the largest expected payoff that~$R$ can guarantee by choosing
-a mixed strategy is equal to the smallest expected payoff that~$C$ can
-guarantee using a mixed strategy.  This common expected payoff value, called
-the \emph{value of the game}, is denoted by~$V$.  A pair of mixed strategies
-$(\mathbf{p},\mathbf{q})$ which respectively maximize the left-hand side and
-minimize the right-hand side of the equation in Theorem~\ref{thm:neumann} is
-called a saddle-point, and the two distributions are called \emph{optimal mixed
-strategies}.
-
-\begin{theorem}[Loomis' Theorem]
-\label{thm:loomis}
-For any two-person zero-sum game specified by a matrix~$\mathbf{M}$,
-\[
-  \max_{\mathbf{p}} \min_j \mathbf{p}^T\mathbf{M}\,\mathbf{e}_j
-  = \min_{\mathbf{q}} \max_i \mathbf{e}_i^T\mathbf{M}\,\mathbf{q},
-\]
-where $\mathbf{e}_k$ denotes a unit vector with a~1 in the $k$th position
-and~0s elsewhere.
-\end{theorem}
-
-\subsection{Yao's Minimax Principle}
-
-We now describe the application of the above game-theoretic results to
-proving lower bounds on the performance of randomized algorithms.  The idea
-is to view the algorithm designer as the column player~$C$ and the adversary
-choosing the input as the row player~$R$.  The columns correspond to the set
-of all possible algorithms; the rows correspond to the set of all possible
-inputs (of a fixed size).  The payoff from~$C$ to~$R$ is some real-valued
-measure of the performance of an algorithm, such as the running time, the
-quality of the solution obtained, communication cost, or space.
-
-Consider a problem where the number of distinct inputs of a fixed size is
-finite, as is the number of distinct (deterministic, terminating, and always
-correct) algorithms for solving that problem.  A pure strategy for~$C$
-corresponds to the choice of a deterministic algorithm, while a pure strategy
-for~$R$ corresponds to a specific input.  Notice that an optimal pure strategy
-for~$C$ corresponds to an optimal deterministic algorithm, and $V_C$ is the
-worst-case running time of any deterministic algorithm for the problem, which
-we call the \emph{deterministic complexity} of the problem.
-
-Our interest is in the interpretation of the mixed strategies for the
-algorithm designer and the adversary.  A mixed strategy for~$C$ is a
-probability distribution over the space of (always correct) deterministic
-algorithms, so it is a Las Vegas randomized algorithm.  An optimal mixed
-strategy for~$C$ is an optimal Las Vegas algorithm.  A mixed strategy for~$R$
-is a distribution over the space of all inputs.  Let us define the
-\emph{distributional complexity} of the problem at hand as the expected
-running time of the best deterministic algorithm for the worst distribution
-on the inputs.
-
-\begin{proposition}[Yao's Minimax Principle]
-\label{prop:yao}
-Let $\Pi$ be a problem with a finite set~$I$ of input instances (of a fixed
-size), and a finite set~$\mathcal{A}$ of deterministic algorithms.  For input
-$I\in I$ and algorithm $A\in\mathcal{A}$, let $C(I,A)$ denote the running
-time of algorithm~$A$ on input~$I$.  For probability distributions~$\mathbf{p}$
-over~$I$ and~$\mathbf{q}$ over~$\mathcal{A}$, let $I_{\mathbf{p}}$ denote a
-random input chosen according to~$\mathbf{p}$ and $A_{\mathbf{q}}$ denote a
-random algorithm chosen according to~$\mathbf{q}$.  Then:
-\[
-  \min_{A\in\mathcal{A}} \mathbb{E}[C(I_{\mathbf{p}}, A)]
-  \;\le\;
-  \max_{I\in I} \mathbb{E}[C(I, A_{\mathbf{q}})].
-\]
-\end{proposition}
-
-In other words, the expected running time of the optimal deterministic
-algorithm for an arbitrarily chosen input distribution~$\mathbf{p}$ is a
-lower bound on the expected running time of the optimal (Las Vegas)
-randomized algorithm for~$\Pi$.  Thus, to prove a lower bound on the
-randomized complexity, it suffices to choose any distribution~$\mathbf{p}$ on
-the input and prove a lower bound on the expected running time of
-deterministic algorithms for that distribution.  The power of this technique
-lies in the flexibility in the choice of~$\mathbf{p}$ and, more importantly,
-the reduction to a lower bound on deterministic algorithms.  It is important
-to remember that the deterministic algorithm ``knows'' the chosen
-distribution~$\mathbf{p}$.
-
-\subsection{C++ Implementation: Computing Mixed Strategy Equilibria}
-
-\begin{lstlisting}[
-  caption={Solving a $2\times 2$ zero-sum game for optimal mixed strategies.},
-  label={lst:minimax}]
-#include <iostream>
-#include <cmath>
-#include <iomanip>
-
-// Solve a 2x2 zero-sum game with payoff matrix M
-// Returns (V, p1, q1) where
-//   V    = game value
-//   p1   = prob row player plays row 0
-//   q1   = prob col player plays col 0
-struct GameSolution {
-  double V, p1, q1;
-};
-
-GameSolution solve_2x2(double M[2][2]) {
-  // Row player optimal: p*M[:,0] = p*M[:,1]
-  // p*M00 + (1-p)*M10 = p*M01 + (1-p)*M11
-  double denom = M[0][0]-M[0][1]-M[1][0]+M[1][1];
-  double p1 = 0.5;
-  if (std::abs(denom) > 1e-12)
-    p1 = (M[1][1]-M[1][0]) / denom;
-  p1 = std::max(0.0, std::min(1.0, p1));
-
-  double denom2 = M[0][0]-M[1][0]-M[0][1]+M[1][1];
-  double q1 = 0.5;
-  if (std::abs(denom2) > 1e-12)
-    q1 = (M[1][1]-M[0][1]) / denom2;
-  q1 = std::max(0.0, std::min(1.0, q1));
-
-  double V = p1*(q1*M[0][0]+(1-q1)*M[0][1])
-           + (1-p1)*(q1*M[1][0]+(1-q1)*M[1][1]);
-  return {V, p1, q1};
-}
-
-int main() {
-  // Scissors-Paper-Stone
-  double M[2][2] = {{0, 1}, {-1, 0}};
-  auto [V,p1,q1] = solve_2x2(M);
-  std::cout << std::fixed << std::setprecision(4);
-  std::cout << "Modified scissors-paper-stone:\n";
-  std::cout << "  V=" << V
-            << " p=(" << p1 << "," << 1-p1 << ")"
-            << " q=(" << q1 << "," << 1-q1 << ")\n";
-}
-\end{lstlisting}
-
-\subsection{Lower Bound for Game Tree Evaluation}
-
-We now apply Yao's Minimax Principle to the problem of game tree evaluation.
-The lower bound that results only applies to algorithms that terminate in a
-finite number of steps on any input and sequence of random choices.
-
-We once again limit our attention to instances of the AND-OR tree $T_{2,k}$.
-We consider the tree as a balanced binary tree of NORs of depth~$2k$.
-
-\begin{exercise}
-Show that the tree $T_{2,k}$ is equivalent to a balanced binary tree all of
-whose leaves are at distance $2k$ from the root, and all of whose internal
-nodes compute the NOR function: a node returns the value~1 if both inputs
-are~0, and~0 otherwise.
-\end{exercise}
-
-In order to prove a lower bound on the expected number of leaves evaluated by
-any randomized algorithm, we have to specify a distribution on instances
-(values for the leaves), and then prove a lower bound on the expected running
-time of any deterministic algorithm on such inputs.
-
-Let $p=(3-\sqrt{5})/2$.  Each leaf of the tree is independently set to~1
-with probability~$p$.  Note that if each input to a NOR node is independently
-1 with probability~$p$, then the probability that its output is~1 is the
-probability that both its inputs are~0, which is
-\[
-  (1-p)^2 = \frac{(\sqrt{5}-1)^2}{4} = \frac{6-2\sqrt{5}}{4}
-  = \frac{3-\sqrt{5}}{2} = p.
-\]
-Thus the value of every node of the NOR tree is~1 with probability~$p$, and
-the value of a node is independent of the values of all the other nodes on
-the same level.
+In the RAM model, we have a machine that can perform the following types of
+operations involving registers and main memory: input--output operations,
+memory--register transfers, indirect addressing, branching, and arithmetic
+operations.  Each register or memory location may hold an integer that can be
+accessed as a unit, but an algorithm has no access to the representation of
+the number.
 
 \begin{proposition}
-Let $T$ be a NOR tree each of whose leaves is independently set to~1 with
-probability~$q$ for a fixed value $q\in[0,1]$.  Let $W(T)$ denote the
-minimum, over all deterministic algorithms, of the expected number of steps to
-evaluate~$T$.  Then, there is a depth-first pruning algorithm whose expected
-number of steps to evaluate~$T$ is $W(T)$.
+Any Turing machine computation of length polynomial in the size of the input
+can be simulated by a RAM computation of length polynomial in the size of the
+input.  Any RAM computation of length polynomial in the size of the input can
+be simulated by a Turing machine computation of length polynomial in the size
+of the input.
 \end{proposition}
 
-Proposition~2.7 tells us that for the purposes of our lower bound, we may
-restrict our attention to depth-first pruning algorithms.  For a depth-first
-pruning algorithm evaluating this tree, let $W(h)$ be the expected number of
-leaves it inspects in determining the value of a node at distance~$h$ from
-the leaves.  Clearly
-\[
-  W(h) = W(h-1) + (1-p)\times W(h-1),
-\]
-where the first term represents the work done in evaluating one of the
-sub-trees, and the second term represents the work done in evaluating the
-other sub-tree (which will be necessary if the first sub-tree returns the
-value~0, an event occurring with probability~$1-p$).  Letting $h=\log_2 n$
-and solving, we get $W(h)\ge n^{0.694}$.
+\subsection{Complexity Classes}
 
-\begin{theorem}
-\label{thm:lowerbound}
-The expected running time of any randomized algorithm that always evaluates an
-instance of $T_{2,k}$ correctly is at least $n^{0.694}$, where $n=2^{2k}$ is
-the number of leaves.
-\end{theorem}
-
-\begin{remark}
-Our lower bound of $n^{0.694}$ is less than the upper bound of $n^{0.793}$
-that follows from Theorem~\ref{thm:gametree}.  The gap is due to the choice
-of input distribution; a more careful (and considerably harder) analysis with
-a non-independent distribution shows that the algorithm of
-Section~\ref{sec:gametree} is in fact optimal.
-\end{remark}
-
-%==========================================================================
-\section{Randomness and Non-uniformity}
-\label{sec:nonuniform}
-%==========================================================================
-
-A basic issue in the study of randomized algorithms is the extent to which
-randomization is necessary for solving a problem.  When is it possible to
-remove the randomization in a randomized algorithm?  The answer depends on a
-number of aspects of the problem being solved.  The goal of this section is to
-show that this question is more subtle than appears at first, and touches on
-the issue of uniformity in algorithms.
-
-\subsection{Boolean Circuits}
+We now define some basic complexity classes focusing on those involving
+randomized algorithms.
 
 \begin{definition}
-A \emph{Boolean circuit} with $n$ inputs is a directed acyclic graph with the
-following properties:
-\begin{enumerate}
-  \item There are $n$ vertices of in-degree~0; these are called the inputs and
-    are labeled $x_1,x_2,\ldots,x_n$.  There is one vertex with out-degree~0;
-    this is called the output.
-  \item Every vertex $v$ that is not an input or the output is labeled with one
-    Boolean function $b(v)\in\{\mathrm{AND},\mathrm{OR},\mathrm{NOT}\}$.  A
-    vertex labeled NOT has in-degree~1.
-  \item Under an assignment of input values, each vertex $v$ computes the
-    Boolean function $b(v)$ of the values on its incoming edges.
-  \item The \emph{size} of a circuit is the number of vertices in it.
-\end{enumerate}
+The class $\mathbf{P}$ consists of all languages $L$ that have a
+polynomial-time algorithm $A$ such that for any input $x\in\Sigma^*$,
+$x\in L \Rightarrow A(x)$ accepts, and
+$x\notin L \Rightarrow A(x)$ rejects.
 \end{definition}
-
-A \emph{randomized circuit} is very similar, except that there may be more
-than~$n$ vertices of in-degree~0, partitioned into two classes:
-\begin{enumerate}
-  \item \textbf{Random inputs}, each of which is assigned an independent
-    random value from $\{0,1\}$.
-  \item The $n$ \textbf{circuit inputs}, labeled $x_1,\ldots,x_n$.
-\end{enumerate}
-
-A randomized circuit is said to \emph{compute} a function $f$ of the inputs
-$x_1,\ldots,x_n$ if:
-\begin{enumerate}
-  \item For inputs for which $f(x_1,\ldots,x_n)=0$, the output is~0 regardless
-    of the values of random inputs.
-  \item If $f(x_1,\ldots,x_n)=1$, the output is~1 with probability at
-    least~$1/2$.
-\end{enumerate}
 
 \begin{definition}
-A sequence $C=C_1,C_2,\ldots$ of circuits is a \emph{circuit family} for $f$
-if $C_n$ has $n$ inputs and computes $f_n(x_1,\ldots,x_n)$ at its output for
-all $n$-bit inputs.  The family $C$ is \emph{polynomial-sized} if the size
-of $C_n$ is bounded above by $p(n)$ for every $n$, where $p(\cdot)$ is a
-polynomial.
+The class $\mathbf{NP}$ consists of all languages $L$ that have a
+polynomial-time algorithm $A$ such that for any input $x\in\Sigma^*$,
+$x\in L \Rightarrow \exists\, y\in\Sigma^*: A(x,y)$ accepts, where
+$|y|$ is bounded by a polynomial in $|x|$; and
+$x\notin L \Rightarrow \forall\, y\in\Sigma^*: A(x,y)$ rejects.
 \end{definition}
-
-\subsection{Adleman's Theorem}
-
-\begin{theorem}[Adleman's Theorem]
-\label{thm:adleman}
-If a Boolean function has a randomized, polynomial-sized circuit family, then
-it has a polynomial-sized circuit family.
-\end{theorem}
-
-\begin{proof}
-We show how to turn a given randomized polynomial-sized circuit~$C_n$ for
-$f_n(x_1,\ldots,x_n)$ using random inputs $r_1,\ldots,r_m$, into a
-deterministic polynomial-sized circuit~$D_n$.
-
-Form a matrix~$\mathbf{M}$ with $2^n$ rows, one for each possible input from
-$\{0,1\}^n$.  The matrix has $2^m$ columns, one for each of the possible
-$m$-tuples from $\{0,1\}^m$ that the $r_i$ can assume.  The entry $M_{jk}$
-is~1 if the setting of $r_1,\ldots,r_m$ corresponding to column~$k$ is a
-\emph{witness} for the input corresponding to row~$j$; otherwise, the entry
-is~0.  Eliminate all rows corresponding to inputs for which $f_n$ evaluates
-to~0.
-
-By definition, at least half the entries of every surviving row equal~1.
-Therefore, there must be a column with at least half its entries~1; in other
-words, there is an assignment of~0s and~1s to the $r_i$ that serves as a
-witness to at least half of the possible inputs.  Let this witness be
-$r_1^{(1)},\ldots,r_m^{(1)}$.  Build a circuit $T_1$, which is a copy
-of~$C_n$ with the random inputs ``hard-wired'' to
-$r_1^{(1)},\ldots,r_m^{(1)}$.  Delete the column corresponding to this
-witness, and all rows that had~1s in this column.
-
-The remaining matrix still has the property that every row has at least half
-its entries equal to~1.  Repeat: pick a second witness
-$r_1^{(2)},\ldots,r_m^{(2)}$ that is a witness for at least half the
-remaining inputs and build a circuit~$T_2$.  Continuing in this manner, we
-delete all rows while building at most~$n$ circuits $T_1,\ldots,T_n$.
-
-Take the OR of the outputs of $T_1,\ldots,T_n$.  This is a (deterministic)
-circuit whose size is $O(n)$ times that of the randomized circuit we started
-with.
-\end{proof}
-
-\begin{corollary}
-$\mathrm{RP}\subseteq\mathrm{P/poly}$.
-\end{corollary}
-
-\begin{remark}
-The technique in Theorem~\ref{thm:adleman} is the first example we have seen
-of \emph{derandomization}---where we take a randomized algorithm and remove
-the randomness.  However, the deterministic circuit generated by this process
-is one that works for a particular value of~$n$.  The circuit it produces for
-$n$ inputs may have very little resemblance to the circuit it produces for
-$n+1$ inputs, even if the original randomized circuits were similar.  Any
-``practical'' algorithm will exhibit the property of \emph{uniformity}, which
-is formalized in the literature as follows.
-\end{remark}
 
 \begin{definition}
-An algorithm~$A$ is said to use \emph{advice}~$a$ if on an input of length~$n$
-it is given the string $a(n)$ on a read-only tape.  We say that $A$ decides a
-language~$L$ with advice~$a$ if on an input~$x$ it uses the read-only string
-$a(|x|)$ to decide the membership of~$x$ in~$L$.
+The class $\mathbf{RP}$ (Randomized Polynomial time) consists of all
+languages $L$ that have a randomized algorithm $A$ running in worst-case
+polynomial time such that for any input $x\in\Sigma^*$,
+$x\in L \Rightarrow \Pr[A(x)\text{ accepts}]\ge 1/2$; and
+$x\notin L \Rightarrow \Pr[A(x)\text{ accepts}]=0$.
 \end{definition}
 
-The class $\mathrm{P/poly}$ consists of all languages~$L$ that have a
-non-uniform polynomial-time algorithm~$A$ such that the length of the advice
-string $a(n)$ is bounded by a polynomial in~$n$.
+\begin{definition}
+The class $\mathbf{ZPP}$ (Zero-error Probabilistic Polynomial time) is the
+class of languages that have Las Vegas algorithms running in expected
+polynomial time.
+\end{definition}
+
+\begin{definition}
+The class $\mathbf{BPP}$ (Bounded-error Probabilistic Polynomial time)
+consists of all languages $L$ that have a randomized algorithm $A$ running
+in worst-case polynomial time such that for any input $x\in\Sigma^*$,
+$x\in L \Rightarrow \Pr[A(x)\text{ accepts}]\ge 3/4$; and
+$x\notin L \Rightarrow \Pr[A(x)\text{ accepts}]\le 1/4$.
+\end{definition}
 
 \begin{exercise}
-Consider any language $L\subseteq\{0,1\}^*$.  We define a Boolean
-function~$f$ corresponding to the language~$L$ as follows.  For any positive
-integer~$n$, let $f_n$ be the Boolean function such that for any
-$x\in\{0,1\}^n$, $f_n(x)$ assumes the value~1 if $x\in L$ and~0 otherwise.
-Show that $L\in\mathrm{P/poly}$ if and only if it has a polynomial-sized
-circuit family.
+Show that $\mathrm{ZPP}=\mathrm{RP}\cap\mathrm{co\text{-}RP}$.
 \end{exercise}
 
-In summary, the removal of randomness in Theorem~\ref{thm:adleman} only shows
-that this can be done in principle; it is not known how to do this in any
-uniform or practical way.
+
 
 %==========================================================================
-\section*{Notes}
 \addcontentsline{toc}{section}{Notes}
+\section*{Notes}
 %==========================================================================
 
-The material of Section~\ref{sec:gametree} is based on a paper of
-Snir~[381].  Most of the material in Section~\ref{sec:minimax} is covered in
-textbooks on game theory.  Some good sources are the books by
-Wang~[213], Luce and Raiffa~[287], and von Neumann and
-Morgenstern~[411].  Theorem~\ref{thm:neumann} is due to von
-Neumann~[408], and Theorem~\ref{thm:loomis} is due to Loomis~[279].  The
-application of the minimax theorems to proving lower bounds on randomized
-algorithms was pointed out by Yao~[419].  Proposition~\ref{prop:yao} is also
-from~[419].
+The ideas underlying randomized algorithms can be traced back to Monte Carlo
+methods used in numerical analysis, statistical physics, and simulation.  In
+the context of computability theory, the notion of a probabilistic Turing
+machine was proposed by de~Leeuw, Moore, Shannon, and Shapiro~[122] and
+further explored in the pioneering work of Rabin~[340] and
+Gill~[166].  Berlekamp~[57], Rabin~[341], and Solovay and
+Strassen~[382] gave early examples of concrete randomized algorithms.
 
-In our lower bound for game tree evaluation, the principle that any
-deterministic algorithm may as well determine the value of one sub-tree before
-inspecting any leaves of its sibling (used in
-Section~\ref{sec:minimax}) is due to Tarsi~[393].  Saks and
-Wigderson~[362] refined the lower bound to show that Snir's algorithm is
-optimal among all randomized algorithms.
+Our RandQS algorithm is based on Hoare's algorithm~[201].  The min-cut
+algorithm of Section~1.2.2, together many variations and
+extensions, is due to Karger~[231].  Monte Carlo methods have been popular in
+the sciences for over a hundred years.  The classic experiment on
+approximating the value of $\pi$ by dropping needles on a sheet of paper with
+parallel lines is described in an eighteenth-century paper by
+Buffon~[86].  The origin of the modern theory of Monte Carlo methods in the
+physical sciences is widely attributed to Ulam, von~Neumann, and
+Fermi~[116].  The term \emph{Las Vegas algorithm} was introduced by
+Babai~[37].
 
-Theorem~\ref{thm:adleman} is due to Adleman~[1]; a version of this theorem
-applicable to circuit families with two-sided error is due to Gill~[166].  The
-notion of non-uniformity is studied in depth in the paper by Karp and
-Lipton~[245].
+The material of Section~\ref{sec:bpp} is drawn from Paterson and
+Yao~[329].  The Find algorithm described in Section~\ref{sec:recurrence} is
+due to Hoare~[200].  Theorem~\ref{thm:recurrence} is given in a paper by
+Karp, Upfal, and Wigderson~[250].  Karp~[244] gives a number of additional
+results on probabilistic recurrence relations.
+
+The reader is referred to introductory texts on algorithms and complexity
+such as those by Aho, Hopcroft, and Ullman~[5,~6] and
+Papadimitriou~[326] for more details on the Turing machine model and the
+RAM model.  The books by Bovet and Crescenzi~[81] and by
+Papadimitriou~[326] contain a more detailed treatment of the complexity
+classes described in this chapter.
 
 %==========================================================================
-\section*{Problems}
 \addcontentsline{toc}{section}{Problems}
+\section*{Problems}
 %==========================================================================
 
-\begin{exercise}[2.1]
-Show that for any deterministic evaluation algorithm, there is an instance of
-$T_{d,k}$ that forces the algorithm to read the values on all $d^{2k}$ leaves.
-\end{exercise}
-
-\begin{exercise}[2.2]
-Generalize the randomized algorithm and analysis of Section~\ref{sec:gametree}
-to trees $T_{d,k}$ for $d>2$.
-\end{exercise}
-
-\begin{exercise}[2.3]
-(Due to R.~Boppana~[362].)  Consider a uniform rooted tree of height~$h$:
-every leaf is at distance~$h$ from the root.  The root, as well as any
-internal node, has three children.  Each leaf has a Boolean value associated
-with it.  Each internal node returns the value returned by the majority of its
-children.  The evaluation problem consists of determining the value of the
-root; at each step, an algorithm can choose one leaf whose value it wishes to
-read.
+\begin{exercise}[1.1]
+(Due to J.~von~Neumann~[409].)
 \begin{enumerate}[label=(\alph*)]
-\item Show that for any deterministic algorithm, there is an instance that
-  forces it to read all $n=3^h$ leaves.
-\item Consider the recursive randomized algorithm that evaluates two sub-trees
-  of the root chosen at random.  If the values returned disagree, it proceeds
-  to evaluate the third sub-tree.  Show that the expected number of leaves
-  read by this algorithm (on any instance) is at most $n^{0.91}$.
+\item Suppose you are given a coin for which the probability of HEADS, say
+  $p$, is unknown.  How can you use this coin to generate unbiased (i.e.,
+  $\Pr[\text{HEADS}]=\Pr[\text{TAILS}]=1/2$) coin-flips?  Give a scheme for
+  which the expected number of flips of the biased coin for extracting one
+  unbiased coin-flip is no more than $1/[p(1-p)]$.  (Hint: Consider two
+  consecutive flips of the biased coin.)
+\item Devise an extension of the scheme that extracts the largest possible
+  number of independent, unbiased coin-flips from a given number of flips of
+  the biased coin.
 \end{enumerate}
 \end{exercise}
 
-\begin{exercise}[2.4]
-Determine the value $V_R$ of the following $2\times 2$ matrix game and give
-optimal mixed strategies for the two players.
-\[
-  \mathbf{M} = \begin{pmatrix} 3 & 1 \\ 0 & 2 \end{pmatrix}
-\]
+\begin{exercise}[1.2]
+(Due to D.~E.~Knuth and A.~C.-C.~Yao~[264].)
+\begin{enumerate}[label=(\alph*)]
+\item Suppose you are provided with a source of unbiased random bits.  Explain
+  how you will use this to generate uniform samples from the set
+  $S=\{0,\ldots,n-1\}$.  Determine the expected number of random bits
+  required by your sampling algorithm.
+\item What is the worst-case number of random bits required by your sampling
+  algorithm?  Consider the case when $n$ is a power of~2, as well as the case
+  when it is not.
+\item Solve (a) and (b) when, instead of unbiased random bits, you are
+  required to use as the source of randomness uniform random samples from the
+  set $\{0,\ldots,p-1\}$; consider the case when $n$ is a power of $p$, as
+  well as the case when it is not.
+\end{enumerate}
 \end{exercise}
 
-\begin{exercise}[2.5]
-(Due to A.~M.~Karp.)  Let $(a_{ij})$ be an $m\times n$ matrix, let the
-vector $(p_1,p_2,\ldots,p_m)$ consist of reals in $[0,1]$ such that
-$\sum_i p_i=1$, and let $(q_1,q_2,\ldots,q_n)$ consist of reals in $[0,1]$
-such that $\sum_j q_j=1$.  Prove:
-\[
-  \min_j \sum_i p_i a_{ij}
-  \;\le\; \sum_{i,j} p_i a_{ij} q_j
-  \;\le\; \max_i \sum_j a_{ij} q_j.
-\]
+\begin{exercise}[1.3]
+(Due to D.~E.~Knuth and A.~C.-C.~Yao~[264].) Suppose you are provided with
+a source of unbiased random bits.  Provide efficient (in terms of expected
+running time and expected number of random bits used) schemes for generating
+samples from the distribution over the set $\{2,3,\ldots,12\}$ induced by
+rolling two unbiased dice and taking the sum of their outcomes.
 \end{exercise}
 
-\begin{exercise}[2.6]
-Use Yao's Minimax Principle to prove a lower bound on the expected running
-time of any Las Vegas algorithm for sorting $n$ numbers.
+\begin{exercise}[1.4]
+\begin{enumerate}[label=(\alph*)]
+\item Suppose you are required to generate a random permutation of size $n$.
+  Assuming that you have access to a source of independent and unbiased
+  random bits, suggest a method for generating random permutations of size
+  $n$.  Efficiency is measured in terms of both time and number of random
+  bits.  What lower bounds can you prove for this task?
+\item Consider the following method for generating a random permutation of
+  size $n$.  Pick $n$ random values $X_1,\ldots,X_n$ independently from the
+  uniform distribution over the interval $[0,1]$.  Now, the permutation that
+  orders the random variables in ascending order is claimed to be a random
+  permutation, and it can be determined by sorting the random values.  Is the
+  claim correct?  How efficient is this scheme?
+\item Consider the following ``lazy'' implementation of the scheme suggested
+  in~(b).  The binary representation of the fraction $X_i$ is a sequence of
+  unbiased and independent random bits.  At any given stage of the sorting
+  algorithm, we would have chosen only as many bits of each $X_i$ as
+  necessary to resolve all the comparisons performed up to that point.  When
+  comparing $X_i$ to $X_j$, if the current prefixes of their binary
+  expansions do not determine the outcome of the comparison, then we extend
+  their prefixes by choosing further random bits until this happens.  Compute
+  tight bounds on the expected number of random bits used by this
+  implementation.
+\end{enumerate}
 \end{exercise}
 
-\begin{exercise}[2.7]
-(Due to A.~M.~Karp.)  You are given an array~$A$ containing $n$ numbers in
-sorted order.  In one step, an algorithm may specify an integer $i\in[1,n]$,
-and is given the value of $A[i]$ in return.  Determine lower and upper bounds
-on the expected number of steps taken by a Las Vegas randomized algorithm to
-determine whether or not a given key~$k$ is present in the array.
+\begin{exercise}[1.5]
+Consider the problem of using a source of unbiased random bits to generate
+samples from the set $S=\{0,\ldots,n-1\}$ such that the element $i$ is
+chosen with probability $p_i$.  Show how to perform this sampling using
+$O(\log n)$ random bits per sample, regardless of the values of $p_i$.  Use
+the result from part~(c) of Problem~1.4.
 \end{exercise}
 
-\begin{exercise}[2.8]
-(Due to A.~M.~Karp.)  In a graph with $n$ vertices, where $n$ is even, a
-perfect matching is a set of $n/2$ edges, no two of which meet at a common
-vertex.  Consider a randomized algorithm that takes an $n$-vertex graph as
-input and correctly determines whether the graph has a perfect matching.  At
-each step the algorithm asks a question of the form ``Is there an edge between
-vertex~$i$ and vertex~$j$?''  The complexity of the algorithm is defined as
-the maximum, over all $n$-vertex graphs~$G$, of the expected number of
-questions $C(n)$ asked when the input graph is~$G$.  Prove: $C(n)=O(n^2)$.
+\begin{exercise}[1.6]
+Consider a sequence of $n$ flips of an unbiased coin.  Let $H_i$ denote the
+absolute value of the excess of the number of HEADS over the number of TAILS
+seen in the first $i$ flips.  Define $H=\max_i H_i$.  Show that
+$\mathbb{E}[H_i]=\Theta(\sqrt{i})$, and that
+$\mathbb{E}[H]=\Theta(\sqrt{n})$.
+\end{exercise}
+
+\begin{exercise}[1.7]
+Suppose we choose a permutation $\pi$ of the ordered set
+$N=\{1,2,\ldots,n\}$ uniformly at random from the space of all permutations
+of $N$.  Let $L(\pi)$ denote the length of the longest increasing
+subsequence in permutation~$\pi$.
+\begin{enumerate}[label=(\alph*)]
+\item For large $n$ and some positive constant $c$, prove that
+  $\mathbb{E}[L(\pi)]\ge c\sqrt{n}$.
+\item Is the bound in~(a) tight?
+\end{enumerate}
+\end{exercise}
+
+\begin{exercise}[1.8]
+Consider adapting the min-cut algorithm of Section~1.2.2 to the
+problem of finding an $s$-$t$ min-cut in an undirected graph.  In this
+problem, we are given an undirected graph $G$ together with two distinguished
+vertices $s$ and $t$.  An $s$-$t$ cut is a set of edges whose removal from
+$G$ disconnects $s$ from $t$; we seek an $s$-$t$ cut of minimum cardinality.
+As the algorithm proceeds, the vertex $s$ may get amalgamated into a new
+vertex as a result of an edge being contracted; we call this vertex the
+$s$-vertex (initially the $s$-vertex is $s$ itself).  Similarly, we have a
+$t$-vertex.  As we run the contraction algorithm, we ensure that we never
+contract an edge between the $s$-vertex and the $t$-vertex.
+\begin{enumerate}[label=(\alph*)]
+\item Show that there are graphs on which the probability that this algorithm
+  finds an $s$-$t$ min-cut is exponentially small.
+\item How large can the number of $s$-$t$ min-cuts in an instance be?
+\end{enumerate}
+\end{exercise}
+
+\begin{exercise}[1.9]
+Consider the Find algorithm described in Section~\ref{sec:recurrence} for
+selecting the $k$th smallest of a set $S$ of $n$ elements.  Show that the
+algorithm finds the $k$th smallest element in $S$ in expected time $O(n)$.
+\end{exercise}
+
+\begin{exercise}[1.10]
+Consider the setting of Example~1.1 (the Sailor Problem).  Show that the
+probability that no sailor returns to her own cabin approaches $1/e$ as the
+number of sailors grows large.
+\end{exercise}
+
+\begin{exercise}[1.11]
+Verify the following inclusions:
+$\mathrm{P}\subseteq\mathrm{RP}\subseteq\mathrm{NP}
+  \subseteq\mathrm{PSPACE}\subseteq\mathrm{EXP}\subseteq\mathrm{NEXP}$.
+It is not known whether these inclusions are strict.
+\end{exercise}
+
+\begin{exercise}[1.12]
+Verify the following inclusions:
+$\mathrm{RP}\subseteq\mathrm{BPP}\subseteq\mathrm{PP}$.
+It is not known whether these inclusions are strict.
+\end{exercise}
+
+\begin{exercise}[1.13]
+Show that $\mathrm{PP}=\mathrm{co\text{-}PP}$ and
+$\mathrm{BPP}=\mathrm{co\text{-}BPP}$.
+\end{exercise}
+
+\begin{exercise}[1.14]
+Show that $\mathrm{NP}\subseteq\mathrm{PP}\subseteq\mathrm{PSPACE}$.
+\end{exercise}
+
+\begin{exercise}[1.15]
+(Due to K.-I.~Ko~[265].)  Show that $\mathrm{NP}\subseteq\mathrm{BPP}$
+implies $\mathrm{NP}=\mathrm{RP}$.
 \end{exercise}
 
 \end{document}

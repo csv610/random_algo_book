@@ -1,8 +1,9 @@
-#include "apsp.h"
-#include "min_cut.h"
-#include "mst.h"
+#include "convex_hull.h"
+#include "delaunay.h"
+#include "linear_programming.h"
 #include <iostream>
 #include <string>
+#include <chrono>
 
 void print_header(const std::string& title) {
     std::cout << "\n";
@@ -11,18 +12,22 @@ void print_header(const std::string& title) {
     std::cout << "========================================\n\n";
 }
 
+void print_section(const std::string& title) {
+    std::cout << "\n--- " << title << " ---\n\n";
+}
+
 int main() {
-    std::cout << "Chapter 10: Graph Algorithms\n";
+    std::cout << "Chapter 9: Geometric Algorithms and Linear Programming\n";
     std::cout << "Randomized Algorithms - C++ Implementations\n";
 
-    print_header("10.1 All-Pairs Shortest Paths");
-    randalgo::demonstrate_apsp();
+    print_header("9.2 Convex Hull (Randomized Incremental)");
+    chapter10::demonstrate_convex_hull();
 
-    print_header("10.2 The Min-Cut Problem (Karger & Karger-Stein)");
-    randalgo::demonstrate_min_cut();
+    print_header("9.5 Delaunay Triangulation (Incremental with Flips)");
+    chapter10::demonstrate_delaunay();
 
-    print_header("10.3 Minimum Spanning Trees (Karger-Klein-Tarjan)");
-    randalgo::demonstrate_mst();
+    print_header("9.10 Linear Programming (Seidel's Algorithm)");
+    chapter10::demonstrate_lp();
 
     std::cout << "\n========================================\n";
     std::cout << "  All demonstrations complete.\n";

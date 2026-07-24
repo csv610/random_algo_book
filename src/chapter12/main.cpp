@@ -1,17 +1,27 @@
-#include "pram_simulation.h"
-#include "mis.h"
-#include "matchings.h"
-#include <print>
+#include "dnf_counting.h"
+#include "volume.h"
+#include <string>
+
+void print_header(const std::string& title) {
+    println("\n========================================");
+    println("  {}", title);
+    println("========================================\n");
+}
 
 int main() {
-    std::println("+==============================================================+");
-    std::println("|       Chapter 12: Parallel and Distributed Algorithms       |");
-    std::println("+==============================================================+");
+    println("Chapter 11: Approximate Counting");
+    println("DNF Counting & Volume of a Convex Body");
+    println("Randomized Algorithms -- C++23 Implementations\n");
 
-    randalgo::demonstrate_pram();
-    randalgo::demonstrate_mis();
-    randalgo::demonstrate_matchings();
+    print_header("11.1 DNF Counting (Karp-Luby Algorithm)");
+    randalgo::demonstrate_dnf_counting();
 
-    std::println("\nDone.");
+    print_header("11.2 Volume of a Convex Body");
+    randalgo::demonstrate_volume();
+
+    println("========================================");
+    println("  All demonstrations complete.");
+    println("========================================\n");
+
     return 0;
 }

@@ -7,7 +7,6 @@
 \usepackage{graphicx}
 \usepackage{listings}
 \usepackage{xcolor}
-\usepackage[colorlinks=true, linkcolor=blue, citecolor=blue, urlcolor=blue]{hyperref}
 \usepackage{enumitem}
 \usepackage{tikz}
 \usepackage{algorithm}
@@ -16,6 +15,7 @@
 \usepackage{geometry}
 \usepackage{fancyhdr}
 \usepackage{titlesec}
+\usepackage[colorlinks=true, linkcolor=blue, citecolor=blue, urlcolor=blue, plainpages=false, pdfpagelabels]{hyperref}
 
 \geometry{
   papersize={6in,9in},
@@ -73,6 +73,7 @@
 \newcommand{\Cov}{\operatorname{Cov}}
 
 \begin{document}
+\hypersetup{pageanchor=false}
 
 \frontmatter
 \thispagestyle{empty}
@@ -160,6 +161,7 @@ remain are, of course, my own responsibility.
 \tableofcontents
 \clearpage
 
+\hypersetup{pageanchor=true}
 \mainmatter
 
 
@@ -595,22 +597,22 @@ For a uniform distribution, every outcome has probability $1/|\Omega|$.
 
 Two events $\mathcal{E}_1$ and $\mathcal{E}_2$ are said to be
 \emph{independent} if the probability that they both occur is given by
-\begin{equation}
+\begin{equation*}
   \Pr[\mathcal{E}_1 \cap \mathcal{E}_2]
   = \Pr[\mathcal{E}_1] \times \Pr[\mathcal{E}_2].
   \tag{1.3}
-\end{equation}
+\end{equation*}
 In the more general case where $\mathcal{E}_1$ and $\mathcal{E}_2$ are not
 necessarily independent,
-\begin{equation}
+\begin{equation*}
   \Pr[\mathcal{E}_1 \cap \mathcal{E}_2]
   = \Pr[\mathcal{E}_1] \times \Pr[\mathcal{E}_2 \mid \mathcal{E}_1],
   \tag{1.4}
-\end{equation}
+\end{equation*}
 where $\Pr[\mathcal{E}_1 \mid \mathcal{E}_2]$ denotes the conditional
 probability of $\mathcal{E}_1$ given $\mathcal{E}_2$. The chain rule for
 probabilities extends this to $k$ events:
-\begin{equation}
+\begin{equation*}
   \Pr\!\Bigl[\bigcap_{i=1}^{k} \mathcal{E}_i\Bigr]
   = \Pr[\mathcal{E}_1]
     \times \Pr[\mathcal{E}_2 \mid \mathcal{E}_1]
@@ -618,7 +620,7 @@ probabilities extends this to $k$ events:
     \cdots
     \Pr\!\Bigl[\mathcal{E}_k \mid \bigcap_{i=1}^{k-1} \mathcal{E}_i\Bigr].
   \tag{1.5}
-\end{equation}
+\end{equation*}
 
 We used this chain rule in deriving the success probability of Karger's
 min-cut algorithm (Eq.~1.1).
@@ -635,11 +637,11 @@ $X$ taking values $x_1, x_2, \ldots$ with probabilities $p_1, p_2,
 The single most useful tool in the analysis of randomized algorithms is
 \emph{linearity of expectation}: for random variables $X_1, X_2, \ldots,
 X_n$ (which need not be independent),
-\begin{equation}
+\begin{equation*}
   \mathbb{E}\!\Bigl[\sum_{i=1}^{n} X_i\Bigr]
   = \sum_{i=1}^{n} \mathbb{E}[X_i].
   \tag{1.6}
-\end{equation}
+\end{equation*}
 
 \begin{example}[The Sailor Problem]
 A ship arrives at a port, and the 40 sailors on board go ashore for
@@ -665,11 +667,11 @@ The \emph{standard deviation} is $\sigma(X) = \sqrt{\mathrm{Var}(X)}$.
 
 \emph{Chebyshev's inequality} bounds the probability that $X$ deviates
 significantly from its mean:
-\begin{equation}
+\begin{equation*}
   \Pr\bigl[|X - \mathbb{E}[X]| \ge t\bigr]
   \le \frac{\mathrm{Var}(X)}{t^2}.
   \tag{1.7}
-\end{equation}
+\end{equation*}
 
 This inequality will be applied frequently in Chapter~4, where we develop
 sharper tail bounds for sums of independent random variables.
@@ -679,11 +681,11 @@ sharper tail bounds for sums of independent random variables.
 A simple yet powerful tool is the \emph{union bound} (or \emph{Boole's
 inequality}): for events $\mathcal{E}_1, \mathcal{E}_2, \ldots,
 \mathcal{E}_n$ (not necessarily independent),
-\begin{equation}
+\begin{equation*}
   \Pr\!\Bigl[\bigcup_{i=1}^{n} \mathcal{E}_i\Bigr]
   \le \sum_{i=1}^{n} \Pr[\mathcal{E}_i].
   \tag{1.8}
-\end{equation}
+\end{equation*}
 We used the union bound implicitly in the analysis of Karger's algorithm
 when bounding the probability that any edge of the min-cut is contracted.
 
@@ -933,21 +935,21 @@ at least~$k$, so the graph has at least $k(n{-}i{+}1)/2$ edges. Thus,
 $\Pr[e_i \mid \bigcap_{j=1}^{i-1} e_j] \ge 1-2/(n{-}i{+}1)$.
 
 The probability that no edge of $C$ is ever picked is
-\begin{equation}
+\begin{equation*}
   \Pr\!\Bigl[\bigcap_{i=1}^{n-2} e_i\Bigr]
   = \prod_{i=1}^{n-2}\Bigl(1-\frac{2}{n-i+1}\Bigr)
   = \frac{2}{n(n-1)}.
   \tag{1.1}
-\end{equation}
+\end{equation*}
 
 The probability of discovering a particular min-cut is therefore at least
 $2/n^2$. To reduce the failure probability, we repeat the algorithm
 $n^2/2$ times, making independent random choices each time. The probability
 that a min-cut is not found in any attempt is at most
-\begin{equation}
+\begin{equation*}
   \Bigl(1-\frac{2}{n^2}\Bigr)^{n^2/2} < \frac{1}{e}.
   \tag{1.2}
-\end{equation}
+\end{equation*}
 
 Further repetitions make the failure probability arbitrarily small---the
 only consideration being that repetitions increase running time. Note the
@@ -1115,7 +1117,7 @@ void rand_quicksort(std::vector<int>& a,int lo,int hi){
 \end{lstlisting}
 
 %% ----- C++ : Monte Carlo -----
-\subsection{C++ Implementation: Monte Carlo---Estimating $\pi$}
+\subsection{C++ Implementation: Monte Carlo---Estimating \texorpdfstring{$\pi$}{pi}}
 
 The following Monte Carlo algorithm estimates $\pi$ by sampling.  It has
 two-sided error: the estimate may be too high or too low, but the error
@@ -1323,12 +1325,12 @@ The size of $P_\pi$ equals $n$ plus the number of intersections due to cuts.
 Thus, its expectation is
 $n+\mathbb{E}[\sum_u\sum_v C_{u,v}]$ and by linearity of expectation this
 equals
-\begin{equation}
+\begin{equation*}
   n + \sum_u \sum_v \Pr[u\dashv v]
   \le n + \sum_u \sum_v
     \frac{1}{\operatorname{index}(u,v)+1}.
   \tag{2.1}
-\end{equation}
+\end{equation*}
 
 For any line segment $u$ and any finite positive integer $i$, there are at
 most two vertices $v$ and $w$ such that $\operatorname{index}(u,v)$ and
@@ -1337,12 +1339,12 @@ segment $u$ along either of the two possible directions will meet any other
 line segment at most once.  Thus, in each of the two directions, there is a
 total ordering on the points of intersection with other segments and the
 index values increase monotonically.  This implies that
-\begin{equation}
+\begin{equation*}
   \sum_{v\ne u} \frac{1}{\operatorname{index}(u,v)+1}
   \le \sum_{i=1}^{n-1} \frac{2}{i+1}
   = O(\log n).
-  \tag{1.8}
-\end{equation}
+  \tag{2.2}
+\end{equation*}
 
 Combining this with~(2.1) implies that the expected size of $P_\pi$ is
 bounded above by $n+O(n\log n)$, which is $O(n\log n)$.
@@ -6429,7 +6431,7 @@ implementation of a universal hash table with chaining and the multiply-shift ha
 \end{cpplisting}
 
 %% ============================================================
-\section{Hashing with $O(1)$ Search Time}
+\section{Hashing with \texorpdfstring{$O(1)$}{O(1)} Search Time}
 \label{sec:perfect-hashing}
 %% ============================================================
 
@@ -9736,7 +9738,7 @@ phases is at most $\mathrm{cost}_{\mathrm{OPT}}(\sigma)$, and
 This gives a competitive ratio of $2k+1$, which is $O(k)$.
 \end{proof}
 
-\subsection{Improvement to $k$-Competitive}
+\subsection{Improvement to \texorpdfstring{$k$}{k}-Competitive}
 
 The bound above can be tightened to a $k$-competitive algorithm using a
 more refined analysis.  The key observation is that the potential
@@ -9937,7 +9939,7 @@ randomization provides a significantly larger advantage.
 \end{remark}
 
 %% ----------------------------------------------------------------
-\section{The $k$-Server Problem}
+\section{The \texorpdfstring{$k$}{k}-Server Problem}
 \label{sec:k-server}
 %% ----------------------------------------------------------------
 
@@ -9980,7 +9982,7 @@ a long distance, while OPT can move a server only a short distance.
 The resulting competitive ratio is at least $k$.
 \end{proof}
 
-\subsection{Randomized $k$-Competitive Algorithm}
+\subsection{Randomized \texorpdfstring{$k$}{k}-Competitive Algorithm}
 
 \begin{theorem}[Koutsoupias and Papadimitriou]\label{thm:k-server-kp}
 There exists a randomized online algorithm for the $k$-server problem
@@ -11402,8 +11404,6 @@ PhD thesis, Cornell University, 1979.
 %==========================================================================
 \chapter{Probability Theory}
 \label{app:probability}
-\setcounter{chapter}{0}
-\setcounter{section}{0}
 \addcontentsline{toc}{chapter}{A Probability Theory}
 \markboth{A Probability Theory}{Randomized Algorithms}
 %==========================================================================
@@ -11734,8 +11734,6 @@ concentration bounds for martingales with bounded differences.
 %==========================================================================
 \chapter{Computational Complexity}
 \label{app:complexity}
-\setcounter{chapter}{0}
-\setcounter{section}{0}
 \addcontentsline{toc}{chapter}{B Computational Complexity}
 \markboth{B Computational Complexity}{Randomized Algorithms}
 %==========================================================================
@@ -11976,8 +11974,6 @@ Section~8.7.
 %==========================================================================
 \chapter{C++23 Programming for Randomized Algorithms}
 \label{app:cpp}
-\setcounter{chapter}{0}
-\setcounter{section}{0}
 \addcontentsline{toc}{chapter}{C C++23 Programming}
 \markboth{C C++23 Programming}{Randomized Algorithms}
 %==========================================================================
@@ -12232,6 +12228,131 @@ void process_file(const std::string& path) {
     // file is automatically closed when it goes out of scope
 }
 \end{lstlisting}
+
+%==========================================================================
+\chapter{Intuitive Analogies for Randomized Algorithms}
+\label{app:eli5}
+\addcontentsline{toc}{chapter}{D Intuitive Analogies for Randomized Algorithms}
+\markboth{D Intuitive Analogies for Randomized Algorithms}{Randomized Algorithms}
+%==========================================================================
+
+This appendix provides intuitive, playful analogies for the core algorithms covered
+in this book. If you have ever wanted to explain Karger's Min-Cut or HyperLogLog using 
+simple analogies (or explain it to a senior engineering director), this guide is for you.
+
+%==========================================================================
+\section{Graph Algorithms}
+%==========================================================================
+
+\subsection{Karger-Stein Min-Cut (Cutting the Web)}
+\begin{itemize}
+    \item \textbf{The Story}: Imagine you have a giant spiderweb made of strings, and you want to cut it into two separate webs by cutting the fewest strings possible.
+    \item \textbf{What the Algorithm Does}: You close your eyes, randomly grab two knots in the web, and melt them together into one big knot. You keep doing this until there are only two big knots left. The strings remaining between them are the ones you cut!
+\end{itemize}
+
+\subsection{Karger-Klein-Tarjan MST (Connecting the Islands)}
+\begin{itemize}
+    \item \textbf{The Story}: You have a bunch of toy islands, and you want to build bridges between them so your toy cars can drive anywhere. But bridges cost pocket money, and you want to spend the absolute least amount of money.
+    \item \textbf{What the Algorithm Does}: You look at the bridges, randomly throw away the most expensive ones by tossing a coin, and keep only the cheapest connections.
+\end{itemize}
+
+\subsection{Seidel's APSP (The Map Maker)}
+\begin{itemize}
+    \item \textbf{The Story}: You want to draw a map showing the shortest path between every single toy house in your room.
+    \item \textbf{What the Algorithm Does}: Instead of walking and counting steps between every single house one by one, you take a magic photo that shows you all houses that are exactly 1 step away, then use a math trick to instantly calculate the houses that are 2, 4, or 8 steps away.
+\end{itemize}
+
+\subsection{Luby's Parallel MIS (Playground Tag)}
+\begin{itemize}
+    \item \textbf{The Story}: You have a big group of kids, and you want to choose some ``captains'' to stand in hoops. But no two captains can be standing next to each other, and every kid must either be a captain or standing right next to one.
+    \item \textbf{What the Algorithm Does}: Every kid rolls a die. Whoever rolls the highest number in their group instantly becomes a captain. They and their neighbors sit down. The remaining kids roll again. Very quickly, everyone is sorted!
+\end{itemize}
+
+%==========================================================================
+\section{Data Structures}
+%==========================================================================
+
+\subsection{Treap (The Balancing Toy Shelf)}
+\begin{itemize}
+    \item \textbf{The Story}: You want to put your books on a shelf in alphabetical order (A to Z) so you can find them fast. But if you add them one by one, the shelf might get too heavy on one side.
+    \item \textbf{What the Algorithm Does}: You give each book a random ``coolness'' sticker (like a priority number). You organize the books alphabetically left-to-right, but you also make sure the ``coolest'' books float to the top shelf. This keeps the shelf perfectly balanced!
+\end{itemize}
+
+\subsection{Skip List (The Express Train)}
+\begin{itemize}
+    \item \textbf{The Story}: Imagine you are riding a toy train. If the train stops at every single station, it takes forever to get to the end.
+    \item \textbf{What the Algorithm Does}: You build a second track above it that only stops at every 4th station (the Express Track), and a third track that only stops at every 16th station. You ride the fast train on top, and then hop down to the local train when you get close to your station.
+\end{itemize}
+
+\subsection{FKS Perfect Hashing (The Magic Cubby)}
+\begin{itemize}
+    \item \textbf{The Story}: You want to put away your toys in cubbies so that when you want your teddy bear, you can grab it instantly without looking through a messy box.
+    \item \textbf{What the Algorithm Does}: You use a magic sorting hat that assigns each toy its own perfect cubby. The hat is so smart that no two toys ever end up in the same cubby, meaning zero collisions and zero searching!
+\end{itemize}
+
+%==========================================================================
+\section{Algebraic Algorithms}
+%==========================================================================
+
+\subsection{Freivalds' Verification (Checking the Lego Boxes)}
+\begin{itemize}
+    \item \textbf{The Story}: You have two massive boxes of Lego sets, and you want to know if they contain the exact same blocks. Counting all 10,000 blocks would take all day.
+    \item \textbf{What the Algorithm Does}: Instead of counting everything, you grab a random handful of blocks from both boxes and weigh them. If they match, you're almost certain the boxes are identical!
+\end{itemize}
+
+\subsection{Rabin-Karp String Matching (The Word Detective)}
+\begin{itemize}
+    \item \textbf{The Story}: You want to find the word ``CAT'' in a giant storybook.
+    \item \textbf{What the Algorithm Does}: You turn the word ``CAT'' into a secret code number (like a fingerprint). You slide your finger along the book, quickly calculating the fingerprint of the letters under your hand. If the fingerprint matches, you read the word to make sure it's really a cat!
+\end{itemize}
+
+%==========================================================================
+\section{Geometric Algorithms}
+%==========================================================================
+
+\subsection{RIC Convex Hull (Wrapping the Presents)}
+\begin{itemize}
+    \item \textbf{The Story}: You have a bunch of toy pegs hammered into a board, and you want to wrap a single rubber band around the outside of all of them.
+    \item \textbf{What the Algorithm Does}: You add the pegs one by one in a random order. Each time you add a new peg, if it falls outside the rubber band, you stretch the rubber band to include it. Doing it in a random order prevents the rubber band from getting tangled.
+\end{itemize}
+
+\subsection{Seidel's LP Solver (The Best Toy Spot)}
+\begin{itemize}
+    \item \textbf{The Story}: You want to find the best spot in the yard to play. The spot must be close to the slide, but it cannot be near the mud, the bees, or the prickly bush.
+    \item \textbf{What the Algorithm Does}: You start at a random spot. Whenever someone tells you a new rule (like ``stay away from the mud''), you slide along the edge of the mud until you find the new best spot closest to the slide.
+\end{itemize}
+
+%==========================================================================
+\section{Selection \& Online Algorithms}
+%==========================================================================
+
+\subsection{LazySelect (Finding the Medium Toy)}
+\begin{itemize}
+    \item \textbf{The Story}: You have a giant box of 100 toys, and you want to find the toy that is exactly medium-sized.
+    \item \textbf{What the Algorithm Does}: You are too lazy to sort all 100 toys. So you randomly grab 10 toys, look at them, and pick two that look ``sort of medium.'' You then throw away any toys in the big box that are clearly too small or too big. Now you only have to sort the few toys left in the middle!
+\end{itemize}
+
+\subsection{Online Paging (The Toy Chest Limit)}
+\begin{itemize}
+    \item \textbf{The Story}: You have a small toy box that can only hold 3 toys. Your friend keeps asking for different toys. When the box is full and your friend asks for a new toy, you have to choose which toy to put back in the closet.
+    \item \textbf{What the Algorithm Does}: You use a ``Marking'' game. When a toy is played with, you put a green sticker on it. When all toys have stickers and you need to put one away, you peel off all stickers, toss a coin, and put away one of the unsticker-ed toys.
+\end{itemize}
+
+%==========================================================================
+\section{Modern Sketches}
+%==========================================================================
+
+\subsection{HyperLogLog (Counting the Kids)}
+\begin{itemize}
+    \item \textbf{The Story}: You want to count how many different kids visited the playground today, but you aren't allowed to write down their names, and you have a terrible memory.
+    \item \textbf{What the Algorithm Does}: You ask every kid who leaves to flip a coin until they get ``tails'' and tell you their longest streak of ``heads.'' If one kid got 5 heads in a row, you can guess there were probably around 32 different kids at the park!
+\end{itemize}
+
+\subsection{Johnson-Lindenstrauss Projections (Shadow Puppets)}
+\begin{itemize}
+    \item \textbf{The Story}: You have a beautiful 3D toy house, but you want to send a picture of it to your friend using a flat piece of paper.
+    \item \textbf{What the Algorithm Does}: You shine a flashlight on the toy house and trace its shadow on the wall. Even though the shadow is flat (2D), it still preserves the distances between the doors and windows so your friend can see what the house looks like!
+\end{itemize}
 
 \backmatter
 

@@ -1,4 +1,5 @@
 \documentclass[twoside,12pt]{book}
+
 \usepackage[utf8]{inputenc}
 \usepackage[T1]{fontenc}
 \usepackage{mathpazo}
@@ -6,7 +7,6 @@
 \usepackage{graphicx}
 \usepackage{listings}
 \usepackage{xcolor}
-\usepackage{hyperref}
 \usepackage{enumitem}
 \usepackage{tikz}
 \usepackage{algorithm}
@@ -15,16 +15,45 @@
 \usepackage{geometry}
 \usepackage{fancyhdr}
 \usepackage{titlesec}
-\geometry{papersize={6in,9in},margin=0.75in,top=0.75in,bottom=0.75in,inner=0.9in,outer=0.65in,headheight=14pt}
+\usepackage[colorlinks=true, linkcolor=blue, citecolor=blue, urlcolor=blue, plainpages=false, pdfpagelabels]{hyperref}
+
+\geometry{
+  papersize={6in,9in},
+  margin=0.75in,
+  top=0.75in,bottom=0.75in,
+  inner=0.85in,outer=0.65in,
+  headheight=14pt
+}
+
 \pagestyle{fancy}
 \fancyhf{}
-\fancyhead[LE]{\small\textit{14. Number Theory and Algebra}}
+\fancyhead[LE]{\small\textit{14. Online Algorithms}}
 \fancyhead[RO]{\small\textit{Randomized Algorithms}}
 \fancyfoot[C]{\thepage}
 \renewcommand{\headrulewidth}{0.4pt}
+
 \definecolor{codegray}{rgb}{0.45,0.45,0.45}
-\lstdefinestyle{cppstyle}{basicstyle=\ttfamily\scriptsize,keywordstyle=\bfseries,commentstyle=\itshape\color{codegray},numbers=left,numberstyle=\tiny\color{codegray},numbersep=8pt,frame=single,framerule=0.4pt,rulecolor=\color{codegray},backgroundcolor=\color{gray!5},breaklines=true,tabsize=4,showstringspaces=false,language=C++}
+\lstdefinestyle{cppstyle}{
+  basicstyle=\ttfamily\scriptsize,
+  keywordstyle=\bfseries,
+  commentstyle=\itshape\color{codegray},
+  numbers=left,
+  numberstyle=\tiny\color{codegray},
+  numbersep=8pt,
+  frame=single,
+  framerule=0.4pt,
+  rulecolor=\color{codegray},
+  backgroundcolor=\color{gray!5},
+  breaklines=true,
+  tabsize=4,
+  showstringspaces=false,
+  language=C++,
+  morekeywords={nullptr,size_t,auto,const,constexpr,
+    unordered_map,vector,pair,mt19937,
+    uniform_int_distribution,INT_MAX}
+}
 \lstset{style=cppstyle}
+
 \theoremstyle{plain}
 \newtheorem{theorem}{Theorem}[chapter]
 \newtheorem{lemma}[theorem]{Lemma}
@@ -38,763 +67,916 @@
 \newtheorem{exercise}[theorem]{Exercise}
 \newtheorem{problem}[theorem]{Problem}
 \newenvironment{cpplisting}{\begin{center}\small}{\end{center}}
+
+\newcommand{\Exp}{\operatorname{\mathbb{E}}}
+\newcommand{\Var}{\operatorname{Var}}
+\newcommand{\Cov}{\operatorname{Cov}}
+
 \begin{document}
 
-\chapter*{14 Number Theory and Algebra}
-\addcontentsline{toc}{chapter}{14 Number Theory and Algebra}
-\markboth{14 Number Theory and Algebra}{Randomized Algorithms}
+\chapter*{14 Online Algorithms}
+\addcontentsline{toc}{chapter}{14 Online Algorithms}
+\markboth{14 Online Algorithms}{Randomized Algorithms}
+\label{ch:online-algorithms}
 
-Number theory and abstract algebra provide the mathematical foundation for modern cryptography and for several fundamental randomized algorithms. The ring of integers modulo $n$, the structure of finite groups and fields, and the theory of polynomial arithmetic over finite fields all arise naturally in the design of randomized protocols for primality testing, cryptographic key generation, and algebraic computation.
+An \emph{online algorithm} must process its input piece by piece, making
+irrevocable decisions at each step without knowledge of future requests.
+This stands in sharp contrast to an \emph{offline algorithm}, which
+receives the entire input in advance and may compute an optimal solution
+by examining all of it.  The central question in the study of online
+algorithms is: \emph{how much worse must an online algorithm perform
+compared to an optimal offline algorithm that sees the entire request
+sequence in advance?}
 
-Randomness is essential in this setting for reasons that are both practical and fundamental. Deterministic primality testing was only shown to be possible in polynomial time in 2002 (the AKS algorithm), while randomized tests such as Miller--Rabin have been used efficiently since the 1970s. The security of the RSA cryptosystem rests on the conjectured hardness of factoring large integers---a problem for which no efficient deterministic algorithm is known. The interplay between algebraic structure and probabilistic computation is one of the most elegant themes in the theory of randomized algorithms.
+This degradation is captured by the \emph{competitive ratio}, defined as
+the worst-case ratio of the cost incurred by the online algorithm to that
+of the optimal offline algorithm.  Randomization plays a pivotal role in
+online algorithms because it makes the algorithm's behavior unpredictable
+to an adversary.  Whereas a deterministic online algorithm is completely
+determined by the request sequence and hence can be ``foiled'' by a
+carefully chosen worst-case input, a randomized algorithm can distribute
+its cost over many possible actions, rendering the adversary's task of
+exploiting worst-case structure significantly harder.
 
-In this chapter we develop the necessary algebraic background, study randomized algorithms for primality testing and quadratic residuosity, describe the RSA cryptosystem, and explore the Schwartz--Zippel lemma and its applications to polynomial identity testing.
+In this chapter we study several fundamental online problems, with
+particular emphasis on the \emph{online paging problem} and the
+\emph{$k$-server problem}.  We develop randomized algorithms that achieve
+competitive ratios strictly better than what deterministic algorithms can
+guarantee, and we analyze the interplay between different adversary models
+that govern the power of an adversary against randomized algorithms.
 
-%% ============================================================
-\section{Preliminaries}
-\label{sec:number-theory-prelim}
-%% ============================================================
+%% ----------------------------------------------------------------
+\section{The Online Paging Problem}
+\label{sec:paging}
+%% ----------------------------------------------------------------
 
-We begin with the basic objects of modular arithmetic and the Euclidean algorithm.
-
-\subsection{Modular arithmetic}
-
-For a positive integer $n$, the set $\mathbb{Z}_n = \{0, 1, \ldots, n-1\}$ equipped with addition and multiplication modulo $n$ forms a commutative ring. We write $a \equiv b \pmod{n}$ to mean $n \mid (a - b)$, and we denote by $[a]_n$ the congruence class of $a$ modulo $n$.
-
-\begin{definition}[$\mathbb{Z}_n^*$]
-The \emph{multiplicative group of integers modulo $n$} is the set
-\[
-\mathbb{Z}_n^* = \{a \in \mathbb{Z}_n : \gcd(a, n) = 1\}
-\]
-under multiplication modulo $n$. Its cardinality is $\phi(n)$, where $\phi$ denotes Euler's totient function.
+\begin{definition}[Online paging]
+Let $\mathcal{U}$ be a universe of $n$ pages and let the algorithm
+maintain a \emph{cache} (or \emph{fast memory}) of $k$ pages, where
+$k < n$.  A \emph{request sequence} $\sigma = \sigma_1, \sigma_2,
+\ldots, \sigma_m$ is a sequence of pages drawn from $\mathcal{U}$.  When
+request $\sigma_i$ arrives, the algorithm must ensure that $\sigma_i$ is
+in the cache; if it is not, a \emph{cache miss} (or \emph{page fault})
+occurs and the algorithm must bring $\sigma_i$ into the cache by evicting
+some page currently stored there.  The cost of a request is 1 if it
+causes a miss and 0 if it is a hit.  The total cost is the number of
+misses incurred over the entire sequence.
 \end{definition}
 
-\subsection{The Euclidean algorithm}
-
-The greatest common divisor of two integers $a$ and $b$ (not both zero) is the largest positive integer dividing both. The \emph{Euclidean algorithm} computes $\gcd(a, b)$ by repeated application of the division algorithm:
-\begin{align*}
-a &= q_1 b + r_1, \quad 0 \leq r_1 < b, \\
-b &= q_2 r_1 + r_2, \quad 0 \leq r_2 < r_1, \\
-r_1 &= q_3 r_2 + r_3, \quad 0 \leq r_3 < r_2, \\
-&\;\;\vdots
-\end{align*}
-until some remainder $r_k = 0$, at which point $\gcd(a, b) = r_{k-1}$.
-
-\begin{theorem}[Complexity of the Euclidean algorithm]
-\label{thm:euclid}
-The Euclidean algorithm on integers $a > b > 0$ terminates in $O(\log \min(a, b))$ divisions, requiring $O(\log^2 a \cdot \log b)$ bit operations.
-\end{theorem}
-
-\begin{proof}
-At each step the pair $(r_{i-1}, r_i)$ is replaced by $(r_i, r_{i+1})$ with $r_{i+1} < r_i$ and $r_{i+1} < r_{i-1} - r_i$. After two consecutive steps the remainder decreases by at least a factor of~$1/2$. Hence the number of steps is at most $2 \log_2 b + O(1)$. Each division involves operands of $O(\log a)$ bits and takes $O(\log a \cdot \log b)$ bit operations by schoolbook long division, giving the stated bound.
-\end{proof}
-
-\subsection{The extended Euclidean algorithm and B\'ezout's identity}
-
-\begin{theorem}[B\'ezout's identity]
-\label{thm:bezout}
-For any integers $a$ and $b$ (not both zero), there exist integers $x$ and $y$ such that
+The goal is to minimize the total number of cache misses.  The
+\emph{optimal offline algorithm} (denoted OPT) knows the entire request
+sequence $\sigma$ in advance and computes the minimum possible number of
+misses.  We say an algorithm $A$ is \emph{$c$-competitive} if for every
+request sequence $\sigma$,
 \[
-ax + by = \gcd(a, b).
+  \mathrm{cost}_A(\sigma) \;\le\; c \cdot \mathrm{cost}_{\mathrm{OPT}}(\sigma) \;+\; O(1).
 \]
-Moreover, the \emph{extended Euclidean algorithm} computes such $x$ and $y$ in $O(\log^2 a \cdot \log b)$ bit operations.
-\end{theorem}
 
-\begin{proof}
-The proof proceeds by induction on the number of steps of the Euclidean algorithm. In the base case, if $b = 0$, then $\gcd(a, b) = |a|$ and we may take $x = \operatorname{sgn}(a)$, $y = 0$. For the inductive step, suppose $\gcd(b, r_1) = bx' + r_1 y'$. Substituting $r_1 = a - q_1 b$ gives $\gcd(a, b) = bx' + (a - q_1 b)y' = ay' + b(x' - q_1 y')$, so $x = y'$ and $y = x' - q_1 y'$. The extended Euclidean algorithm tracks these coefficients through the recursion. Each step performs $O(1)$ arithmetic operations on numbers of $O(\log a)$ bits, and there are $O(\log b)$ steps.
-\end{proof}
+\subsection{Deterministic Algorithms and Their Limitations}
 
-\begin{corollary}
-\label{cor:inverse}
-Let $a, n$ be positive integers. Then $\gcd(a, n) = 1$ if and only if $a$ has a multiplicative inverse in $\mathbb{Z}_n$, i.e., there exists $x \in \mathbb{Z}_n$ with $ax \equiv 1 \pmod{n}$.
-\end{corollary}
+Several natural deterministic strategies are immediately
+available:
 
-\begin{proof}
-If $\gcd(a, n) = 1$, then by Theorem~\ref{thm:bezout} there exist integers $x, y$ with $ax + ny = 1$. Reducing modulo $n$ gives $ax \equiv 1 \pmod{n}$. Conversely, if $ax \equiv 1 \pmod{n}$, then $ax - 1 = kn$ for some integer $k$, so $\gcd(a, n) \mid 1$, hence $\gcd(a, n) = 1$.
-\end{proof}
+\begin{itemize}[nosep]
+  \item \textbf{LRU (Least Recently Used):} Evict the page whose last
+        use was furthest in the past.
+  \item \textbf{FIFO (First-In, First-Out):} Evict the page that has
+        been in the cache the longest.
+  \item \textbf{FAR (Furthest in the Future):} Evict the page whose next
+        use is furthest in the future (this is the optimal offline
+        algorithm).
+\end{itemize}
 
-\begin{example}
-To find the inverse of $17$ modulo $43$, apply the extended Euclidean algorithm:
-\begin{align*}
-43 &= 2 \cdot 17 + 9, \\
-17 &= 1 \cdot 9 + 8, \\
-9 &= 1 \cdot 8 + 1, \\
-8 &= 8 \cdot 1 + 0.
-\end{align*}
-Back-substituting: $1 = 9 - 1 \cdot 8 = 9 - 1 \cdot (17 - 1 \cdot 9) = 2 \cdot 9 - 17 = 2(43 - 2 \cdot 17) - 17 = 2 \cdot 43 - 5 \cdot 17$. Thus $(-5) \cdot 17 \equiv 1 \pmod{43}$, so $17^{-1} \equiv 38 \pmod{43}$.
+While FAR achieves the optimal cost, it requires knowledge of future
+requests and is therefore offline.  LRU and FIFO are online, but both
+can be forced to perform poorly.
+
+\begin{example}\label{ex:paging-adversary}
+Consider a cache of size $k=3$ with page universe $\{1, 2, 3, 4\}$.
+Suppose the cache initially contains $\{1, 2, 3\}$.  Consider the
+request sequence
+\[
+  \sigma = 4,\; 1,\; 4,\; 2,\; 4,\; 3,\; 4,\; 1,\; 4,\; 2,\; 4,\; 3,\; 4,\; \ldots
+\]
+In the subsequence $4, 1, 4, 2, 4, 3, 4$, every third request is page 4,
+and pages 1, 2, 3 cycle through the remaining slots.  Every request
+causes a miss for LRU (and similarly for FIFO), for a total cost of
+approximately $\tfrac{4}{3} \cdot |\sigma|$.  However, the optimal
+offline algorithm, seeing the pattern in advance, can keep page 4 in the
+cache at all times and suffer only one miss per three requests, for a
+total cost of approximately $\tfrac{1}{3} \cdot |\sigma|$.
 \end{example}
 
-\subsection{The Chinese Remainder Theorem}
+\subsection{Lower Bound for Deterministic Algorithms}
 
-\begin{theorem}[Chinese Remainder Theorem]
-\label{thm:crt}
-Let $n_1, n_2, \ldots, n_k$ be pairwise coprime positive integers, and let $N = n_1 n_2 \cdots n_k$. For any integers $a_1, a_2, \ldots, a_k$, the system of simultaneous congruences
+The example above generalizes.  We now prove the classical lower bound
+showing that no deterministic online paging algorithm can achieve a
+competitive ratio better than $k-1$.
+
+\begin{theorem}\label{thm:paging-det-lb}
+Any deterministic online algorithm $A$ for $k$-page caching satisfies
 \[
-x \equiv a_i \pmod{n_i}, \quad i = 1, 2, \ldots, k,
+  \sup_\sigma \frac{\mathrm{cost}_A(\sigma)}{\mathrm{cost}_{\mathrm{OPT}}(\sigma)} \;\ge\; k - 1.
 \]
-has a unique solution modulo $N$. Moreover, the solution can be found in $O(\log^3 N)$ bit operations.
 \end{theorem}
 
 \begin{proof}
-\textbf{Existence.} For each $i$, define $N_i = N / n_i$. Since the $n_i$ are pairwise coprime, $\gcd(N_i, n_i) = 1$, so by Corollary~\ref{cor:inverse} there exists $y_i$ with $N_i y_i \equiv 1 \pmod{n_i}$. Set
+Let the universe consist of $k+1$ pages $\{p_0, p_1, \ldots, p_k\}$.
+Consider the following adversarial strategy.  The adversary presents
+requests in blocks.  In each block, the adversary requests the $k+1$
+pages in some order that avoids the page currently in position $k$ of
+algorithm $A$'s internal ordering (i.e., the page $A$ would evict
+next).  Specifically, the adversary maintains a set $S$ of $k+1$ pages.
+At the start of each block, $A$'s cache contains some $k$-element subset
+of $S$.  The adversary requests the one page of $S$ not in $A$'s cache,
+causing a miss.  Then it continues requesting other pages of $S$ to
+rearrange $A$'s cache without reducing its own cost.
+
+More precisely, suppose at the start of a block, $A$'s cache contains
+pages $q_1, q_2, \ldots, q_k \in S$ and the missing page is $p$.  The
+adversary presents the single request $p$.  Algorithm $A$ must evict
+some page $q_j$ to bring in $p$, incurring a miss.  Meanwhile, OPT can
+serve this request with a hit if $p$ was already in OPT's cache.  By
+choosing $p$ to be the unique page of $S$ not in $A$'s cache, the
+adversary guarantees $A$ misses while OPT can serve the request with cost
+0 (after the first block, OPT keeps all of $S \setminus \{q\}$ for an
+appropriate page $q$ in its cache, using $k$ slots for $k$ pages).
+
+After each block, $A$'s cache has changed (one page was evicted and $p$
+was inserted), but still consists of $k$ pages from $S$.  The adversary
+repeats, choosing the new missing page.  Each block costs $A$ at least 1
+miss while OPT pays 0 (after the initial cost of loading its cache).  If
+we group the sequence into rounds of $k$ blocks each, we can force
+$A$ to miss $k-1$ times per round while OPT misses only once.  Hence
 \[
-x = \sum_{i=1}^{k} a_i N_i y_i.
+  \frac{\mathrm{cost}_A(\sigma)}{\mathrm{cost}_{\mathrm{OPT}}(\sigma)} \;\ge\; k-1.
 \]
-Then for any $j$, reducing modulo $n_j$: all terms with $i \neq j$ contain $N_i = N / n_i$ which is divisible by $n_j$, so $x \equiv a_j N_j y_j \equiv a_j \cdot 1 = a_j \pmod{n_j}$.
-
-\textbf{Uniqueness.} If $x$ and $x'$ are both solutions, then $n_i \mid (x - x')$ for all $i$. Since the $n_i$ are pairwise coprime, $N = \prod n_i \mid (x - x')$, so $x \equiv x' \pmod{N}$.
-
-\textbf{Complexity.} Computing each $y_i$ via the extended Euclidean algorithm costs $O(\log^2 N)$ bit operations, and summing the $k \leq \log N$ terms costs $O(\log^3 N)$.
 \end{proof}
 
-\begin{remark}
-The Chinese Remainder Theorem has a structural interpretation: it gives a ring isomorphism
+The above bound is tight for randomized algorithms, as we shall see.
+
+%% ----------------------------------------------------------------
+\section{Adversary Models}
+\label{sec:adversary-models}
+%% ----------------------------------------------------------------
+
+The competitive analysis of randomized algorithms requires a careful
+treatment of the adversary.  Unlike the deterministic case, where the
+input is fixed and the algorithm is deterministic, the randomized
+algorithm involves internal randomness, and the adversary's knowledge
+of this randomness fundamentally affects the analysis.
+
+\begin{definition}[Competitive ratio]
+An online algorithm $A$ (possibly randomized) is
+\emph{$C$-competitive} if, for every input sequence $\sigma$,
 \[
-\mathbb{Z}_N \;\cong\; \mathbb{Z}_{n_1} \times \mathbb{Z}_{n_2} \times \cdots \times \mathbb{Z}_{n_k}.
+  \mathbf{E}\!\bigl[\mathrm{cost}_A(\sigma)\bigr] \;\le\; C \cdot \mathrm{cost}_{\mathrm{OPT}}(\sigma) \;+\; O(1),
 \]
-Under this isomorphism, $\mathbb{Z}_N^* \cong \mathbb{Z}_{n_1}^* \times \cdots \times \mathbb{Z}_{n_k}^*$. This decomposition is fundamental to many number-theoretic algorithms.
-\end{remark}
+where the expectation is over the random coins of $A$.
+\end{definition}
 
-%% ============================================================
-\section{Groups and Fields}
-\label{sec:groups-fields}
-%% ============================================================
+\subsection{The Three Adversary Models}
 
-\subsection{Groups and abelian groups}
+There are three natural adversary models for randomized algorithms,
+ordered from weakest to strongest:
 
-\begin{definition}[Group]
-A \emph{group} $(G, \cdot)$ is a set $G$ together with a binary operation $\cdot : G \times G \to G$ satisfying:
 \begin{enumerate}[nosep]
-    \item \textbf{Closure:} $a \cdot b \in G$ for all $a, b \in G$.
-    \item \textbf{Associativity:} $(a \cdot b) \cdot c = a \cdot (b \cdot c)$ for all $a, b, c \in G$.
-    \item \textbf{Identity:} There exists $e \in G$ with $e \cdot a = a \cdot e = a$ for all $a \in G$.
-    \item \textbf{Inverses:} For each $a \in G$, there exists $a^{-1} \in G$ with $a \cdot a^{-1} = a^{-1} \cdot a = e$.
+  \item \textbf{Oblivious adversary:} The adversary must fix the entire
+        input sequence $\sigma$ \emph{before} the algorithm begins
+        execution.  The adversary has no knowledge of the algorithm's
+        random coins.  This is the \emph{weakest} adversary.
+
+  \item \textbf{Adaptive online adversary:} The adversary produces
+        requests one at a time.  When producing request $\sigma_i$, the
+        adversary knows the algorithm's random coins and the algorithm's
+        behavior up to step $i-1$, but does \emph{not} know the
+        algorithm's future random coins (those that will be used after
+        step $i$).  This adversary is \emph{intermediate} in power.
+
+  \item \textbf{Adaptive offline adversary:} The adversary sees the
+        algorithm's entire sequence of random coins (and hence the
+        algorithm's complete behavior) and then produces the worst-case
+        input sequence.  Equivalently, the adversary can view the
+        algorithm as a function from random strings to behaviors, and
+        choose the input to maximize cost against the worst-case random
+        string.  This is the \emph{strongest} adversary.
 \end{enumerate}
-If moreover $a \cdot b = b \cdot a$ for all $a, b \in G$, the group is called \emph{abelian}.
-\end{definition}
 
-\begin{example}
-The set $\mathbb{Z}_n^*$ under multiplication modulo $n$ is an abelian group. Its order is $|\mathbb{Z}_n^*| = \phi(n)$, where $\phi$ is Euler's totient function.
-\end{example}
-
-\subsection{Euler's totient function}
-
-\begin{definition}[Euler's totient function]
-For a positive integer $n$ with prime factorization $n = p_1^{e_1} p_2^{e_2} \cdots p_k^{e_k}$,
+\begin{proposition}\label{prop:adversary-hierarchy}
+For any randomized online algorithm $A$ and problem $\Pi$, if $A$ is
+$C$-competitive against an adaptive offline adversary, then $A$ is also
+$C$-competitive against an adaptive online adversary, and hence against an
+oblivious adversary:
 \[
-\phi(n) = n \prod_{i=1}^{k} \left(1 - \frac{1}{p_i}\right).
+  C_{\text{oblivious}} \;\le\; C_{\text{adaptive online}} \;\le\; C_{\text{adaptive offline}}.
 \]
-Equivalently, $\phi(n)$ counts the number of integers in $\{1, 2, \ldots, n\}$ that are coprime to $n$.
-\end{definition}
-
-\begin{example}
-$\phi(12) = 12(1 - 1/2)(1 - 1/3) = 12 \cdot 1/2 \cdot 2/3 = 4$. Indeed, $\{1, 5, 7, 11\} = \mathbb{Z}_{12}^*$.
-\end{example}
-
-\subsection{Euler's theorem}
-
-\begin{theorem}[Euler's theorem]
-\label{thm:euler}
-If $\gcd(a, n) = 1$, then
-\[
-a^{\phi(n)} \equiv 1 \pmod{n}.
-\]
-\end{theorem}
-
-\begin{proof}
-Let $r_1, r_2, \ldots, r_{\phi(n)}$ be a complete set of representatives for $\mathbb{Z}_n^*$. Since $\gcd(a, n) = 1$, multiplication by $a$ permutes the elements of $\mathbb{Z}_n^*$: the set $\{ar_1, ar_2, \ldots, ar_{\phi(n)}\}$ is a rearrangement of $\{r_1, r_2, \ldots, r_{\phi(n)}\}$, because $ar_i \equiv ar_j \pmod{n}$ implies $r_i \equiv r_j \pmod{n}$ (as $a$ is invertible modulo $n$).
-
-Taking the product of both sets modulo $n$:
-\[
-\prod_{i=1}^{\phi(n)} (ar_i) \equiv \prod_{i=1}^{\phi(n)} r_i \pmod{n}.
-\]
-The left side equals $a^{\phi(n)} \prod r_i$. Since each $r_i$ is coprime to $n$, $\prod r_i$ is also coprime to $n$ and hence invertible modulo $n$. Cancelling $\prod r_i$ from both sides yields $a^{\phi(n)} \equiv 1 \pmod{n}$.
-\end{proof}
-
-\begin{corollary}[Fermat's little theorem]
-\label{thm:fermat}
-If $p$ is prime and $p \nmid a$, then
-\[
-a^{p-1} \equiv 1 \pmod{p}.
-\]
-\end{corollary}
-
-\begin{proof}
-This is Theorem~\ref{thm:euler} applied with $n = p$ prime, since $\phi(p) = p - 1$.
-\end{proof}
-
-\subsection{Fields and finite fields}
-
-\begin{definition}[Field]
-A \emph{field} $(F, +, \cdot)$ is a set $F$ with two binary operations satisfying:
-\begin{enumerate}[nosep]
-    \item $(F, +)$ is an abelian group with identity $0$.
-    \item $(F \setminus \{0\}, \cdot)$ is an abelian group with identity $1$.
-    \item Multiplication distributes over addition: $a(b + c) = ab + ac$.
-\end{enumerate}
-\end{definition}
-
-\begin{proposition}
-For a prime $p$, the ring $\mathbb{Z}_p$ is a field. It has exactly $p$ elements, denoted $\mathbb{F}_p$.
 \end{proposition}
 
 \begin{proof}
-When $p$ is prime, every nonzero element $a \in \{1, 2, \ldots, p-1\}$ satisfies $\gcd(a, p) = 1$, so by Corollary~\ref{cor:inverse} it has a multiplicative inverse in $\mathbb{Z}_p$. All field axioms follow from the ring axioms of $\mathbb{Z}_p$ together with the existence of multiplicative inverses.
+If $A$ is $C$-competitive against an adaptive offline adversary, then for
+every input $\sigma$ and every random string $r$ of $A$,
+$\mathrm{cost}_A(\sigma, r) \le C \cdot \mathrm{cost}_{\mathrm{OPT}}(\sigma) + O(1)$.
+Taking expectations over $r$ gives the bound against oblivious
+adversaries.  The adaptive online adversary is weaker than the adaptive
+offline one because it must commit to each request without seeing the
+algorithm's future random coins, which can only reduce the adversary's
+ability to choose the worst-case input.
 \end{proof}
 
-\subsection{Cyclic groups and generators}
+The hierarchy is strict in general: there exist problems and algorithms
+where the competitive ratio against an oblivious adversary is strictly
+better than against an adaptive offline adversary.  However, as we shall
+see in Section~\ref{sec:relating-adversaries}, for the paging problem the
+situation is more nuanced.
 
-\begin{definition}[Generator]
-An element $g \in G$ of a finite group $G$ is a \emph{generator} if $\{g^0, g^1, g^2, \ldots\} = G$, i.e., every element of $G$ is a power of $g$. A group with a generator is called \emph{cyclic}.
-\end{definition}
+\subsection{The Randomized Competitive Guarantee}
 
-\begin{theorem}
-\label{thm:cyclic}
-For any prime $p$, the multiplicative group $\mathbb{F}_p^*$ is cyclic of order $p - 1$. That is, there exists a \emph{primitive root} $g$ modulo $p$ such that $\{g^1, g^2, \ldots, g^{p-1}\} = \mathbb{F}_p^*$.
-\end{theorem}
+In the randomized setting, the competitive ratio is defined as the
+worst-case (over input sequences) of the ratio of the expected cost of
+the algorithm to the cost of OPT.  Formally:
 
-\begin{remark}
-More generally, $\mathbb{Z}_n^*$ is cyclic if and only if $n \in \{1, 2, 4, p^k, 2p^k\}$ for an odd prime $p$ and $k \geq 1$.
-\end{remark}
-
-\subsection{The discrete logarithm problem}
-
-\begin{definition}[Discrete logarithm]
-Let $g$ be a generator of $\mathbb{F}_p^*$. For $h \in \mathbb{F}_p^*$, the \emph{discrete logarithm} of $h$ base $g$ is the unique integer $x$ with $1 \leq x \leq p-1$ such that $g^x \equiv h \pmod{p}$, written $x = \log_g h$.
-\end{definition}
-
-\begin{remark}[Hardness assumption]
-While $g^x \pmod{p}$ can be computed in $O(\log x \cdot \log^2 p)$ bit operations by repeated squaring, the inverse problem---given $g$ and $h$, find $x$ such that $g^x \equiv h \pmod{p}$---is believed to be hard. No polynomial-time deterministic algorithm is known for the discrete logarithm problem in $\mathbb{F}_p^*$ for general prime $p$. This asymmetry between exponentiation and logarithm computation underlies the security of Diffie--Hellman key exchange and many other cryptographic protocols.
-\end{remark}
-
-%% ============================================================
-\section{Quadratic Residues}
-\label{sec:quadratic-residues}
-%% ============================================================
-
-\begin{definition}[Quadratic residue]
-An integer $a$ with $\gcd(a, n) = 1$ is a \emph{quadratic residue modulo $n$} if there exists $x$ with $x^2 \equiv a \pmod{n}$. If no such $x$ exists, $a$ is a \emph{quadratic nonresidue modulo $n$}. The set of quadratic residues modulo $n$ is denoted $QR(n)$.
-\end{definition}
-
-\subsection{The Legendre symbol}
-
-\begin{definition}[Legendre symbol]
-For an odd prime $p$ and integer $a$ with $p \nmid a$, the \emph{Legendre symbol} is defined by
+\begin{definition}[Randomized competitive ratio]\label{def:rand-competitive}
+A randomized algorithm $A$ is \emph{$C$-competitive against adversary
+$\mathcal{A}$} if for every input sequence $\sigma$ (or every
+$\sigma$ chosen by $\mathcal{A}$),
 \[
-\left(\frac{a}{p}\right) = \begin{cases}
-+1 & \text{if } a \in QR(p), \\
--1 & \text{if } a \notin QR(p).
-\end{cases}
+  \mathbf{E}\!\bigl[\mathrm{cost}_A(\sigma)\bigr] \;\le\; C \cdot \mathrm{cost}_{\mathrm{OPT}}(\sigma) \;+\; O(1),
 \]
+where $\mathcal{O}(1)$ is a constant independent of $|\sigma|$.
 \end{definition}
 
-\begin{theorem}[Euler's criterion]
-\label{thm:euler-criterion}
-For an odd prime $p$ and integer $a$ with $p \nmid a$,
+%% ----------------------------------------------------------------
+\section{Paging against an Oblivious Adversary}
+\label{sec:paging-oblivious}
+%% ----------------------------------------------------------------
+
+We now present a randomized algorithm for the $k$-page paging problem
+that achieves a competitive ratio of $O(k)$ against an oblivious
+adversary.
+
+\subsection{The Randomized Marking Algorithm}
+
+\begin{definition}[Marking algorithm]\label{def:marking}
+The \emph{randomized marking algorithm} for $k$-page caching operates
+as follows.  Each page in the cache carries a \emph{mark} (either
+\emph{marked} or \emph{unmarked}).
+
+\begin{itemize}[nosep]
+  \item \textbf{On a request to page $p$:}
+    \begin{enumerate}
+      \item If $p$ is in the cache, mark $p$ (if not already marked).
+            This is a \emph{hit}.
+      \item If $p$ is not in the cache (a \emph{miss}):
+        \begin{enumerate}
+          \item If all $k$ pages in the cache are marked, unmark all
+                pages and then mark $p$.  (Equivalently, start a new
+                ``phase.'')
+          \item Otherwise (at least one page in the cache is unmarked),
+                \emph{evict a uniformly random unmarked page} and
+                insert $p$, marking it.
+        \end{enumerate}
+    \end{enumerate}
+\end{itemize}
+\end{definition}
+
+The key insight is that the marking algorithm partitions the request
+sequence into \emph{phases}.  A new phase begins whenever all $k$ pages
+in the cache are marked and a miss occurs.  Within a phase, the
+algorithm only evicts randomly among unmarked pages.
+
+\subsection{Analysis against an Oblivious Adversary}
+
+We analyze the marking algorithm using a potential function argument.
+Consider the configuration of the algorithm's cache $A$ and the optimal
+offline algorithm's cache $O$ at any point during the execution.
+
+\begin{definition}[Potential function]\label{def:paging-potential}
+At any point in the execution, define the potential
 \[
-a^{(p-1)/2} \equiv \left(\frac{a}{p}\right) \pmod{p}.
+  \Phi \;=\; \bigl|\{p \in A \setminus O\}\bigr|,
 \]
+i.e., the number of pages in $A$'s cache that are not in $O$'s cache.
+Here $A$ denotes the set of pages in the algorithm's cache and $O$
+denotes the set of pages in OPT's cache.
+\end{definition}
+
+Note that $0 \le \Phi \le k$ since $|A| = |O| = k$.
+
+\begin{lemma}\label{lem:marking-hit}
+Within a phase, every request to a page that is in the cache is served
+with cost 0 (a hit) by both the marking algorithm and OPT.
+\end{lemma}
+
+\begin{proof}
+Within a phase, once a page is marked, it is never evicted (the algorithm
+only evicts unmarked pages).  Thus all pages that have been requested at
+least once during the current phase remain in the cache until the phase
+ends.  OPT may choose to evict such a page, but it need not.
+\end{proof}
+
+\begin{lemma}\label{lem:marking-miss-prob}
+When the marking algorithm suffers a miss on request $\sigma_i$ (with at
+least one unmarked page in the cache), the probability that the
+evicted page is one that is not in OPT's cache is at least $1/k$.
+\end{lemma}
+
+\begin{proof}
+At the moment of eviction, the marking algorithm has $k$ pages in cache,
+of which some subset $U$ of size $|U| \ge 1$ are unmarked.  It evicts a
+page chosen uniformly at random from $U$.  Let $B = A \setminus O$ be the
+set of pages in $A$'s cache but not in $O$'s cache.  Since $|A| = |O| =
+k$, we have $|B| = |A \setminus O| = |O \setminus A|$.  At least $|B|$
+pages in $A$ are ``bad'' (not in OPT).
+
+The unmarked pages $U$ are a subset of $A$.  At most $k - |U|$ pages of
+$A$ are marked.  In the worst case, all pages of $O \cap A$ could be
+marked, so $|U \cap B| \ge |U| - |O \cap A \cap U^c|$ is not directly
+computable.  However, observe that $|A \setminus O| = |B|$ and $|U|
+\ge 1$.  Since $|A \cap O| \le k - |B|$ and $|U \cap A| = |U|$, we
+have
+\[
+  |U \cap B| \;=\; |U| - |U \cap O| \;\ge\; |U| - |A \cap O| \;\ge\; |U| - (k - |B|).
+\]
+In the simplest case where $|U| = k$ (all pages are unmarked at the
+start of a phase), we get $|U \cap B| = |B| \ge 1$ (if $|B| > 0$).
+The probability of evicting a page in $B$ is $|U \cap B|/|U|$.
+
+We use a cleaner argument: when a miss occurs, the newly arriving page
+is not in $A$.  Either it is in $O$ or it is not.  Either way, $|A
+\setminus O|$ does not decrease by more than 1 due to the insertion.
+For the eviction step, note that the algorithm picks uniformly at random
+from $U$.  Among $U$, at least one page must be in $A \setminus O$
+whenever $|A \setminus O| > 0$, because $|U| \le k$ and $|A \cap O| \le
+k - 1$ (since the new page is not in $A$, so $|A \cap O|$ could be at
+most $k$).  In fact, since $|A \setminus O|$ counts pages in $A$ not in
+$O$, and $|U| \ge 1$, by a counting argument at least a $1/k$ fraction
+of $U$ lies in $A \setminus O$:
+\[
+  \frac{|U \cap (A \setminus O)|}{|U|} \;\ge\; \frac{|A \setminus O| - (k - |U|)}{|U|}.
+\]
+When $|A \setminus O| \ge 1$, this is at least $1/k$ because in the worst
+case $|A \setminus O| = 1$ and $|U| = k$, giving probability $1/k$.
+\end{proof}
+
+We now state the main theorem.
+
+\begin{theorem}\label{thm:marking-2k}
+The randomized marking algorithm is $2k$-competitive against an oblivious
+adversary for the $k$-page paging problem.
 \end{theorem}
 
 \begin{proof}
-Suppose $a \in QR(p)$, so $a \equiv x^2 \pmod{p}$ for some $x$. Then $a^{(p-1)/2} \equiv (x^2)^{(p-1)/2} = x^{p-1} \equiv 1 \pmod{p}$ by Fermat's little theorem (Corollary~\ref{thm:fermat}). So $\left(\frac{a}{p}\right) = 1$ and the congruence holds.
+We use the potential function $\Phi = |A \setminus O|$ as defined in
+Definition~\ref{def:paging-potential}.  Recall that $0 \le \Phi \le k$.
 
-Suppose $a \notin QR(p)$. Consider the polynomial $x^{p-1} - 1 \equiv 0 \pmod{p}$. By Fermat's little theorem, all $p-1$ nonzero elements of $\mathbb{F}_p$ are roots. By the fact that $\mathbb{F}_p^*$ is cyclic (Theorem~\ref{thm:cyclic}), it has a generator $g$, and the quadratic residues are exactly $\{g^2, g^4, \ldots, g^{p-1}\}$, which are the $(p-1)/2$ even powers of $g$. The quadratic nonresidues are the $(p-1)/2$ odd powers.
+We partition the request sequence into \emph{phases}.  A phase ends when
+all $k$ pages in the cache are marked and a new miss occurs (triggering
+a global unmark).  Consider one phase.  Let $m_A$ be the number of
+misses the marking algorithm suffers in this phase, and let $m_O$ be the
+number of misses OPT suffers in this phase (for the requests in this
+phase only, considering OPT's cache state at the start of the phase).
 
-If $a \equiv g^k \pmod{p}$ with $k$ odd, then $a^{(p-1)/2} \equiv g^{k(p-1)/2} \pmod{p}$. Since $g^{(p-1)/2} \not\equiv 1 \pmod{p}$ (as $g$ has order $p-1$) but $(g^{(p-1)/2})^2 = g^{p-1} \equiv 1 \pmod{p}$, we must have $g^{(p-1)/2} \equiv -1 \pmod{p}$. Hence $a^{(p-1)/2} \equiv (-1)^k = -1 \pmod{p}$ for odd $k$, which equals $\left(\frac{a}{p}\right) = -1$.
-\end{proof}
+\textbf{Claim:} $m_O \ge m_A - k$.
 
-\subsection{A randomized quadratic residue test}
+\emph{Proof of claim:} Each miss by the marking algorithm brings a new
+page into the cache.  At the end of the phase, all $k$ pages in the
+cache are marked, meaning $k$ distinct pages were brought in during the
+phase (each was requested at least once while unmarked).  OPT starts
+the phase with $k$ pages.  Each miss by OPT introduces one new page.
+To serve all the requests in the phase that cause misses for the marking
+algorithm, OPT must also miss on at least $m_A - k$ of them, because
+OPT's cache can contain at most $k$ of the $m_A$ pages that the marking
+algorithm brought in (OPT might already have some of them, but not all
+$m_A$).  Hence $m_O \ge m_A - k$.
 
-Euler's criterion yields a simple randomized algorithm for testing quadratic residuosity modulo a prime.
+Now we do the potential function analysis.  Over a phase, define
+$\Delta\Phi$ as the change in $\Phi$ from the start to the end of the
+phase.  Since $\Phi$ measures $|A \setminus O|$ and the phase ends with
+a new marking configuration, we have $\Delta\Phi \le k$ (since $\Phi \le
+k$ at all times).
 
-\begin{algorithm}
-\caption{Randomized Quadratic Residue Test (modulo prime $p$)}
-\label{alg:qr-test}
-\begin{algorithmic}[1]
-\Function{IsQR}{$a, p$} \Comment{$p$ prime, $\gcd(a,p)=1$}
-    \State $r \gets a^{(p-1)/2} \bmod p$ \Comment{repeated squaring}
-    \State \Return $(r \equiv 1 \pmod{p})$
-\EndFunction
-\end{algorithmic}
-\end{algorithm}
-
-By Euler's criterion (Theorem~\ref{thm:euler-criterion}), this test is deterministic and exact for prime moduli. The running time is $O(\log p \cdot \log^2 p) = O(\log^3 p)$ bit operations by repeated squaring.
-
-\begin{remark}
-For composite moduli $n = pq$ (where $p, q$ are distinct primes), the situation is fundamentally different. Testing whether $a \in QR(n)$ requires knowing the factorization of $n$. Without the factorization, no deterministic polynomial-time algorithm is known, but a randomized polynomial-time algorithm exists (based on the Jacobi symbol and the structure of quadratic residues modulo Blum integers).
-\end{remark}
-
-\subsection{The Jacobi symbol}
-
-\begin{definition}[Jacobi symbol]
-For an odd positive integer $n = p_1^{e_1} p_2^{e_2} \cdots p_k^{e_k}$ and integer $a$ with $\gcd(a, n) = 1$, the \emph{Jacobi symbol} is
+We relate costs and potential.  Consider the amortized cost of the
+marking algorithm per phase:
 \[
-\left(\frac{a}{n}\right) = \prod_{i=1}^{k} \left(\frac{a}{p_i}\right)^{e_i},
+  m_A + \mathbf{E}[\Delta\Phi] \;\le\; m_A + k.
 \]
-where each $\left(\frac{a}{p_i}\right)$ is the Legendre symbol.
-\end{definition}
-
-\begin{remark}
-The Jacobi symbol generalizes the Legendre symbol, but $\left(\frac{a}{n}\right) = 1$ does not imply $a \in QR(n)$ when $n$ is composite. It can be computed efficiently in $O(\log^2 n)$ bit operations using quadratic reciprocity and its supplements, without knowing the factorization of $n$.
-\end{remark}
-
-\subsection{Quadratic residuosity for composite moduli}
-
-\begin{theorem}
-\label{thm:qr-composite}
-Let $n = pq$ be a product of two distinct primes (a \emph{Blum integer}). An element $a \in \mathbb{Z}_n^*$ is a quadratic residue modulo $n$ if and only if both $\left(\frac{a}{p}\right) = 1$ and $\left(\frac{a}{q}\right) = 1$.
-\end{theorem}
-
-\begin{proof}
-By the Chinese Remainder Theorem (Theorem~\ref{thm:crt}), $\mathbb{Z}_n \cong \mathbb{Z}_p \times \mathbb{Z}_q$. Under this isomorphism, $a \mapsto (a \bmod p, \, a \bmod q)$ and $x^2 \equiv a \pmod{n}$ if and only if $x^2 \equiv a \pmod{p}$ and $x^2 \equiv a \pmod{q}$. Thus $a \in QR(n)$ if and only if $a \bmod p \in QR(p)$ and $a \bmod q \in QR(q)$, which is equivalent to $\left(\frac{a}{p}\right) = 1$ and $\left(\frac{a}{q}\right) = 1$.
+By the claim, $m_A \le m_O + k$.  Thus the expected amortized cost is at
+most $m_O + 2k$.  Since $\Phi \ge 0$ initially and $\Phi \ge 0$ always,
+summing over all phases gives
+\[
+  \mathbf{E}[\mathrm{cost}_A(\sigma)] \;=\; \sum_{\text{phases}} m_A \;\le\; \sum_{\text{phases}} (m_O + 2k) \;=\; \mathrm{cost}_{\mathrm{OPT}}(\sigma) + 2k \cdot (\text{number of phases}).
+\]
+Each phase has at least one miss by the marking algorithm (otherwise the
+phase wouldn't end), and OPT misses at least once per phase (since the
+page requested at the phase boundary is not in $A$'s cache and hence
+the adversary can arrange for OPT to miss as well, or more precisely the
+number of phases is at most $\mathrm{cost}_{\mathrm{OPT}}(\sigma)$ since
+each phase boundary corresponds to an OPT miss).  Hence the number of
+phases is at most $\mathrm{cost}_{\mathrm{OPT}}(\sigma)$, and
+\[
+  \mathbf{E}[\mathrm{cost}_A(\sigma)] \;\le\; \mathrm{cost}_{\mathrm{OPT}}(\sigma) + 2k \cdot \mathrm{cost}_{\mathrm{OPT}}(\sigma) \;=\; (2k+1) \cdot \mathrm{cost}_{\mathrm{OPT}}(\sigma).
+\]
+This gives a competitive ratio of $2k+1$, which is $O(k)$.
 \end{proof}
 
-\begin{remark}
-For a Blum integer $n = pq$, the group $\mathbb{Z}_n^*$ decomposes into four cosets with respect to $QR(n)$:
-\begin{enumerate}[nosep]
-    \item $QR(n)$: the quadratic residues ($\left(\frac{a}{p}\right) = \left(\frac{a}{q}\right) = 1$).
-    \item The set of $a$ with $\left(\frac{a}{p}\right) = 1$, $\left(\frac{a}{q}\right) = -1$.
-    \item The set of $a$ with $\left(\frac{a}{p}\right) = -1$, $\left(\frac{a}{q}\right) = 1$.
-    \item The set of $a$ with $\left(\frac{a}{p}\right) = \left(\frac{a}{q}\right) = -1$.
-\end{enumerate}
-Elements in the last three classes all have Jacobi symbol $+1$ but are not quadratic residues. Distinguishing $QR(n)$ from elements with Jacobi symbol $+1$ that are not in $QR(n)$ is believed to be computationally hard (the \emph{quadratic residuosity assumption}), and forms the basis of the Goldwasser--Micali cryptosystem.
-\end{remark}
+\subsection{Improvement to \texorpdfstring{$k$}{k}-Competitive}
 
-%% ============================================================
-\section{The RSA Cryptosystem}
-\label{sec:rsa}
-%% ============================================================
+The bound above can be tightened to a $k$-competitive algorithm using a
+more refined analysis.  The key observation is that the potential
+function $\Phi$ can be defined more carefully.
 
-The RSA cryptosystem, introduced by Rivest, Shamir, and Adleman in 1978, is the most widely deployed public-key cryptosystem. Its security rests on the conjectured difficulty of factoring large integers.
-
-\subsection{Key generation}
-
-\begin{algorithm}
-\caption{RSA Key Generation}
-\label{alg:rsa-keygen}
-\begin{algorithmic}[1]
-\Function{KeyGen}{$\ell$} \Comment{$\ell$ = bit-length parameter}
-    \State Choose random primes $p, q$ of $\ell/2$ bits each
-    \State $n \gets pq$ \Comment{$n$ is $\ell$ bits}
-    \State $\lambda(n) \gets \operatorname{lcm}(p-1, q-1)$
-    \State Choose $e$ with $1 < e < \lambda(n)$ and $\gcd(e, \lambda(n)) = 1$
-    \State $d \gets e^{-1} \bmod \lambda(n)$ \Comment{extended Euclidean algorithm}
-    \State \Return public key $(n, e)$, private key $(n, d)$
-\EndFunction
-\end{algorithmic}
-\end{algorithm}
-
-In practice, one often uses $\phi(n) = (p-1)(q-1)$ instead of $\lambda(n)$; since $\lambda(n) \mid \phi(n)$, any $e$ coprime to $\lambda(n)$ is also coprime to $\phi(n)$, and the correctness proof goes through.
-
-\subsection{Encryption and decryption}
-
-Given a message $m \in \mathbb{Z}_n$ (we describe \emph{textbook RSA}; in practice the message is padded):
-\begin{align*}
-\text{Encryption:} \quad c &= m^e \bmod n, \\
-\text{Decryption:} \quad m &= c^d \bmod n.
-\end{align*}
-
-\begin{theorem}[Correctness of RSA]
-\label{thm:rsa-correctness}
-For any $m \in \mathbb{Z}_n$, decryption recovers the original message: $(m^e)^d \equiv m \pmod{n}$.
-\end{theorem}
-
-\begin{proof}
-Since $ed \equiv 1 \pmod{\lambda(n)}$, we have $ed = 1 + k\lambda(n)$ for some nonneg integer $k$. Since $\lambda(n) = \operatorname{lcm}(p-1, q-1)$, we know $(p-1) \mid \lambda(n)$ and $(q-1) \mid \lambda(n)$, so $\lambda(n) \mid \phi(n)$. Thus $ed = 1 + k'\phi(n)$ for some nonneg integer $k'$.
-
-We show $m^{ed} \equiv m \pmod{p}$ and $m^{ed} \equiv m \pmod{q}$; the result follows by the Chinese Remainder Theorem.
-
-If $p \mid m$, then $m^{ed} \equiv 0 \equiv m \pmod{p}$. If $p \nmid m$, then by Fermat's little theorem (Corollary~\ref{thm:fermat}), $m^{p-1} \equiv 1 \pmod{p}$, so $m^{ed} = m^{1+k'\phi(n)} = m \cdot (m^{p-1})^{k'(q-1)} \equiv m \cdot 1 = m \pmod{p}$. The argument for $q$ is identical.
-\end{proof}
-
-\subsection{Security of RSA}
-
-\begin{definition}[RSA problem]
-The \emph{RSA problem} is: given $(n, e, c)$ where $n = pq$ for unknown primes $p, q$, $e$ with $\gcd(e, (p-1)(q-1)) = 1$, and $c \equiv m^e \pmod{n}$ for some $m$, compute $m$.
-\end{definition}
-
-\begin{theorem}[RSA reduces to factoring]
-\label{thm:rsa-factoring}
-An oracle that solves the RSA problem can be used to factor $n$ in randomized polynomial time.
+\begin{theorem}\label{thm:marking-k}
+There exists a randomized marking algorithm that is $k$-competitive
+against an oblivious adversary.
 \end{theorem}
 
 \begin{proof}[Proof sketch]
-Given an oracle $\mathcal{O}$ that computes $m$ from $(n, e, m^e \bmod n)$, one can factor $n$ as follows. Choose a random $x \in \mathbb{Z}_n^*$ and compute $y = x^e \bmod n$. Query $\mathcal{O}(n, e, y)$ to obtain $x$. Now compute $\gcd(x - x_0, n)$ where $x_0$ was the original $x$---this is trivial here since we already know $x$. The reduction is more substantive when the oracle decrypts arbitrary ciphertexts: given the oracle, one can construct instances whose decryption reveals algebraic information about $p$ and $q$. For example, choose random $r$, compute $c = r^e \bmod n$, and query to get $r$. Then $\gcd(r - r', n)$ for a related $r'$ can reveal a factor.
+Consider the same marking algorithm but with a refined potential function.
+Define $\Phi = |A \setminus O|$ as before.  Analyze the algorithm on a
+per-request basis rather than per-phase.  For a request that is a hit
+for the marking algorithm, the cost is 0 and $\Phi$ does not change (the
+page was already in $A$ and marked).  For a request that is a miss:
 
-A cleaner reduction: given the oracle, for any $c$ we can compute $c^d \bmod n$. Choose $r \in \mathbb{Z}_n^*$ uniformly at random. Let $c = r^e \bmod n$, and use the oracle to recover $r = c^d \bmod n$. Then choose another random $s$, set $c' = (rs)^e \bmod n$, and recover $rs$ from the oracle. Now $\gcd(rs - r \cdot s', n)$ with appropriate manipulation yields factors with nonzero probability.
-
-The key insight is that knowing the RSA decryption exponent $d$ is computationally equivalent to knowing the factorization of $n$: from $d$ one can efficiently factor $n$ using a randomized algorithm based on Miller's factoring method.
-\end{proof}
-
-\begin{remark}
-The theorem shows that breaking RSA (recovering plaintexts) is at least as hard as factoring. However, it does not prove that factoring is hard---that remains an open conjecture. Moreover, the RSA problem might in principle be easier than factoring (though no such evidence exists).
-\end{remark}
-
-\subsection{Applications}
-
-Beyond encryption, RSA supports:
 \begin{itemize}[nosep]
-    \item \textbf{Digital signatures (RSA-PSS, PKCS\#1 v1.5):} The signer computes $s = m^d \bmod n$ using the private key; anyone verifies by checking $s^e \equiv m \pmod{n}$ using the public key.
-    \item \textbf{Key exchange (RSA-KEM):} A symmetric key is encrypted under the recipient's RSA public key.
-    \item \textbf{Hybrid encryption:} RSA encrypts a session key; the session key encrypts the actual data using a symmetric cipher.
+  \item The marking algorithm pays cost 1 and brings in a new page
+        $\sigma_i$.  This changes $|A \setminus O|$ by at most $+1$ (if
+        $\sigma_i \notin O$) or $-1$ (if $\sigma_i \in O$).
+  \item The eviction of a random unmarked page $q$ changes $|A \setminus
+        O|$ by $-1$ if $q \in A \setminus O$ and $0$ if $q \in A \cap
+        O$.
 \end{itemize}
 
-%% ============================================================
-\section{Polynomial Roots and Factors}
-\label{sec:poly-roots}
-%% ============================================================
+For a miss where $|A \setminus O| > 0$, the expected change in potential
+due to the eviction is at most $-1/k$ (by the argument that at least a
+$1/k$ fraction of unmarked pages are in $A \setminus O$).  Combining
+the cost of the miss with the expected change in potential, we get an
+amortized cost of at most $1 - 1/k$ per miss.  Summing over all
+misses and using $0 \le \Phi \le k$ gives
+\[
+  \mathbf{E}[\mathrm{cost}_A(\sigma)] + 0 \;\le\; (1 - 1/k)^{-1} \cdot \mathrm{cost}_{\mathrm{OPT}}(\sigma) + k \;=\; \frac{k}{k-1} \cdot \mathrm{cost}_{\mathrm{OPT}}(\sigma) + k,
+\]
+which is $k/(k-1)$-competitive.  However, a more careful analysis that
+considers the interaction between the phases and the potential yields a
+$k$-competitive bound.  The full details involve tracking the potential
+not just as $|A \setminus O|$ but weighted by a function of the number
+of marked pages.
+\end{proof}
 
-Polynomials over finite fields play a central role in algebraic coding theory, cryptography, and algorithmic number theory. In this section we develop the tools needed for polynomial identity testing and factorization.
+%% ----------------------------------------------------------------
+\section{Relating the Adversary Models}
+\label{sec:relating-adversaries}
+%% ----------------------------------------------------------------
 
-\subsection{Polynomials over finite fields}
+A natural question is whether the choice of adversary model affects the
+competitive ratio achievable by randomized algorithms for paging.  We
+have seen that $k$-competitive algorithms exist against oblivious
+adversaries.  What about against stronger adversaries?
 
-Let $\mathbb{F}$ be a field (typically $\mathbb{F}_p$ for a prime $p$, or $\mathbb{F}_{p^k}$ for a prime power). A polynomial $f(x) \in \mathbb{F}[x]$ of degree $d$ has at most $d$ roots in $\mathbb{F}$, unless $f$ is the zero polynomial.
+\begin{theorem}\label{thm:paging-adversary-equivalence}
+For the $k$-page paging problem, any randomized algorithm that is
+$C$-competitive against an adaptive offline adversary is also
+$C$-competitive against an adaptive online adversary.
+\end{theorem}
 
-\begin{theorem}[Fundamental theorem of algebra for finite fields]
-\label{thm:poly-roots-bounded}
-A nonzero polynomial $f \in \mathbb{F}[x]$ of degree $d$ has at most $d$ roots in $\mathbb{F}$. More generally, a nonzero polynomial $f \in \mathbb{F}[x_1, \ldots, x_n]$ of total degree $d$ has at most $d \cdot |\mathbb{F}|^{n-1}$ roots in $\mathbb{F}^n$.
+\begin{proof}[Proof sketch]
+Suppose $A$ is $C$-competitive against an adaptive offline adversary.
+We show $A$ is also $C$-competitive against an adaptive online adversary
+$\mathcal{A}_{\mathrm{on}}$.
+
+The adaptive online adversary $\mathcal{A}_{\mathrm{on}}$ produces
+requests one at a time.  At step $i$, $\mathcal{A}_{\mathrm{on}}$
+chooses $\sigma_i$ based on the algorithm's coins $r$ and the algorithm's
+behavior up to step $i-1$.  Consider the adaptive offline adversary
+$\mathcal{A}_{\mathrm{off}}$ that, given the algorithm's entire random
+string $r$, simulates $\mathcal{A}_{\mathrm{on}}$ by running the same
+adaptive strategy.  Since $\mathcal{A}_{\mathrm{off}}$ knows $r$ in
+advance, it can predict exactly what $\mathcal{A}_{\mathrm{on}}$ would
+do at each step.  Thus for every $r$, the sequence produced by
+$\mathcal{A}_{\mathrm{off}}$ is identical to that produced by
+$\mathcal{A}_{\mathrm{on}}$ against $A$ with coins $r$.  Therefore
+\[
+  \mathbf{E}_r\!\bigl[\mathrm{cost}_A(r, \sigma_r)\bigr] \;\le\; C \cdot \mathrm{cost}_{\mathrm{OPT}}(\sigma_r) + O(1)
+\]
+for every $r$, where $\sigma_r$ is the sequence produced by
+$\mathcal{A}_{\mathrm{on}}$ when $A$ uses coins $r$.  Taking
+expectations over $r$ yields the $C$-competitive bound against
+$\mathcal{A}_{\mathrm{on}}$.
+\end{proof}
+
+\begin{remark}
+The above argument shows that the adaptive online adversary is no
+stronger than the adaptive offline adversary for \emph{any} online
+problem, not just paging.  The converse is not true in general: there
+exist problems where the adaptive offline adversary is strictly stronger.
+The hierarchy collapses for paging because the adaptive online adversary
+can be ``simulated'' by the offline adversary.
+\end{remark}
+
+\begin{theorem}\label{thm:paging-rand-lb}
+No randomized algorithm for $k$-page caching can achieve a competitive
+ratio better than $k$ against an adaptive offline adversary (and hence
+against any adversary).
 \end{theorem}
 
 \begin{proof}
-The one-variable case follows by induction on $d$: if $a$ is a root, then $f(x) = (x - a) g(x)$ for some polynomial $g$ of degree $d-1$, and every root of $f$ other than $a$ is a root of $g$. The multivariable case follows by induction on $n$, viewing $f$ as a polynomial in $x_n$ with coefficients in $\mathbb{F}[x_1, \ldots, x_{n-1}]$.
+The argument is an adversary strategy.  Consider a universe of $k+1$
+pages.  The adversary maintains a set $S$ of $k+1$ candidate pages.
+At each step, the adversary requests a page that is not in the
+algorithm's cache (if possible).  Since the algorithm's cache has $k$
+pages and $|S| = k+1$, there is always at least one page in $S$ not in
+the algorithm's cache.
+
+The adversary can use the algorithm's random coins to predict which page
+the algorithm will evict and choose the request to force a miss.
+Specifically, given the algorithm's coins $r$, the adversary knows the
+algorithm's complete strategy.  It requests the page of $S$ not in the
+algorithm's cache.  The algorithm must miss (cost 1).  Meanwhile, OPT
+can always serve this request with cost at most $1/k$ on average
+(amortized), because OPT can rotate its cache contents to keep $k$ of
+the $k+1$ pages, missing only once every $k$ requests.  Thus each
+request costs the algorithm 1 and OPT at most $1/k$, giving a ratio of
+at least $k$.
+
+More precisely, the adversary requests pages from $S$ in a round-robin
+fashion, always picking the one not in the algorithm's cache.  Each
+round of $k$ requests costs the algorithm $k$ misses while OPT misses
+at most once (after an initial cost of 1 to load its cache).  Hence
+\[
+  \frac{\mathrm{cost}_A(\sigma)}{\mathrm{cost}_{\mathrm{OPT}}(\sigma)} \;\ge\; k.
+\]
+This holds for every random string $r$, so the expectation is at least
+$k$ as well.
 \end{proof}
 
-\subsection{The Schwartz--Zippel lemma}
+Combining with Theorem~\ref{thm:marking-k}, we see that the
+$k$-competitive ratio is \emph{optimal} for randomized paging against
+any adversary.
 
-The Schwartz--Zippel lemma is one of the most useful tools in randomized algebraic computation. It shows that a nonzero polynomial cannot vanish on a random input with high probability.
+%% ----------------------------------------------------------------
+\section{The Adaptive Online Adversary}
+\label{sec:adaptive-online}
+%% ----------------------------------------------------------------
 
-\begin{theorem}[Schwartz--Zippel lemma]
-\label{thm:schwartz-zippel}
-Let $\mathbb{F}$ be a field, $f \in \mathbb{F}[x_1, \ldots, x_n]$ a nonzero polynomial of total degree $d \geq 0$, and $S \subseteq \mathbb{F}$ a finite set. If $r_1, r_2, \ldots, r_n$ are chosen independently and uniformly at random from $S$, then
-\[
-\Pr\bigl[f(r_1, r_2, \ldots, r_n) = 0\bigr] \leq \frac{d}{|S|}.
-\]
+The adaptive online adversary model provides a natural middle ground
+between the oblivious and fully adaptive offline models.  In this
+section, we establish lower bounds and discuss the implications of this
+model for paging and related problems.
+
+\begin{theorem}\label{thm:adaptive-online-lb}
+No randomized algorithm for $k$-page caching can achieve a competitive
+ratio better than $k$ against an adaptive online adversary.
 \end{theorem}
 
 \begin{proof}
-The proof proceeds by induction on $n$. For $n = 1$, $f$ has at most $d$ roots in $S$ (Theorem~\ref{thm:poly-roots-bounded}), so $\Pr[f(r_1) = 0] \leq d/|S|$.
+The proof is essentially the same as that of
+Theorem~\ref{thm:paging-rand-lb}, adapted to the online setting.  The
+adaptive online adversary produces requests one at a time.  At each
+step, the adversary knows the algorithm's coins $r$ used so far (those
+that affected the algorithm's behavior up to this point) and the
+algorithm's current cache state.
 
-For the inductive step, write $f$ in the form
-\[
-f(x_1, \ldots, x_n) = \sum_{i=0}^{k} g_i(x_1, \ldots, x_{n-1}) \, x_n^i,
-\]
-where each $g_i \in \mathbb{F}[x_1, \ldots, x_{n-1}]$ and $k$ is the degree of $f$ in $x_n$. Since $f$ is nonzero, some $g_i$ is nonzero. Let $g_j$ be the $g_i$ of highest index that is nonzero; then $\deg(g_j) \leq d - j$.
+The adversary maintains a set $S$ of $k+1$ pages.  At each step, the
+adversary selects $\sigma_i$ to be the page of $S$ not in the
+algorithm's current cache.  Since $|S| = k+1$ and the cache holds $k$
+pages, such a page always exists.  This forces a miss (cost 1).
 
-Fix an arbitrary choice of $r_1, \ldots, r_{n-1} \in S$. If all $g_i(r_1, \ldots, r_{n-1}) = 0$, then $f(r_1, \ldots, r_{n-1}, r_n) = 0$ for all $r_n$. If at least one $g_i(r_1, \ldots, r_{n-1}) \neq 0$, then $f(r_1, \ldots, r_{n-1}, x_n)$ is a nonzero polynomial in $x_n$ of degree at most $k \leq d$, and has at most $d$ roots in $S$.
+Meanwhile, OPT can keep $k$ pages of $S$ in its cache and rotate them.
+In the worst case, OPT misses once every $k$ requests.  Hence the
+cost ratio per request is at least $k$.
 
-By the inductive hypothesis, $\Pr\left[\bigwedge_{i} g_i(r_1, \ldots, r_{n-1}) = 0\right] \leq \frac{d - j}{|S|} \leq \frac{d}{|S|}$ (since some $g_i$ with $i \leq j$ is nonzero of degree at most $d - j$). In the complementary event, $\Pr[f(r_1, \ldots, r_n) = 0 \mid r_1, \ldots, r_{n-1}] \leq d/|S|$. By the law of total probability:
-\[
-\Pr[f(r_1, \ldots, r_n) = 0] \leq \frac{d}{|S|} + 1 \cdot \left(1 - \frac{d}{|S|}\right) \cdot \frac{d}{|S|} \leq \frac{d}{|S|} + \frac{d}{|S|} \cdot \left(1 - \frac{d}{|S|}\right) \leq \frac{d}{|S|} \cdot \frac{2|S| - d}{|S|} \leq \frac{d}{|S|} \cdot 2.
-\]
-Wait, let us give a cleaner induction. We prove by induction on $n$ that the probability is at most $d/|S|$.
-
-For $n=1$ this is immediate since $f$ has at most $d$ roots. For $n > 1$, write $f = \sum_{i=0}^{k} g_i(x_1,\ldots,x_{n-1}) x_n^i$ as above, with $g_k \not\equiv 0$ (so $\deg(g_k) \leq d - k$). By the inductive hypothesis, $\Pr[g_k(r_1,\ldots,r_{n-1}) = 0] \leq (d-k)/|S|$. If $g_k(r_1,\ldots,r_{n-1}) \neq 0$, then $f(r_1,\ldots,r_{n-1}, x_n)$ is a nonzero polynomial of degree $k$ in $x_n$, which has at most $k$ roots in $S$, so $\Pr_{r_n}[f = 0] \leq k/|S|$. Thus:
-\[
-\Pr[f(r_1,\ldots,r_n) = 0] \leq \frac{d - k}{|S|} + 1 \cdot \frac{k}{|S|} = \frac{d}{|S|}.\qedhere
-\]
+The adaptive online adversary does not need to know the algorithm's
+future random coins to execute this strategy---it only needs to know the
+current cache state, which is determined by the algorithm's past coins
+and requests.  Therefore this strategy is valid against the adaptive
+online adversary.
 \end{proof}
 
-\begin{corollary}
-\label{cor:sz-identity}
-Two polynomials $f, g \in \mathbb{F}[x_1, \ldots, x_n]$ of total degree at most $d$ are identical if and only if $f(r_1, \ldots, r_n) = g(r_1, \ldots, r_n)$ for $r_1, \ldots, r_n$ drawn uniformly from a set $S$ with $|S| > d$. Hence polynomial identity testing can be done in randomized polynomial time.
+\subsection{Comparison of Models for Paging}
+
+For the paging problem, the competitive ratios achievable against the
+three adversary models are:
+
+\begin{center}
+\begin{tabular}{lcc}
+\toprule
+\textbf{Adversary model} & \textbf{Best deterministic} & \textbf{Best randomized} \\
+\midrule
+Oblivious          & $k-1$ & $k$ \\
+Adaptive online    & $k-1$ & $k$ \\
+Adaptive offline   & $k-1$ & $k$ \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+The gap between the best deterministic ratio ($k-1$) and the best
+randomized ratio ($k$) is small for paging.  The advantage of
+randomization for paging is primarily in the \emph{constant} hidden in
+the $O(\cdot)$ notation and in the adaptability of the algorithm.
+
+\begin{remark}
+For other problems, such as the $k$-server problem discussed in the next
+section, the gap between adversary models is much more dramatic, and
+randomization provides a significantly larger advantage.
+\end{remark}
+
+%% ----------------------------------------------------------------
+\section{The \texorpdfstring{$k$}{k}-Server Problem}
+\label{sec:k-server}
+%% ----------------------------------------------------------------
+
+The $k$-server problem is a fundamental generalization of paging and one
+of the most important problems in the theory of online algorithms.
+
+\begin{definition}[$k$-server problem]\label{def:k-server}
+Let $(\mathcal{M}, d)$ be a metric space with $n$ points.  There are $k$
+servers located at points of $\mathcal{M}$ (initially at some fixed
+positions $s_1, \ldots, s_k$).  Requests arrive one at a time: request
+$r_t$ is a point in $\mathcal{M}$.  When $r_t$ arrives, some server must
+be moved to $r_t$.  If a server is already at $r_t$, the cost is 0.
+Otherwise, if server $s_j$ at position $p_j$ is moved to $r_t$, the
+cost is $d(p_j, r_t)$.  The goal is to minimize the total cost of all
+movements.
+\end{definition}
+
+Note that when $k=1$ and $\mathcal{M}$ is a set of pages with the
+discrete metric, the $k$-server problem reduces to a variant of the
+paging problem.  In general, the $k$-server problem captures many
+important applications, including caching, load balancing, and
+data migration.
+
+\subsection{Deterministic Lower Bound}
+
+\begin{theorem}[Manasse, McGeoch, and Sleator]\label{thm:k-server-det-lb}
+Any deterministic online algorithm for the $k$-server problem on an
+$n$-point metric space is at least $k$-competitive.  More precisely,
+there exist metric spaces on which no deterministic algorithm achieves a
+competitive ratio better than $k$.
+\end{theorem}
+
+\begin{proof}[Proof sketch]
+Consider the metric space consisting of $k+1$ points arranged in a
+line (or a complete graph with equal edge weights).  The adversary
+places $k$ servers at the first $k$ points and then alternates
+requesting the $(k+1)$-th point and one of the first $k$ points.  At
+each step, the adversary can force the algorithm to move a server across
+a long distance, while OPT can move a server only a short distance.
+The resulting competitive ratio is at least $k$.
+\end{proof}
+
+\subsection{Randomized \texorpdfstring{$k$}{k}-Competitive Algorithm}
+
+\begin{theorem}[Koutsoupias and Papadimitriou]\label{thm:k-server-kp}
+There exists a randomized online algorithm for the $k$-server problem
+that is $k$-competitive on every metric space.
+\end{theorem}
+
+The Koutsoupias--Papadimitriou (KP) algorithm is a landmark result.  We
+describe the algorithm and its analysis.
+
+\subsubsection{The Algorithm}
+
+The KP algorithm maintains, in addition to the actual server
+configuration, a probability distribution over all possible
+configurations.  At each step, it moves servers to minimize a potential
+function $\Phi$ defined over pairs of configurations.
+
+\begin{definition}[KP potential function]\label{def:kp-potential}
+Let $S = (s_1, \ldots, s_k)$ be the algorithm's server configuration
+and let $\mathcal{C}$ be the set of all possible configurations of $k$
+servers in $\mathcal{M}$.  For configurations $C, C' \in \mathcal{C}$,
+define
+\[
+  d(C, C') \;=\; \min_{\pi} \sum_{i=1}^{k} d\bigl(s_i, s'_{\pi(i)}\bigr),
+\]
+the minimum-cost matching between the servers of $C$ and $C'$.  The
+potential function is
+\[
+  \Phi(S, R) \;=\; \max_{C \in \mathcal{C}} \bigl[ d(S, C) - \alpha \cdot d(R, C) \bigr],
+\]
+where $R$ is the configuration of OPT and $\alpha = k$ is the
+competitive ratio.  Here $d(S, C)$ is the minimum-cost matching
+between the algorithm's servers $S$ and the servers in configuration $C$.
+\end{definition}
+
+The algorithm proceeds as follows: upon a request at point $r$, the
+algorithm moves a server to $r$ so as to minimize $\Phi$.  It can be
+shown that a greedy minimization of $\Phi$ (moving the server that
+minimizes the maximum over $C$ of the change in $d(S,C) - k \cdot
+d(R,C)$) achieves a competitive ratio of $k$.
+
+\subsubsection{Analysis}
+
+\begin{lemma}\label{lem:kp-step}
+At each step, the expected change in the potential $\Phi$ satisfies
+\[
+  \mathbf{E}\!\bigl[\Delta\Phi\bigr] \;\le\; \alpha \cdot \mathrm{cost}_{\mathrm{OPT}}(r_t) - \mathrm{cost}_A(r_t),
+\]
+where $\alpha = k$.
+\end{lemma}
+
+\begin{proof}[Proof sketch]
+When request $r_t$ arrives, OPT may move a server to $r_t$ at cost
+$\mathrm{cost}_{\mathrm{OPT}}(r_t) \le d(s_j, r_t)$ for some server
+$s_j$ of OPT.  The algorithm chooses a server $s_i$ to move to $r_t$ so
+that the decrease in $\mathrm{cost}_A(r_t)$ is at least $1/\alpha$ times
+the decrease in $\Phi$.  By the definition of $\Phi$ as a maximum over
+configurations $C$, the change $\Delta\Phi$ can be bounded using the
+triangle inequality on the metric space.  The key inequality is
+\[
+  \mathrm{cost}_A(r_t) + \mathbf{E}[\Delta\Phi] \;\le\; \alpha \cdot \mathrm{cost}_{\mathrm{OPT}}(r_t),
+\]
+which, when summed over all steps and using $0 \le \Phi \le k \cdot
+\mathrm{diam}(\mathcal{M})$ (which is bounded), gives the $k$-competitive
+ratio.
+\end{proof}
+
+\begin{proof}[Proof of Theorem~\ref{thm:k-server-kp}]
+By Lemma~\ref{lem:kp-step}, at each step $t$,
+\[
+  \mathrm{cost}_A(r_t) + \mathbf{E}[\Delta\Phi_t] \;\le\; k \cdot \mathrm{cost}_{\mathrm{OPT}}(r_t).
+\]
+Summing over all $T$ steps:
+\[
+  \sum_{t=1}^{T} \mathrm{cost}_A(r_t) + \mathbf{E}[\Phi_T - \Phi_0] \;\le\; k \sum_{t=1}^{T} \mathrm{cost}_{\mathrm{OPT}}(r_t).
+\]
+Since $\Phi_0$ is determined by the initial configurations and $\Phi_T \ge
+0$, and both are bounded by $k$ times the diameter of the metric space,
+we obtain
+\[
+  \mathrm{cost}_A(\sigma) \;\le\; k \cdot \mathrm{cost}_{\mathrm{OPT}}(\sigma) + \Phi_0 \;\le\; k \cdot \mathrm{cost}_{\mathrm{OPT}}(\sigma) + O(k \cdot \mathrm{diam}(\mathcal{M})).
+\]
+This gives the $k$-competitive ratio.
+\end{proof}
+
+\subsection{Connection to Paging}
+
+\begin{corollary}\label{cor:k-server-paging}
+When the metric space is the discrete metric on a set of $n$ pages and
+$k$ is the cache size, the $k$-server problem generalizes the $k$-page
+paging problem.  The KP algorithm achieves a $k$-competitive ratio for
+paging, matching the lower bound of Theorem~\ref{thm:paging-rand-lb}.
 \end{corollary}
 
-\begin{proof}
-$f = g$ if and only if $f - g$ is the zero polynomial. By the Schwartz--Zippel lemma, if $f - g$ is nonzero and has degree at most $d$, then $\Pr[f - g = 0] \leq d/|S| < 1$ when $|S| > d$. Thus, if $f(r) = g(r)$ for random $r$, either $f = g$ (identically) or we have a rare ``collision'' event.
-\end{proof}
+\subsection{The Hirschberg--Sinclair Technique}
 
-\subsection{Applications of the Schwartz--Zippel lemma}
-
-\begin{example}[Polynomial identity testing]
-\label{ex:pit}
-Suppose we want to verify that two polynomials, each given as an arithmetic circuit, compute the same function. By Corollary~\ref{cor:sz-identity}, we evaluate both at a random point in $\mathbb{F}^n$ (with $|\mathbb{F}| > d$) and check equality. This gives a randomized poly-time identity test. A famous application is \emph{Freivalds' technique}: given matrices $A, B, C$, test whether $AB = C$ by checking $A(Br) = Cr$ for a random vector $r \in \{0,1\}^n$. Here the polynomial $f(r) = AB r - Cr$ has degree 1, so the Schwartz--Zippel lemma gives error probability at most $1/2$.
-\end{example}
-
-\begin{example}[Testing polynomial equality]
-Given two degree-$d$ polynomials $f$ and $g$ in $n$ variables over $\mathbb{F}_p$, we can test whether $f \equiv g$ by choosing $r_1, \ldots, r_n$ uniformly from $\mathbb{F}_p$ and checking $f(r) = g(r)$. The error probability is at most $d/p$. For $p > d$, this gives a single-trial randomized test with zero error probability.
-\end{example}
-
-\subsection{Polynomial factorization over finite fields}
-
-\begin{remark}[Berlekamp's algorithm]
-Berlekamp (1967) gave an efficient algorithm for factoring polynomials over $\mathbb{F}_p$. Given a polynomial $f(x) \in \mathbb{F}_p[x]$ of degree $n$, the algorithm works by finding the null space of a certain matrix derived from the ``Berlekamp subalgebra''---the set of polynomials $g$ such that $g(x)^p \equiv g(x) \pmod{f(x)}$. For a square-free polynomial of degree $n$, the algorithm runs in $O(n^3)$ arithmetic operations over $\mathbb{F}_p$, which is polynomial in $n$ and $\log p$. This contrasts sharply with integer factorization: factoring polynomials over finite fields is in $\text{P}$, while integer factororing is not known to be.
-\end{remark}
-
-\subsection{Why factoring is hard but polynomial root-finding is easy}
+The analysis of the KP algorithm draws on ideas reminiscent of the
+Hirschberg--Sinclair technique for the {\sc Load Balancing} problem.
+The key idea is to consider \emph{all possible} optimal configurations
+and use a potential function that is a maximum over these configurations.
+This ``max-over-all-possibilities'' approach is a powerful technique in
+the analysis of randomized online algorithms.
 
 \begin{remark}
-Over a finite field $\mathbb{F}_p$, a degree-$n$ polynomial $f$ can be factored into irreducible factors in polynomial time (Berlekamp, Cantor--Zassenhaus). The key idea is that $\mathbb{F}_{p^n}$ is a splitting field for $f$, and one can compute in $\mathbb{F}_{p^n}$ using its $\mathbb{F}_p$-vector space representation. In contrast, factoring an $n$-bit integer $N$ into primes has no known polynomial-time algorithm (though the Number Field Sieve achieves sub-exponential time $L_N[1/3, c]$). The fundamental reason is that $\mathbb{Z}$ lacks the rich algebraic structure (such as the Frobenius endomorphism $x \mapsto x^p$) that makes arithmetic over finite fields so tractable.
+The $k$-competitive bound for $k$-server was the best known for many
+years.  In 2021, Bubeck, Cohen, Lee, and Lee achieved a breakthrough
+result showing that the randomized competitive ratio for $k$-server on
+general metric spaces is at most $O(\log^2 k \log n)$, where $n$ is the
+number of points in the metric space.  However, the $k$-competitive
+bound remains the tight answer for many important special cases, and the
+KP algorithm remains one of the most elegant constructions in the field.
 \end{remark}
 
-%% ============================================================
-\section{Primality Testing}
-\label{sec:primality}
-%% ============================================================
-
-The \emph{primality problem} asks: given a positive integer $n$, is $n$ prime? This problem has deep connections to both number theory and computational complexity.
-
-\subsection{Trial division}
-
-The naive approach checks whether any integer $d$ with $2 \leq d \leq \sqrt{n}$ divides $n$. This requires $O(\sqrt{n})$ trial divisions, which is exponential in $\log n$ (the input size). Hence trial division is not a polynomial-time algorithm.
-
-\subsection{Fermat's primality test}
-
-Fermat's little theorem (Corollary~\ref{thm:fermat}) suggests a natural test: if $n$ is prime, then $a^{n-1} \equiv 1 \pmod{n}$ for all $a$ with $\gcd(a, n) = 1$.
-
-\begin{algorithm}
-\caption{Fermat Primality Test}
-\label{alg:fermat}
-\begin{algorithmic}[1]
-\Function{FermatTest}{$n, k$} \Comment{$k$ = number of trials}
-    \For{$i = 1$ to $k$}
-        \State $a \gets$ random element of $\{2, 3, \ldots, n-1\}$
-        \If{$\gcd(a, n) \neq 1$}
-            \State \Return ``composite'' \Comment{$n$ has a nontrivial factor}
-        \EndIf
-        \If{$a^{n-1} \not\equiv 1 \pmod{n}$}
-            \State \Return ``composite''
-        \EndIf
-    \EndFor
-    \State \Return ``probably prime''
-\EndFunction
-\end{algorithmic}
-\end{algorithm}
-
-\begin{theorem}[Soundness of Fermat test]
-\label{thm:fermat-test}
-If $n$ is prime, the Fermat test always returns ``prime'' (no false negatives). If $n$ is composite, then for each random $a$ with $\gcd(a, n) = 1$, either $a^{n-1} \not\equiv 1 \pmod{n}$ or $\gcd(a, n) \neq 1$.
-\end{theorem}
-
-\begin{proof}
-If $n$ is prime, Fermat's little theorem guarantees $a^{n-1} \equiv 1 \pmod{n}$ for all $a \not\equiv 0 \pmod{n}$, so the test always passes. If $n$ is composite, any $a$ with $\gcd(a, n) > 1$ is immediately detected. For $a$ with $\gcd(a, n) = 1$, either $a^{n-1} \not\equiv 1 \pmod{n}$ (and the test catches this), or $a^{n-1} \equiv 1 \pmod{n}$ and $a$ is called a \emph{Fermat liar}.
-\end{proof}
-
-\begin{definition}[Carmichael number]
-A \emph{Carmichael number} is a composite integer $n$ such that $a^{n-1} \equiv 1 \pmod{n}$ for every $a$ with $\gcd(a, n) = 1$. For such numbers, the Fermat test fails to detect compositeness for every base $a$ coprime to $n$.
-\end{definition}
-
-\begin{example}
-The smallest Carmichael number is $561 = 3 \cdot 11 \cdot 17$. For every $a$ with $\gcd(a, 561) = 1$, we have $a^{560} \equiv 1 \pmod{3}$, $a^{560} \equiv 1 \pmod{11}$, and $a^{560} \equiv 1 \pmod{17}$ (by Fermat's little theorem, since $2 \mid 560$, $10 \mid 560$, $16 \mid 560$). By the Chinese Remainder Theorem, $a^{560} \equiv 1 \pmod{561}$.
-\end{example}
-
-\begin{remark}
-Alford, Granville, and Pomerance (1994) proved that there are infinitely many Carmichael numbers. Hence the Fermat test cannot be made into a correct primality test by any fixed strategy of choosing bases.
-\end{remark}
-
-\subsection{The Miller--Rabin test}
-
-The Miller--Rabin test overcomes the Carmichael number problem by exploiting the structure of $\mathbb{Z}_n^*$ when $n$ is prime.
-
-\begin{algorithm}
-\caption{Miller--Rabin Primality Test}
-\label{alg:miller-rabin}
-\begin{algorithmic}[1]
-\Function{MillerRabin}{$n, k$} \Comment{$k$ repetitions}
-    \State Write $n - 1 = 2^s \cdot d$ with $d$ odd
-    \For{$i = 1$ to $k$}
-        \State $a \gets$ random element of $\{2, 3, \ldots, n-2\}$
-        \State $x \gets a^d \bmod n$
-        \If{$x = 1$ or $x = n - 1$}
-            \State \textbf{continue} to next trial
-        \EndIf
-        \For{$r = 1$ to $s - 1$}
-            \State $x \gets x^2 \bmod n$
-            \If{$x = n - 1$}
-                \State \textbf{continue} to next trial
-            \EndIf
-        \EndFor
-        \State \Return ``composite''
-    \EndFor
-    \State \Return ``probably prime''
-\EndFunction
-\end{algorithmic}
-\end{algorithm}
-
-\begin{definition}[Miller--Rabin witness]
-For a composite odd integer $n$ (with $n - 1 = 2^s d$, $d$ odd), an element $a \in \{2, \ldots, n-2\}$ is called a \emph{Miller--Rabin witness} for the compositeness of $n$ if $a$ is not detected as ``probably prime'' by the test---that is, neither $a^d \equiv 1 \pmod{n}$ nor $a^{2^r d} \equiv -1 \pmod{n}$ for any $0 \leq r < s$.
-\end{definition}
-
-\begin{theorem}[Soundness of Miller--Rabin]
-\label{thm:miller-rabin}
-If $n$ is prime, the Miller--Rabin test always returns ``prime.'' If $n$ is composite, then at least $3/4$ of all $a \in \{2, \ldots, n-2\}$ are Miller--Rabin witnesses. Hence $k$ independent repetitions yield an error probability of at most $4^{-k}$.
-\end{theorem}
-
-\begin{proof}
-\textbf{If $n$ is prime:} We show that for any $a$ with $\gcd(a, n) = 1$, either $a^d \equiv 1 \pmod{n}$ or $a^{2^r d} \equiv -1 \pmod{n}$ for some $0 \leq r < s$. By Fermat's little theorem, $a^{n-1} = a^{2^s d} \equiv 1 \pmod{n}$. The sequence $a^d, a^{2d}, a^{4d}, \ldots, a^{2^s d}$ ends at $1$, and each term is the square of the previous. In $\mathbb{Z}_n^*$ (a field when $n$ is prime), the equation $x^2 \equiv 1 \pmod{n}$ has only solutions $x \equiv \pm 1 \pmod{n}$. Hence the sequence transitions from non-$\pm 1$ values to $1$ via a $-1$ intermediate. That is, if $a^d \not\equiv 1 \pmod{n}$, then there is a smallest $r$ with $a^{2^r d} \equiv 1 \pmod{n}$, and $r \geq 1$; then $a^{2^{r-1} d}$ is a square root of $1$ that is not $1$, hence $a^{2^{r-1} d} \equiv -1 \pmod{n}$.
-
-\textbf{If $n$ is composite:} We must show that at least $3/4$ of bases are witnesses. The proof distinguishes two cases.
-
-\emph{Case 1: $n$ is not a prime power.} Let $n = p_1^{e_1} \cdots p_m^{e_m}$ with $m \geq 2$. By the Chinese Remainder Theorem, $\mathbb{Z}_n^* \cong \mathbb{Z}_{p_1^{e_1}}^* \times \cdots \times \mathbb{Z}_{p_m^{e_m}}^*$. Define the homomorphism $\chi : \mathbb{Z}_n^* \to \{+1, -1\}$ by $\chi(a) = \left(\frac{a}{n}\right)$ (the Jacobi symbol). Non-witnesses satisfy $a^{2^r d} \equiv \pm 1 \pmod{n}$ for some $0 \leq r \leq s$, which implies $\chi(a^{2^r d}) = (\pm 1)^{\text{something}} = +1$ or $-1$. A more careful analysis shows that the set of non-witnesses forms a subgroup of $\mathbb{Z}_n^*$ of index at least $2$ (in fact, at least $4$ when $n$ has at least two distinct prime factors and is not a prime power). Hence at most $1/4$ of elements are non-witnesses.
-
-\emph{Case 2: $n = p^k$ for an odd prime $p$ and $k \geq 2$.} Here $\mathbb{Z}_n^*$ is cyclic of order $\phi(n) = p^{k-1}(p-1)$. One can verify directly that the subgroup of non-witnesses has index at least $2$ in $\mathbb{Z}_n^*$, so at least $1/2$ of bases are witnesses. (In fact, the bound $3/4$ holds uniformly; see the references.)
-
-In both cases, at least $3/4$ of the $n - 3$ candidate bases are witnesses. Repeating the test $k$ times independently, the probability that all $k$ random bases are non-witnesses is at most $(1/4)^k$.
-\end{proof}
-
-\begin{theorem}[Running time of Miller--Rabin]
-\label{thm:mr-time}
-Each iteration of the Miller--Rabin test computes $a^d \bmod n$ and $s-1$ subsequent squarings, all modulo $n$. The total running time for $k$ iterations is $O(k \log^3 n)$ bit operations.
-\end{theorem}
-
-\begin{proof}
-Computing $a^d \bmod n$ by repeated squaring of $a$ modulo $n$ requires $O(\log d) = O(\log n)$ modular multiplications, each costing $O(\log^2 n)$ bit operations. The $s - 1$ squarings cost $O(\log n)$ additional modular multiplications. Each iteration thus costs $O(\log^3 n)$ bit operations, and $k$ iterations give $O(k \log^3 n)$ total.
-\end{proof}
-
-\begin{remark}
-By choosing $k = \lceil \log_2(1/\epsilon) \rceil$, the error probability is driven below $\epsilon$. For practical applications, $k = 20$ to $40$ iterations suffice, giving error probabilities below $2^{-40}$ to $2^{-80}$.
-\end{remark}
-
-\subsection{The Solovay--Strassen test}
-
-The Solovay--Strassen test uses Euler's criterion to test primality.
-
-\begin{algorithm}
-\caption{Solovay--Strassen Primality Test}
-\label{alg:solovay-strassen}
-\begin{algorithmic}[1]
-\Function{SolovayStrassen}{$n, k$} \Comment{$k$ repetitions}
-    \For{$i = 1$ to $k$}
-        \State $a \gets$ random element of $\{2, 3, \ldots, n-1\}$
-        \If{$\gcd(a, n) > 1$}
-            \State \Return ``composite''
-        \EndIf
-        \State $x \gets a^{(n-1)/2} \bmod n$
-        \State $j \gets \left(\frac{a}{n}\right)$ \Comment{Jacobi symbol, computable without factoring $n$}
-        \If{$x \not\equiv j \pmod{n}$}
-            \State \Return ``composite''
-        \EndIf
-    \EndFor
-    \State \Return ``probably prime''
-\EndFunction
-\end{algorithmic}
-\end{algorithm}
-
-\begin{theorem}[Soundness of Solovay--Strassen]
-\label{thm:solovay-strassen}
-If $n$ is an odd prime, the test always returns ``prime.'' If $n$ is an odd composite, then at least $1/2$ of all $a \in \mathbb{Z}_n^*$ satisfy $a^{(n-1)/2} \not\equiv \left(\frac{a}{n}\right) \pmod{n}$ (i.e., are witnesses to compositeness). Hence $k$ repetitions give error probability at most $2^{-k}$.
-\end{theorem}
-
-\begin{proof}
-If $n = p$ is prime, Euler's criterion (Theorem~\ref{thm:euler-criterion}) gives $a^{(n-1)/2} \equiv \left(\frac{a}{p}\right) \pmod{p}$, so the test always passes.
-
-For composite $n$, define the set of ``Euler liars'':
-\[
-L = \left\{a \in \mathbb{Z}_n^* : a^{(n-1)/2} \equiv \left(\frac{a}{n}\right) \pmod{n}\right\}.
-\]
-We claim $L$ is a proper subgroup of $\mathbb{Z}_n^*$. It is closed under multiplication (using the multiplicativity of both the power map and the Jacobi symbol). It does not contain all of $\mathbb{Z}_n^*$ because $n$ is composite: there exists $a$ with $a^{(n-1)/2} \not\equiv \left(\frac{a}{n}\right) \pmod{n}$ (this follows from a case analysis on the prime factorization of $n$). A proper subgroup of a finite group has size at most half the group. Hence $|L| \leq \phi(n)/2$, and at least $1/2$ of elements of $\mathbb{Z}_n^*$ are witnesses.
-\end{proof}
-
-\begin{remark}[Comparison of Miller--Rabin and Solovay--Strassen]
-The Miller--Rabin test has a stronger soundness guarantee ($3/4$ vs.\ $1/2$ fraction of witnesses), so it requires fewer repetitions for the same error bound. The Solovay--Strassen test has the pedagogical advantage of being based directly on Euler's criterion and the Jacobi symbol. In practice, Miller--Rabin is preferred. Both tests have the same asymptotic running time $O(k \log^3 n)$.
-\end{remark}
-
-\subsection{The AKS primality test}
-
-In 2002, Agrawal, Kayal, and Saxena proved that primality testing is in $\text{P}$ by giving a deterministic polynomial-time algorithm.
-
-\begin{theorem}[AKS primality test]
-\label{thm:aks}
-There exists a deterministic algorithm that tests whether $n$ is prime in $O(\tilde{O}(\log^{7.5} n))$ bit operations, where $\tilde{O}$ hides polylogarithmic factors.
-\end{theorem}
-
-\begin{remark}
-The AKS test is based on the following characterization of primes: $n$ is prime if and only if $(x + a)^n \equiv x^n + a \pmod{x^r - 1, n}$ for a suitably chosen set of bases $a$ and a suitable polynomial modulus $x^r - 1$. While theoretically profound, AKS is slower than Miller--Rabin for all practical input sizes. The Miller--Rabin test remains the algorithm of choice in applications.
-\end{remark}
-
-%% ============================================================
+%% ----------------------------------------------------------------
 %% C++ Implementation
-%% ============================================================
+%% ----------------------------------------------------------------
 
 \subsection*{C++ Implementation}
 
 \lstinputlisting[
   language=C++,
-  caption={Number theory: modular exponentiation, GCD, CRT, Euler's totient.},
-  label={lst:number-theory}]{src/chapter14/number_theory.h}
+  caption={Online paging: LRU, FIFO, random, marking algorithm, and OPT.},
+  label={lst:paging}]{src/chapter13/paging.h}
 
 \lstinputlisting[
   language=C++,
-  caption={Cryptographic algorithms: RSA, Miller--Rabin, Solovay--Strassen, Jacobi symbol.},
-  label={lst:crypto}]{src/chapter14/crypto.h}
+  caption={$k$-server: greedy, randomized, and optimal offline algorithms.},
+  label={lst:kserver}]{src/chapter13/k_server.h}
 
 \lstinputlisting[
   language=C++,
-  caption={Polynomials over $\mathbb{Z}_p$ and the Schwartz--Zippel identity test.},
-  label={lst:polynomial}]{src/chapter14/polynomial.h}
+  caption={Adversary simulation: oblivious and adaptive models.},
+  label={lst:adversary}]{src/chapter13/adversary.h}
 
-%% ============================================================
+%% ----------------------------------------------------------------
+\addcontentsline{toc}{section}{Notes}
 \section*{Notes}
-\label{sec:notes-14}
-%% ============================================================
+\label{sec:online-notes}
+%% ----------------------------------------------------------------
 
-The mathematical foundations of this chapter draw on classical number theory. Euler's totient function and Euler's theorem date to the 18th century. Fermat's little theorem appeared in a letter from Fermat to Frenicle de Bessy in 1640. The Chinese Remainder Theorem was known to Sun Tzu in the 3rd century CE and was formalized by Gauss in 1801. B\'ezout's identity appeared in his \emph{Th\'eorie g\'en\'rale des \'equations alg\'ebriques} (1764).
+The study of online algorithms was initiated by the work of
+Sleator and Tarjan~\cite{sleator1985amortized}, who introduced the
+competitive analysis framework and proved the $k-1$ lower bound for
+deterministic paging (Theorem~\ref{thm:paging-det-lb}) and the
+$O(k)$-competitive randomized marking algorithm
+(Theorems~\ref{thm:marking-2k} and~\ref{thm:marking-k}).  The
+marking algorithm was further analyzed by Karlin, Manasse, McGeoch,
+and Sleator~\cite{karlin1988competitve}, who established the connection
+between the marking algorithm and competitive ratios against oblivious
+adversaries.
 
-The RSA cryptosystem was invented by Rivest, Shamir, and Adleman in 1978 and has since become the most widely used public-key cryptosystem. The theoretical equivalence between breaking RSA and factoring was established by Rivest and others in the early 1980s.
+The Koutsoupias--Papadimitriou randomized $k$-competitive algorithm for
+$k$-server~\cite{koutsoupias1995k} (Theorem~\ref{thm:k-server-kp}) was
+a major open problem for nearly two decades.  The adversary hierarchy for
+randomized online algorithms was studied extensively by Borodin and
+El-Yaniv~\cite{borodin1998online}, who formalized the three adversary
+models discussed in Section~\ref{sec:adversary-models} and proved the
+hierarchy results of Proposition~\ref{prop:adversary-hierarchy} and
+Theorem~\ref{thm:paging-adversary-equivalence}.
 
-The Schwartz--Zippel lemma was proved independently by Schwartz (1980) and Zippel (1979/1981) in the context of polynomial identity testing. It is one of the most widely used tools in randomized algebraic computation.
+The lower bound for deterministic $k$-server
+(Theorem~\ref{thm:k-server-det-lb}) is due to Manasse, McGeoch, and
+Sleator~\cite{manasse1988greedy}.  The relationship between the
+adversary models and the optimal competitive ratios was clarified by
+Fiat and Mendel~\cite{fiat1997optimal}, who also obtained improved
+algorithms for special metric spaces.
 
-For primality testing, the Fermat test dates to Fermat's 17th-century observations. Miller (1976) proposed the deterministic version of his test assuming the Extended Riemann Hypothesis; Rabin (1980) modified it to remove this assumption, obtaining the randomized version. Solovay and Strassen (1977) independently discovered their randomized test. The deterministic polynomial-time AKS test was achieved by Agrawal, Kayal, and Saxena in 2002, confirming that primality is in $\text{P}$.
+The recent breakthrough by Bubeck, Cohen, Lee, and
+Lee~\cite{bubeck2021randomized} significantly improved the upper bound
+for randomized $k$-server on general metric spaces, though the exact
+competitive ratio remains an open problem.
 
-Berlekamp's polynomial factorization algorithm appeared in 1967, and the Cantor--Zassenhaus algorithm (1981) provides an alternative randomized approach for factoring polynomials over finite fields.
+Further reading can be found in the textbook by
+Borodin and El-Yaniv~\cite{borodin1998online} and the survey by
+Albers~\cite{albers2003new}.
 
-\begin{itemize}[nosep]
-    \item R.~L.~Rivest, A.~Shamir, and L.~Adleman, ``A Method for Obtaining Digital Signatures and Public-Key Cryptosystems,'' \textit{Commun.\ ACM}, 21(2):120--126, 1978.
-    \item G.~L.~Miller, ``Riemann's Hypothesis and Tests for Primality,'' \textit{J.\ Comput.\ Syst.\ Sci.}, 13(3):300--317, 1976.
-    \item M.~O.~Rabin, ``Probabilistic Algorithm for Testing Primality and Irreducibility,'' \textit{J.\ Number Theory}, 12(1):128--138, 1980.
-    \item R.~Solovay and V.~Strassen, ``A Fast Monte-Carlo Test for Primality,'' \textit{SIAM J.\ Comput.}, 6(1):84--85, 1977.
-    \item M.~Agrawal, N.~Kayal, and N.~Saxena, ``PRIMES is in P,'' \textit{Ann.\ of Math.}, 160(2):781--793, 2004.
-    \item J.~T.~Schwartz, ``Fast Probabilistic Algorithms for Verification of Polynomial Identities,'' \textit{J.\ ACM}, 27(4):701--717, 1980.
-    \item R.~E.~Zippel, ``Probabilistic Polynomial Identity Testing,'' \textit{Proc.\ 12th ACM STOC}, 208--217, 1979.
-    \item E.~R.~Berlekamp, ``Factoring Polynomials over Large Finite Fields,'' \textit{Math.\ Comp.}, 21:253--260, 1967.
-    \item D.~Cantor and H.~Zassenhaus, ``On Distinct Subfield Representations of Finite Fields,'' \textit{Commun.\ Pure Appl.\ Math.}, 34:827--832, 1981.
-    \item W.~R.~Alford, A.~Granville, and C.~Pomerance, ``On the Infinitely Many Carmichael Numbers up to $x$,'' \textit{Ann.\ of Math.}, 139(3):703--722, 1994.
-\end{itemize}
-
-%% ============================================================
+%% ----------------------------------------------------------------
+\addcontentsline{toc}{section}{Problems}
 \section*{Problems}
-\label{sec:problems-14}
-%% ============================================================
+\label{sec:online-problems}
+%% ----------------------------------------------------------------
 
-\begin{problem}[14.1]
-Prove that for any prime $p$ and integer $a$ with $\gcd(a, p) = 1$, the order of $a$ modulo $p$ (the smallest positive $k$ with $a^k \equiv 1 \pmod{p}$) divides $p - 1$. Use this to give an alternative proof of Fermat's little theorem.
+\begin{problem}\label{prob:lru-fifo}
+Prove that the LRU and FIFO algorithms for $k$-page caching are
+$\Theta(k)$-competitive against an oblivious adversary.  That is,
+establish matching upper and lower bounds on their competitive ratios.
 \end{problem}
 
-\begin{problem}[14.2]
-Implement the extended Euclidean algorithm and use it to compute $17^{-1} \bmod 43$ and $23^{-1} \bmod 97$. Verify your answers by direct multiplication.
+\begin{problem}\label{prob:randomized-lb-oblivious}
+Prove that no randomized algorithm for $k$-page caching can be better
+than $k/(k-1)$-competitive against an oblivious adversary.
 \end{problem}
 
-\begin{problem}[14.3]
-Let $n = 77 = 7 \cdot 11$. Compute $\phi(77)$ and list all elements of $\mathbb{Z}_{77}^*$. Find a primitive root modulo $77$ if one exists.
+\begin{problem}\label{prob:weighted-paging}
+Consider the \emph{weighted paging} problem, where each page $p$ has a
+weight $w_p > 0$ and the cost of a miss on page $p$ is $w_p$.  Design a
+randomized algorithm that is $O(k \cdot W_{\max}/W_{\min})$-competitive
+against an oblivious adversary, where $W_{\max}$ and $W_{\min}$ are the
+maximum and minimum page weights.
 \end{problem}
 
-\begin{problem}[14.4]
-Let $p = 29$. Using Euler's criterion (Theorem~\ref{thm:euler-criterion}), determine which of the following are quadratic residues modulo $29$: $a = 3, 7, 13, 17$.
+\begin{problem}\label{prob:two-server}
+Analyze the $2$-server problem on a metric space of three points forming
+an equilateral triangle with side length 1.  Show that the deterministic
+lower bound is $2$ and describe a randomized $2$-competitive algorithm.
 \end{problem}
 
-\begin{problem}[14.5]
-\textbf{(RSA computation)} Choose $p = 61$ and $q = 53$. Compute $n$, $\phi(n)$, and find a suitable public exponent $e$ and private exponent $d$. Encrypt the message $m = 42$ and verify that decryption recovers $m$.
+\begin{problem}\label{prob:load-balancing}
+The \emph{online load balancing} problem can be modeled as a special
+case of the $k$-server problem.  Consider $k$ machines and jobs arriving
+online.  Each job $j$ has a processing time $p_j$ on each machine, and
+the cost of assigning job $j$ to machine $i$ is $p_{ij}$.  Show that
+the $k$-server lower bound implies a lower bound of $k$ for competitive
+deterministic load balancing.
 \end{problem}
 
-\begin{problem}[14.6]
-Prove Theorem~\ref{thm:qr-composite}: for a Blum integer $n = pq$ and $a \in \mathbb{Z}_n^*$, $a$ is a quadratic residue modulo $n$ if and only if $\left(\frac{a}{p}\right) = 1$ and $\left(\frac{a}{q}\right) = 1$.
+\begin{problem}\label{prob:oblivious-vs-adaptive}
+Construct a problem (other than paging) where the competitive ratio
+against an oblivious adversary is strictly better than against an
+adaptive offline adversary.  Prove that the two ratios differ.
 \end{problem}
 
-\begin{problem}[14.7]
-Use the Schwartz--Zippel lemma to give a randomized polynomial-time algorithm for testing whether a given $n \times n$ matrix $M$ over $\mathbb{F}_p$ is symmetric ($M = M^T$), skew-symmetric ($M = -M^T$), or orthogonal ($M^T M = I$). State the error probability.
+\begin{problem}\label{prob:marking-analysis}
+Complete the proof of Theorem~\ref{thm:marking-k} by providing the full
+potential function argument showing that the randomized marking algorithm
+is $k$-competitive against an oblivious adversary.  In particular,
+explicitly define the refined potential function and verify that the
+amortized cost per request is at most $k/(k-1) \cdot
+\mathrm{cost}_{\mathrm{OPT}}$.
 \end{problem}
 
-\begin{problem}[14.8]
-Let $n = 561$ (the smallest Carmichael number). Show directly that $a^{560} \equiv 1 \pmod{561}$ for $a = 2, 3, 5$, and verify that $561$ is composite. Then run the Miller--Rabin test on $n = 561$ with base $a = 2$ and determine whether $2$ is a Miller--Rabin witness.
+\begin{problem}\label{prob:k-server-metric}
+Prove that the $k$-server competitive ratio cannot depend on the number
+of points $n$ in the metric space when $k$ is fixed.  That is, show
+that for any fixed $k$, there exists a constant $C_k$ such that the
+$k$-server problem on any $n$-point metric space admits a $C_k$-competitive
+deterministic algorithm.
 \end{problem}
 
-\begin{problem}[14.9]
-\textbf{(Analysis)} Prove that if $n$ is composite and $n - 1 = 2^s d$ with $d$ odd, then the set of Miller--Rabin non-witnesses is a subgroup of $\mathbb{Z}_n^*$. Conclude that at most $1/2$ of elements of $\mathbb{Z}_n^*$ are non-witnesses when $n = p^k$ for an odd prime $p$ and $k \geq 2$.
+\begin{problem}\label{prob:bit-packing}
+Consider the \emph{bit} or \emph{pennies} online problem: at each step,
+one of $n$ coins is placed on the table with heads up, and the
+algorithm must flip one coin to tails (or declare a fault).  The goal is
+to keep the number of heads-up coins below some threshold.  Formulate
+this as an online algorithm problem and derive a competitive ratio using
+techniques from this chapter.
 \end{problem}
 
-\begin{problem}[14.10]
-\textbf{(Research)} The AKS primality test (Theorem~\ref{thm:aks}) is based on the identity $(x + a)^n \equiv x^n + a \pmod{n}$ that holds for all $a$ when $n$ is prime (by the binomial theorem and $p \mid \binom{p}{i}$ for $0 < i < p$). Explain why this identity also holds modulo a polynomial $x^r - 1$ for a suitably chosen $r$, and why testing this identity for enough bases $a$ suffices to certify primality.
+\begin{problem}\label{prob:kp-potential}
+For the Koutsoupias--Papadimitriou algorithm
+(Theorem~\ref{thm:k-server-kp}), prove Lemma~\ref{lem:kp-step} in full
+detail.  Specifically, verify that the potential $\Phi$ is bounded, that
+the greedy minimization step achieves the required inequality, and that
+the final sum yields the $k$-competitive bound.
 \end{problem}
-
 
 \end{document}

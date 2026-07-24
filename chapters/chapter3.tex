@@ -7,7 +7,6 @@
 \usepackage{graphicx}
 \usepackage{listings}
 \usepackage{xcolor}
-\usepackage{hyperref}
 \usepackage{enumitem}
 \usepackage{tikz}
 \usepackage{algorithm}
@@ -16,18 +15,19 @@
 \usepackage{geometry}
 \usepackage{fancyhdr}
 \usepackage{titlesec}
+\usepackage[colorlinks=true, linkcolor=blue, citecolor=blue, urlcolor=blue, plainpages=false, pdfpagelabels]{hyperref}
 
 \geometry{
   papersize={6in,9in},
   margin=0.75in,
   top=0.75in,bottom=0.75in,
-  inner=0.9in,outer=0.65in,
+  inner=0.85in,outer=0.65in,
   headheight=14pt
 }
 
 \pagestyle{fancy}
 \fancyhf{}
-\fancyhead[LE]{\small\textit{3. Moments and Deviations}}
+\fancyhead[LE]{\small\textit{3. Game-Theoretic Techniques}}
 \fancyhead[RO]{\small\textit{Randomized Algorithms}}
 \fancyfoot[C]{\thepage}
 \renewcommand{\headrulewidth}{0.4pt}
@@ -66,928 +66,875 @@
 \theoremstyle{remark}
 \newtheorem{exercise}[theorem]{Exercise}
 \newtheorem{problem}[theorem]{Problem}
-
 \newenvironment{cpplisting}{\begin{center}\small}{\end{center}}
+
+\newcommand{\Exp}{\operatorname{\mathbb{E}}}
+\newcommand{\Var}{\operatorname{Var}}
+\newcommand{\Cov}{\operatorname{Cov}}
 
 \begin{document}
 
-\chapter*{3 Moments and Deviations}
-\addcontentsline{toc}{chapter}{3. Moments and Deviations}
-\markboth{3.\ Moments and Deviations}{3.\ Moments and Deviations}
+\chapter*{3 Game-Theoretic Techniques}
+\addcontentsline{toc}{chapter}{3 Game-Theoretic Techniques}
+\markboth{3 Game-Theoretic Techniques}{Randomized Algorithms}
+\label{ch:game-theoretic}
 
-In the preceding chapters we studied some simple randomized algorithms and encountered the need to analyze the probability that a random variable deviates significantly from its expected value. We now develop general tools for bounding tail probabilities---the probability that a random variable deviates by a given amount from its expectation. The probability of such a deviation is referred to as a \emph{tail probability}. Readers wishing to review basic material on probability and distributions may consult Appendix~C.
+In this chapter we study several ideas that are basic to the design and
+analysis of randomized algorithms.  All the topics in this chapter share a
+game-theoretic viewpoint, which enables us to think of a randomized algorithm
+as a probability distribution on deterministic algorithms.  This leads to
+Yao's Minimax Principle, which can be used to establish a lower bound on the
+performance of a randomized algorithm.
 
-\section{Occupancy Problems}
-\label{sec:occupancy}
+%==========================================================================
+\section{Game Tree Evaluation}
+\label{sec:gametree}
+%==========================================================================
 
-We begin with an example of an occupancy problem. In such problems we envision each of $m$ indistinguishable objects (``balls'') being randomly assigned to one of $n$ distinct classes (``bins''). In other words, each ball is placed in a bin chosen independently and uniformly at random. We are interested in questions such as: what is the maximum number of balls in any bin? what is the expected number of bins with $k$ balls in them? Such problems are at the core of the analyses of many randomized algorithms ranging from data structures to routing in parallel computers.
+We begin with another simple illustration of linearity of expectation, in the
+setting of game tree evaluation.  This example will demonstrate a randomized
+algorithm whose expected running time is smaller than that of any
+deterministic algorithm.  It will also serve as a vehicle for demonstrating a
+standard technique for deriving a lower bound on the running time of any
+randomized algorithm for a problem.
 
-Our discussion of the occupancy problem will illustrate a recurrent tool in the analysis of randomized algorithms: that the probability of the union of events is no more than the sum of their probabilities. This is a special case of the Boole--Bonferroni Inequalities (Proposition~C.2) and can be formally stated as follows: for arbitrary events $\mathcal{E}_1, \mathcal{E}_2, \ldots, \mathcal{E}_n$, not necessarily independent,
-\[
-\Pr\Bigl[\bigcup_{i=1}^{n} \mathcal{E}_i\Bigr] \leq \sum_{i=1}^{n} \Pr[\mathcal{E}_i].
-\]
-This principle is extremely useful because it assumes nothing about the dependencies between the events.
+A \emph{game tree} is a rooted tree in which internal nodes at even distance
+from the root are labeled MIN and internal nodes at odd distance are labeled
+MAX.  Associated with each leaf is a real number, which we call its
+\emph{value}.  The evaluation of the game tree is the following process.
+Each leaf returns the value associated with it.  Each MAX node returns the
+largest value returned by its children, and each MIN node returns the smallest
+value returned by its children.  Given a tree with values at the leaves, the
+evaluation problem is to determine the value returned by the root.
 
-Consider first the case $m = n$. For $1 \leq i \leq n$, let $X_i$ be the number of balls in the $i$th bin. Following Example~1.1, we have $\mathbb{E}[X_i] = 1$ for all $i$. Yet we do not expect that during a typical experiment every bin receives exactly one ball. Rather, we expect some bins to have no balls at all, and others to have many more than one.
+The evaluation of game trees plays a central role in artificial intelligence,
+particularly in game-playing programs.  The reader may readily associate the
+children of a node with the options available to one of the two players in a
+game.  The leaves represent the value of the game for either player.  One
+player seeks to maximize this value, while the other tries to minimize it.
+At each step, an evaluation algorithm chooses a leaf and reads its value.
 
-Let us try now to make a statement of the form ``with very high probability, no bin receives more than $k$ balls,'' for a suitably chosen $k$. Let $\mathcal{E}_j(k)$ denote the event that bin $j$ has $k$ or more balls in it. We concentrate on analyzing $\mathcal{E}_1(k)$.
+We study the number of such steps taken by an algorithm for evaluating a game
+tree.  We do not charge the algorithm for any other computation.  We will
+limit our discussion to the special case in which the values at the leaves are
+bits, 0 or~1.  Thus, each MIN node can be thought of as a Boolean AND
+operation and each MAX node as a Boolean OR operation.  This special case is
+of interest in its own right, having applications in mechanical theorem
+proving.
 
-The probability that bin~1 receives exactly $i$ balls is
-\[
-\Pr[X_1 = i] = \binom{m}{i} \frac{1}{n^i}\Bigl(1 - \frac{1}{n}\Bigr)^{m-i} \leq \frac{m^i}{i! \cdot n^i}.
-\]
-The second inequality results from an upper bound for binomial coefficients (Proposition~B.2). Thus,
-\[
-\Pr[\mathcal{E}_1(k)] \leq \sum_{i=k}^{m} \frac{m^i}{i! \cdot n^i} \leq \frac{(m/n)^k}{k!} \cdot \frac{1}{1 - m/(kn)}.
-\]
-Setting $k^* = \lceil (en \ln n) / \ln \ln n \rceil$, we obtain
-\begin{equation}
-\Pr[\mathcal{E}_1(k^*)] \leq \frac{(e \ln n)^{k^*}}{(k^*)!} \leq \frac{1}{n^2}.
-\label{eq:occ-bound}
-\end{equation}
+Let $T_{d,k}$ denote a uniform tree in which the root and every internal node
+has~$d$ children and every leaf is at distance~$2k$ from the root.  Thus, any
+root-to-leaf path passes through $k$ AND nodes (including the root itself)
+and $k$ OR nodes, and there are $d^{2k}$ leaves.  An instance of the
+evaluation problem consists of the tree $T_{d,k}$ together with a Boolean
+value for each of the $d^{2k}$ leaves.  Given an algorithm, we study the
+maximum number of steps it takes to evaluate any instance of $T_{d,k}$.
 
-The same computation tells us that this upper bound applies to $\Pr[\mathcal{E}_i(k^*)]$ for all~$i$, but can we say that no bin is likely to have more than $k^*$ balls in it? For this we invoke the principle mentioned at the beginning of this section: the probability of the union of the events $\mathcal{E}_i(k^*)$ is no more than their sum.
-
-\begin{theorem}[Maximum Occupancy]
-\label{thm:occ-max}
-With probability at least $1 - 1/n$, no bin has more than $k^* = \lceil (en \ln n) / \ln \ln n \rceil$ balls when $m = n$ balls are randomly assigned to $n$ bins.
-\end{theorem}
-
-\begin{proof}
-By the union bound and~\eqref{eq:occ-bound},
-\[
-\Pr\Bigl[\bigcup_{i=1}^{n} \mathcal{E}_i(k^*)\Bigr] \leq \sum_{i=1}^{n} \Pr[\mathcal{E}_i(k^*)] \leq n \cdot \frac{1}{n^2} = \frac{1}{n}.
-\]
-\end{proof}
-
-\medskip
-
-Interestingly, when $m$ is of the order of $n \ln n$, the bin with the most balls has about the same number of balls as the expected number of balls in any bin. This phenomenon is exploited in a number of randomized algorithms.
-
-\begin{exercise}
-For $m = n \log n$, show that with probability $1 - o(1)$ every bin contains $O(\log n)$ balls.
-\end{exercise}
-
-\subsection{The Birthday Problem}
-
-We turn to a classic combinatorial problem. Suppose that $m$ balls are randomly assigned to $n$ bins. We study the probability of the event that they all land in distinct bins. The special case $n = 365$ is popular in mathematical lore as the \emph{birthday problem}. The interpretation is that the $365$ days of the year correspond to $365$ bins, and the birthday of each of $m$ people is chosen independently and uniformly from all $365$ days (ignoring leap years). How large must $m$ be before two people in the group are likely to share their birthdays?
-
-Consider the assignment of the balls to the bins as a sequential process: we throw the first ball into a random bin, then the second ball, and so on. For $2 \leq i \leq m$, let $\mathcal{E}_i$ denote the event that the $i$th ball lands in a bin not containing any of the first $i-1$ balls. We will bound $\Pr[\bigcap_{i=2}^{m} \mathcal{E}_i]$ from above. From the definition of conditional probability,
-\[
-\Pr\Bigl[\bigcap_{i=2}^{m} \mathcal{E}_i\Bigr] = \Pr[\mathcal{E}_2] \Pr[\mathcal{E}_3 \mid \mathcal{E}_2] \Pr[\mathcal{E}_4 \mid \mathcal{E}_2 \cap \mathcal{E}_3] \cdots \Pr[\mathcal{E}_m \mid \bigcap_{i=2}^{m-1} \mathcal{E}_i].
-\]
-Now, $\Pr[\mathcal{E}_i \mid \bigcap_{j=2}^{i-1} \mathcal{E}_j] = 1 - (i-1)/n$. Making use of the fact that $1 - x \leq e^{-x}$, we have
-\[
-\Pr\Bigl[\bigcap_{i=2}^{m} \mathcal{E}_i\Bigr] \leq \prod_{i=2}^{m}\Bigl(1 - \frac{i-1}{n}\Bigr) \leq \prod_{i=2}^{m} e^{-(i-1)/n} = e^{-\sum_{i=1}^{m-1} i/n} = e^{-m(m-1)/(2n)}.
-\]
-Thus, we see that for $m$ equal to $\lfloor \sqrt{2n+1} \rfloor$, the probability that all $m$ balls land in distinct bins is at most $1/e$; as $m$ increases beyond this value, the probability drops rapidly.
-
-\begin{cpplisting}
-\label{code:birthday}
-\begin{lstlisting}[language=C++, frame=single, framerule=0.4pt,
-  rulecolor=\color{gray}, backgroundcolor=\color{gray!5},
-  basicstyle=\ttfamily\footnotesize, keywordstyle=\bfseries,
-  commentstyle=\itshape\color{gray}, numbers=left,
-  numberstyle=\tiny\color{gray}, numbersep=8pt,
-  tabsize=2, showstringspaces=false]
-#include <iostream>
-#include <vector>
-#include <random>
-#include <cmath>
-
-// Estimate the probability of a birthday collision among m people
-// with n possible birthdays, using repeated simulations.
-double birthday_collision_prob(int m, int n, int trials,
-                               std::mt19937& rng) {
-    int collisions = 0;
-    std::uniform_int_distribution<int> dist(0, n - 1);
-    for (int t = 0; t < trials; ++t) {
-        std::vector<bool> seen(n, false);
-        bool collision = false;
-        for (int i = 0; i < m; ++i) {
-            int bday = dist(rng);
-            if (seen[bday]) { collision = true; break; }
-            seen[bday] = true;
-        }
-        if (collision) ++collisions;
-    }
-    return static_cast<double>(collisions) / trials;
-}
-
-int main() {
-    std::mt19937 rng(42);
-    int n = 365;
-    // Theoretical threshold: m ~ sqrt(2 * n * ln(1/(1-p)))
-    // For p = 0.5, m ~ 22.49
-    double analytical = 1.0 - std::exp(-0.5);
-    std::cout << "Birthday Problem (n=" << n << "):\n";
-    for (int m : {10, 15, 20, 23, 30, 50}) {
-        double sim = birthday_collision_prob(m, n, 100000, rng);
-        double theory = 1.0 - std::exp(-static_cast<double>(m * (m - 1)) / (2.0 * n));
-        std::cout << "  m=" << m
-                  << "  simulated=" << sim
-                  << "  theoretical=" << theory << "\n";
-    }
-    return 0;
-}
-\end{lstlisting}
-\end{cpplisting}
-
-\section{The Markov and Chebyshev Inequalities}
-\label{sec:markov-chebyshev}
-
-We have seen above that making statements about the probability that a random variable deviates far from its expectation may involve a detailed, problem-specific analysis. Often, one can avoid such detailed analyses by resorting to general inequalities on such tail probabilities.
-
-We begin with the Markov inequality, a fundamental tool we will invoke repeatedly when we develop more sophisticated bounding techniques.
-
-\begin{theorem}[Markov Inequality]
-\label{thm:markov}
-Let $Y$ be a random variable assuming only non-negative values. Then for all $t \in \mathbb{R}^+$,
-\[
-\Pr[Y \geq t] \leq \frac{\mathbb{E}[Y]}{t}.
-\]
-Equivalently, $\Pr[Y \geq k\,\mathbb{E}[Y]] \leq 1/k$.
-\end{theorem}
-
-\begin{proof}
-Define a function $f(y)$ by $f(y) = 1$ if $y \geq t$, and $0$ otherwise. Then $\Pr[Y \geq t] = \mathbb{E}[f(Y)]$. Since $f(y) \leq y/t$ for all $y$,
-\[
-\mathbb{E}[f(Y)] \leq \mathbb{E}\Bigl[\frac{Y}{t}\Bigr] = \frac{\mathbb{E}[Y]}{t},
-\]
-and the theorem follows.
-\end{proof}
-
-This is the tightest possible bound when we know only that $Y$ is non-negative and has a given expectation. Unfortunately, the Markov inequality by itself is often too weak to yield useful results.
+An algorithm begins by specifying a leaf whose value is to be read at the
+first step.  Thereafter, it specifies such a leaf at each step, based on the
+values it has read on previous steps.  In a deterministic algorithm, the
+choice of the next leaf to be read is a deterministic function of the values
+at the leaves read so far.  For a randomized algorithm, this choice may be
+randomized.
 
 \begin{exercise}
-Given a positive integer $k$, describe a random variable $X$ assuming only non-negative values, such that $\Pr[X \geq k\,\mathbb{E}[X]] = 1/k$.
+Show that for any deterministic evaluation algorithm, there is an instance of
+$T_{d,k}$ that forces the algorithm to read the values on all $d^{2k}$ leaves.
 \end{exercise}
 
-\begin{exercise}
-Let $Y$ be any random variable and $h$ any non-negative real function. Show that for all $t \in \mathbb{R}^+$,
-\[
-\Pr[h(Y) \geq t] \leq \frac{\mathbb{E}[h(Y)]}{t}.
-\]
-\end{exercise}
+\subsection{A Randomized Algorithm}
 
-The following generalization of Markov's inequality underlies its usefulness in deriving stronger bounds.
+We now give a simple randomized algorithm and study the expected number of
+leaves it reads on any instance of $T_{d,k}$.  To simplify our presentation,
+we restrict ourselves to the case $d=2$.  Any deterministic algorithm for this
+case can be made to read all $2^{2k}=4^k$ leaves on some instance.  Our
+randomized algorithm is based on the following simple observation.  Consider
+a single AND node with two leaves.  If the node were to return~0, at least
+one of the leaves must contain~0.  A deterministic algorithm inspects the
+leaves in a fixed order, and an adversary can therefore always ``hide'' the~0
+at the second of the two leaves inspected by the algorithm.  Reading the
+leaves in a random order foils this strategy.  With probability~$1/2$, the
+algorithm chooses the hidden~0 on the first step, so its expected number of
+steps is~$3/2$, which is better than the worst case for any deterministic
+algorithm.  Similarly, in the case of an OR node, if it were to return a~1,
+then a randomized order of examining the leaves will reduce the expected
+number of steps to~$3/2$.
 
-We now show that the Markov inequality can be used to derive better bounds on the tail probability by using more information about the distribution of the random variable. The first of these is the Chebyshev bound, which is based on the knowledge of the variance of the distribution.
-
-For a random variable $X$ with expectation $\mu_X$, its \emph{variance} $\sigma_X^2$ is defined to be $\mathbb{E}[(X - \mu_X)^2]$. The \emph{standard deviation} of $X$, denoted $\sigma_X$, is the positive square root of $\sigma_X^2$.
-
-\begin{theorem}[Chebyshev's Inequality]
-\label{thm:chebyshev}
-Let $X$ be a random variable with expectation $\mu_X$ and standard deviation $\sigma_X$. Then for any $t \in \mathbb{R}^+$,
-\[
-\Pr[|X - \mu_X| \geq t\,\sigma_X] \leq \frac{1}{t^2}.
-\]
-\end{theorem}
-
-\begin{proof}
-First, note that
-\[
-\Pr[|X - \mu_X| \geq t\,\sigma_X] = \Pr[(X - \mu_X)^2 \geq t^2 \sigma_X^2].
-\]
-The random variable $Y = (X - \mu_X)^2$ has expectation $\sigma_X^2$, and applying the Markov inequality to $Y$ bounds this probability from above by $1/t^2$.
-\end{proof}
-
-\begin{exercise}
-The use of the variance of a random variable in bounding its deviation from its expectation is called the \emph{second moment method}. In an analogous fashion, we can speak of the \emph{$k$th moment method}: let $k$ be even, and suppose we have a random variable $X$ for which $\mu_k = \mathbb{E}[(X - \mu_X)^k]$ exists. Show that
-\[
-\Pr[|X - \mu_X| > t\,(\mu_k)^{1/k}] \leq \frac{1}{t^k}.
-\]
-Why is the $k$th moment method difficult to invoke for odd values of $k$?
-\end{exercise}
-
-\section{Randomized Selection}
-\label{sec:rand-sel}
-
-We now consider the use of random sampling for the problem of selecting the $k$th smallest element in a set $S$ of $n$ elements drawn from a totally ordered universe. We assume that the elements of $S$ are all distinct, although it is not very hard to modify the following analysis to allow for multisets. Let $r_S(t)$ denote the rank of an element $t$ (the $k$th smallest element has rank~$k$) and let $S_{\langle i \rangle}$ denote the $i$th smallest element of $S$.
-
-\begin{algorithm}[H]
-\caption{LazySelect}
-\label{alg:lazy-select}
+\begin{algorithm}[htbp]
+\caption{Randomized evaluation of $T_{2,k}$}
+\label{alg:gametree}
 \begin{algorithmic}[1]
-\Require A set $S$ of $n$ elements from a totally ordered universe; integer $k \in [n]$
-\Ensure The $k$th smallest element of $S$, $S_{\langle k \rangle}$
-\State Pick $n^{3/4}$ elements from $S$, chosen independently and uniformly at random with replacement; call this multiset of elements $R$
-\State Sort $R$ using any optimal sorting algorithm in $O(n^{3/4} \log n)$ steps
-\State Let $x = k \cdot n^{-1/4}$. Set $t = \max\{\lfloor x - \sqrt{n} \rfloor, 1\}$ and $h = \min\{\lceil x + \sqrt{n} \rceil, n^{3/4}\}$
-\State Let $a = R_{\langle t \rangle}$ and $b = R_{\langle h \rangle}$. By comparing $a$ and $b$ to every element of $S$, determine $r_S(a)$ and $r_S(b)$
-\If{$k < n^{1/4}$}
-    \State $P \gets \{y \in S \mid y \leq b\}$
-\ElsIf{$k > n - n^{1/4}$}
-    \State $P \gets \{y \in S \mid y \geq a\}$
-\Else
-    \State $P \gets \{y \in S \mid a \leq y \leq b\}$
-\EndIf
-\State Check whether $S_{\langle k \rangle} \in P$ and $|P| \leq 4n^{3/4} + 2$. If not, repeat Steps~1--5 until such a set $P$ is found
-\State Sort $P$ and identify $P_{\langle k - r_S(a) + 1 \rangle}$, which is $S_{\langle k \rangle}$
+\Procedure{EvalAND}{$v$}
+  \State Pick a child $c$ of $v$ uniformly at random
+  \State $val \gets$ \Call{EvalOR}{$c$}
+  \If{$val = 0$}
+    \State \Return 0
+  \EndIf
+  \State $val' \gets$ \Call{EvalOR}{other child of $v$}
+  \State \Return $val'$
+\EndProcedure
+\Statex
+\Procedure{EvalOR}{$v$}
+  \State Pick a child $c$ of $v$ uniformly at random
+  \State $val \gets$ \Call{EvalAND}{$c$}
+  \If{$val = 1$}
+    \State \Return 1
+  \EndIf
+  \State $val' \gets$ \Call{EvalAND}{other child of $v$}
+  \State \Return $val'$
+\EndProcedure
 \end{algorithmic}
 \end{algorithm}
 
-The idea of the algorithm is to identify two elements $a$ and $b$ in $S$ such that both of the following hold with high probability:
-\begin{enumerate}
-\item The element $S_{\langle k \rangle}$ that we seek is in $P$.
-\item The set $P$ of elements between $a$ and $b$ is not very large, so that we can sort $P$ inexpensively in Step~7.
-\end{enumerate}
-
-We examine how either of these requirements could fail. We focus on the most interesting case when $k \in [n^{1/4}, n - n^{1/4}]$, so that $P = \{y \in S \mid a \leq y \leq b\}$.
-
-If the element $a$ is greater than $S_{\langle k \rangle}$ (or if $b$ is smaller than or equal to $S_{\langle k \rangle}$), we fail because $P$ does not contain $S_{\langle k \rangle}$. For this to happen, fewer than $t$ of the samples in $R$ should be smaller than $S_{\langle k \rangle}$ (respectively, at least $h$ of the random samples should be smaller than $S_{\langle k \rangle}$). We will bound the probability that this happens using the Chebyshev bound.
-
-\begin{lemma}[Additivity of Variances]
-\label{lemma:var-sum}
-Let $X_1, X_2, \ldots, X_m$ be independent random variables. Let $X = \sum_{i=1}^{m} X_i$. Then $\sigma_X^2 = \sum_{i=1}^{m} \sigma_{X_i}^2$.
-\end{lemma}
-
-\begin{proof}
-Let $\mu_i$ denote $\mathbb{E}[X_i]$, and $\mu = \sum_{i=1}^{m} \mu_i$. The variance of $X$ is given by
-\[
-\mathbb{E}[(X - \mu)^2] = \mathbb{E}\Bigl[\Bigl(\sum_{i=1}^{m} (X_i - \mu_i)\Bigr)^2\Bigr].
-\]
-Expanding the latter and using linearity of expectations,
-\[
-\mathbb{E}[(X - \mu)^2] = \sum_{i=1}^{m} \mathbb{E}[(X_i - \mu_i)^2] + 2 \sum_{i < j} \mathbb{E}[(X_i - \mu_i)(X_j - \mu_j)].
-\]
-Since all pairs $X_i, X_j$ are independent, so are the pairs $(X_i - \mu_i), (X_j - \mu_j)$. By the fact that expectation factors for independent variables, each term in the latter summation equals $\mathbb{E}[(X_i - \mu_i)] \cdot \mathbb{E}[(X_j - \mu_j)]$. Since $\mathbb{E}[(X_i - \mu_i)] = 0$, the latter summation vanishes.
-\end{proof}
-
-\begin{theorem}[LazySelect Correctness]
-\label{thm:lazy-select}
-With probability $1 - O(n^{-1/4})$, LazySelect finds $S_{\langle k \rangle}$ on the first pass through Steps~1--7, and thus performs only $2n + o(n)$ comparisons.
-\end{theorem}
-
-\begin{proof}
-Step~3 requires $2n$ comparisons, and all other steps perform $o(n)$ comparisons, provided the algorithm finds $S_{\langle k \rangle}$ on the first pass. We now consider the first mode of failure: $a > S_{\langle k \rangle}$ because fewer than $t$ of the samples in $R$ are less than or equal to $S_{\langle k \rangle}$.
-
-Let $X_i = 1$ if the $i$th random sample is at most $S_{\langle k \rangle}$, and $0$ otherwise; thus $\Pr[X_i = 1] = k/n$, and $\Pr[X_i = 0] = 1 - k/n$. Let $X = \sum_{i=1}^{n^{3/4}} X_i$ be the number of samples of $R$ that are at most $S_{\langle k \rangle}$. The random variables $X_i$ are Bernoulli trials. Using Lemma~\ref{lemma:var-sum} and the variance of a Bernoulli trial with success probability $p$,
-\[
-\mu_X = k n^{3/4} / n = k n^{-1/4},
-\]
-and
-\[
-\sigma_X^2 = n^{3/4} \cdot \frac{k}{n} \cdot \Bigl(1 - \frac{k}{n}\Bigr) \leq n^{3/4} \cdot \frac{1}{4}.
-\]
-This implies that $\sigma_X \leq n^{3/8}/2$. Applying the Chebyshev bound to $X$,
-\[
-\Pr[|X - \mu_X| \geq \sqrt{n}] = \Pr[|X - \mu_X| \geq 2n^{1/8} \sigma_X] = o(n^{-1/4}).
-\]
-An essentially identical argument shows that $\Pr[b < S_{\langle k \rangle}] = o(n^{-1/4})$. Since the probability of the union of events is at most the sum of their probabilities, the probability that either of these events occurs (causing $S_{\langle k \rangle}$ to lie outside $P$) is $O(n^{-1/4})$.
-
-The analysis of the second mode of failure---that $P$ contains more than $4n^{3/4} + 2$ elements---is very similar, with $k_t$ and $k_h$ playing the role of $k$. Adding up the probabilities of all failure modes, we find that the probability that Steps~1--5 fail to find a suitable set $P$ is $O(n^{-1/4})$.
-\end{proof}
-
-This adds to the significance of LazySelect: the best known deterministic selection algorithms use $3n$ comparisons in the worst case and are quite complicated to implement. Further, it is known that any deterministic algorithm for finding the median requires at least $2n$ comparisons, so we have a randomized algorithm that is both fast and has an expected number of comparisons that is provably smaller than that of any deterministic algorithm.
-
-\begin{exercise}
-The failure probability can be driven down further at the expense of increased running time. For a suitable definition of the $o(n)$ term, give an upper bound on the probability that the algorithm does not find $S_{\langle k \rangle}$ in $cn + o(n)$ steps for $c > 2$.
-\end{exercise}
-
-\begin{exercise}
-Suggest a modification in the algorithm that brings the constant in the linear term down to $1.5$ from $2$. We will refine this further in Problem~4.16.
-\end{exercise}
-
-\begin{exercise}
-Show that as a direct corollary of Theorem~\ref{thm:lazy-select}, the expected running time of the LazySelect algorithm is $2n + o(n)$.
-\end{exercise}
-
-\begin{cpplisting}
-\label{code:lazy-select}
-\begin{lstlisting}[language=C++, frame=single, framerule=0.4pt,
-  rulecolor=\color{gray}, backgroundcolor=\color{gray!5},
-  basicstyle=\ttfamily\footnotesize, keywordstyle=\bfseries,
-  commentstyle=\itshape\color{gray}, numbers=left,
-  numberstyle=\tiny\color{gray}, numbersep=8pt,
-  tabsize=2, showstringspaces=false]
-#include <algorithm>
-#include <cmath>
-#include <iostream>
-#include <random>
-#include <vector>
-
-// Returns the k-th smallest element (0-indexed) using LazySelect.
-// Expected comparisons: 2n + o(n), succeeding w.h.p. on first pass.
-int lazy_select(std::vector<int>& S, int k, std::mt19937& rng) {
-    int n = static_cast<int>(S.size());
-    int sample_size = static_cast<int>(std::ceil(std::pow(n, 0.75)));
-    std::uniform_int_distribution<int> dist(0, n - 1);
-
-    while (true) {
-        // Step 1: sample n^{3/4} elements with replacement
-        std::vector<int> R(sample_size);
-        for (int i = 0; i < sample_size; ++i)
-            R[i] = S[dist(rng)];
-
-        // Step 2: sort R
-        std::sort(R.begin(), R.end());
-
-        // Step 3: compute indices t, h
-        double x = static_cast<double>(k) * std::pow(n, -0.25);
-        int t = std::max(static_cast<int>(std::floor(x - std::sqrt(n))), 1);
-        int h = std::min(static_cast<int>(std::ceil(x + std::sqrt(n))),
-                         sample_size - 1);
-        int a_val = R[t];
-        int b_val = R[h];
-
-        // Step 4: compute ranks of a and b in S
-        int rank_a = 0, rank_b = 0;
-        for (int i = 0; i < n; ++i) {
-            if (S[i] <= a_val) ++rank_a;
-            if (S[i] < b_val) ++rank_b;
-        }
-
-        // Build candidate set P
-        std::vector<int> P;
-        if (k < static_cast<int>(std::pow(n, 0.25))) {
-            for (int v : S) if (v <= b_val) P.push_back(v);
-        } else if (k > n - static_cast<int>(std::pow(n, 0.25))) {
-            for (int v : S) if (v >= a_val) P.push_back(v);
-        } else {
-            for (int v : S)
-                if (v >= a_val && v <= b_val) P.push_back(v);
-        }
-
-        // Check S<k> is in P and |P| is small enough
-        int target_in_P = k - rank_a + 1;
-        if (target_in_P >= 1 && target_in_P <= static_cast<int>(P.size())
-            && static_cast<int>(P.size()) <= 4 * sample_size + 2) {
-            // Step 7: sort P and pick the element
-            std::sort(P.begin(), P.end());
-            return P[target_in_P - 1];
-        }
-        // Otherwise retry
-    }
-}
-
-int main() {
-    std::mt19937 rng(42);
-    std::vector<int> S(10000);
-    for (int i = 0; i < 10000; ++i) S[i] = i + 1;
-    std::shuffle(S.begin(), S.end(), rng);
-
-    int k = 5000;  // find the median
-    int result = lazy_select(S, k, rng);
-    std::cout << "LazySelect: " << k << "th smallest = "
-              << result << "\n";
-
-    std::sort(S.begin(), S.end());
-    std::cout << "Sorted:     " << k << "th smallest = "
-              << S[k - 1] << "\n";
-    return 0;
-}
-\end{lstlisting}
-\end{cpplisting}
-
-\section{Two-Point Sampling}
-\label{sec:two-point}
-
-We have so far been making use of the fact that the variance of the sum of independent random variables equals the sum of their variances. In fact, we can make a stronger statement. Let $X$ and $Y$ be discrete random variables defined on the same probability space. The \emph{joint density function} of $X$ and $Y$ is the function
-\[
-p(x, y) = \Pr[\{X = x\} \cap \{Y = y\}].
-\]
-A set of random variables $X_1, X_2, \ldots, X_m$ is said to be \emph{pairwise independent} if for all $i \neq j$, and $x, y \in \mathbb{R}$,
-\[
-\Pr[X_i = x \mid X_j = y] = \Pr[X_i = x].
-\]
-
-\begin{exercise}
-Let $n$ be a prime number and $\mathbb{Z}_n$ denote the field of integers modulo~$n$. For $a$ and $b$ chosen independently and uniformly at random from $\mathbb{Z}_n$, let $Y_i = ai + b \pmod{n}$. Show that for $i \neq j \pmod{n}$, $Y_i$ and $Y_j$ are uniformly distributed on $\mathbb{Z}_n$ and pairwise independent. (Make use of the fact that in the field $\mathbb{Z}_n$, given fixed values for $Y_i$ and $Y_j$, we can solve $Y_i = ai + b \pmod{n}$ and $Y_j = aj + b \pmod{n}$ uniquely for $a$ and~$b$.)
-\end{exercise}
-
-\begin{exercise}
-Let $X_1, X_2, \ldots, X_m$ be pairwise independent random variables, and $X = \sum_{i=1}^{m} X_i$. Show that $\sigma_X^2 = \sum_{i=1}^{m} \sigma_{X_i}^2$.
-\end{exercise}
-
-We now consider an application of these concepts to the reduction of the random bits used by RP algorithms. Consider an RP algorithm $A$ for deciding whether input strings $x$ belong to a language~$L$. Given $x$, $A$ picks a random number $r$ from the range $\mathbb{Z}_n = \{0, \ldots, n-1\}$ and computes a binary value $A(x, r)$ with the following properties:
-\begin{itemize}
-\item If $x \in L$, then $A(x, r) = 1$ for at least half the possible values of $r$.
-\item If $x \notin L$, then $A(x, r) = 0$ for all possible choices of $r$.
-\end{itemize}
-
-For any $x \in L$, we refer to the values of $r$ for which $A(x, r) = 1$ as \emph{witnesses} for $x$; clearly, at least $n/2$ of the $n$ possible values of $r$ are witnesses. Choosing $t$ independent random numbers is expensive in that it requires $O(t \log n)$ random bits. Suppose instead that we are only willing to use $O(\log n)$ random bits---in particular, suppose we wish to use only two independent samples from $\mathbb{Z}_n$.
-
-The naive usage of $a$ and $b$ as potential witnesses yields an upper bound of only $1/4$ on the probability of incorrect classification. Here is a better scheme: let $r_i = ai + b \pmod{n}$, and compute $A(x, r_i)$ for $1 \leq i \leq t$. As before, if for any $i$ we obtain $A(x, r_i) = 1$, we declare that $x$ is in $L$, else we declare that $x$ is not in $L$.
-
-\begin{theorem}[Probability Amplification via Two-Point Sampling]
-\label{thm:two-point}
-With the two-point sampling scheme, the error probability is at most $1/t$.
-\end{theorem}
-
-\begin{proof}
-We need to worry about the possibility of making error only when the input $x$ is in $L$. By the result of Exercise~3.7, the random $r_i$'s are pairwise independent and, therefore, so are the random variables $A(x, r_i)$, for $1 \leq i \leq t$. Let $Y = \sum_{i=1}^{t} A(x, r_i)$. Assuming that $x \in L$, $\mathbb{E}[Y] \geq t/2$ and $\sigma_Y^2 \leq t/4$, so $\sigma_Y \leq \sqrt{t}/2$. The probability that the pairwise independent iterations produce an incorrect classification corresponds to the event $\{Y = 0\}$, and
-\[
-\Pr[Y = 0] \leq \Pr[|Y - \mathbb{E}[Y]| \geq t/2].
-\]
-By the Chebyshev inequality, the latter is at most $1/t$. Thus, the error probability is at most $1/t$, which is a considerable improvement over the error bound of $1/4$ achieved by the naive use of $a$ and~$b$.
-\end{proof}
-
-\begin{cpplisting}
-\label{code:two-point}
-\begin{lstlisting}[language=C++, frame=single, framerule=0.4pt,
-  rulecolor=\color{gray}, backgroundcolor=\color{gray!5},
-  basicstyle=\ttfamily\footnotesize, keywordstyle=\bfseries,
-  commentstyle=\itshape\color{gray}, numbers=left,
-  numberstyle=\tiny\color{gray}, numbersep=8pt,
-  tabsize=2, showstringspaces=false]
-#include <iostream>
-#include <random>
-#include <vector>
-
-// Simulated RP algorithm: for x in L, A(x,r)=1 for half the r's.
-// For x not in L, A(x,r)=0 for all r.
-bool RP_algorithm(int x, int r, bool x_in_L) {
-    if (!x_in_L) return false;
-    // Deterministic witness check: r < n/2 means witness
-    return r < 500;
-}
-
-// Naive: use a and b directly as witnesses. Error <= 1/4.
-bool naive_two_point(int x, int n, bool x_in_L,
-                     std::mt19937& rng) {
-    std::uniform_int_distribution<int> dist(0, n - 1);
-    int a = dist(rng), b = dist(rng);
-    if (RP_algorithm(x, a, x_in_L)) return true;
-    if (RP_algorithm(x, b, x_in_L)) return true;
-    return false;
-}
-
-// Amplified: use r_i = a*i + b mod n for t samples.
-// Error <= 1/t by pairwise independence.
-bool amplified_two_point(int x, int n, int t, bool x_in_L,
-                         std::mt19937& rng) {
-    std::uniform_int_distribution<int> dist(0, n - 1);
-    int a = dist(rng), b = dist(rng);
-    for (int i = 0; i < t; ++i) {
-        int ri = (static_cast<long long>(a) * i + b) % n;
-        if (RP_algorithm(x, ri, x_in_L)) return true;
-    }
-    return false;
-}
-
-int main() {
-    std::mt19937 rng(42);
-    int n = 1000;
-    int trials = 100000;
-    int t = 10;  // amplification parameter
-
-    // Test with x in L (should almost always return true)
-    int naive_false = 0, amp_false = 0;
-    for (int i = 0; i < trials; ++i) {
-        if (!naive_two_point(1, n, true, rng)) ++naive_false;
-        if (!amplified_two_point(1, n, t, true, rng)) ++amp_false;
-    }
-    std::cout << "x in L:\n"
-              << "  Naive error rate:   "
-              << static_cast<double>(naive_false) / trials << "\n"
-              << "  Amplified error rate: "
-              << static_cast<double>(amp_false) / trials << "\n"
-              << "  (theory: naive <= 1/4, amplified <= 1/t = "
-              << 1.0 / t << ")\n";
-    return 0;
-}
-\end{lstlisting}
-\end{cpplisting}
-
-\section{The Stable Marriage Problem}
-\label{sec:stable-marriage}
-
-Consider a society in which there are $n$ men (denoted by capital letters $A, B, C, \ldots$) and $n$ women (denoted by lowercase letters $a, b, c, \ldots$). A marriage $M$ is a one-to-one correspondence between the men and the women. Assume a monogamous society. Each person has a preference list of the members of the opposite sex organized in decreasing order of desirability. A marriage is said to be \emph{unstable} if there exist two married couples $X$--$x$ and $Y$--$y$ such that $X$ desires $y$ more than $x$, and $y$ desires $X$ more than $Y$, implying that $X$--$y$ will have a tendency to leave their current mates to marry each other. A marriage $M$ in which there are no dissatisfied couples is called a \emph{stable marriage}.
-
-\begin{example}
-For $n = 4$, consider the following preference lists.
-\[
-\begin{array}{llll}
-A: a\; b\; c\; d & B: b\; a\; e\; d & C: a\; d\; e\; b & D: d\; e\; a\; b \\
-a: A\; B\; C\; D & b: D\; C\; B\; A & c: A\; B\; C\; D & d: C\; D\; A\; B
-\end{array}
-\]
-Consider the marriage $M$ given by $A$--$a$, $B$--$b$, $C$--$c$, and $D$--$d$. Here $C$--$d$ is a dissatisfied couple, implying that $M$ is unstable. However, if $C$ and $d$ marry each other, and $c$ and $D$ marry each other, we obtain the stable marriage given by $A$--$a$, $B$--$b$, $C$--$d$, $D$--$c$.
-\end{example}
-
-The problem of finding stable marriages has several interesting applications, for example in matching medical graduates to residency positions in hospitals. It can be shown that for every choice of preference lists there exists at least one stable marriage. We will prove this by presenting an algorithm to find a stable marriage.
-
-\begin{algorithm}[H]
-\caption{The Proposal Algorithm (Gale--Shapley)}
-\label{alg:proposal}
-\begin{algorithmic}[1]
-\Require Complete preference lists for $n$ men and $n$ women
-\Ensure A stable marriage $M$
-\State Start with all men and women free (unmarried)
-\While{there exists a free man $X$ who has not proposed to every woman}
-    \State $X$ proposes to the most desirable woman $x$ on his list who has not already rejected him
-    \If{$x$ is free}
-        \State $x$ accepts; $X$ and $x$ become engaged
-    \ElsIf{$x$ prefers $X$ over her current fianc\'{e} $Y$}
-        \State $x$ jilts $Y$ and becomes engaged to $X$; $Y$ becomes free
-    \Else
-        \State $x$ rejects $X$
-    \EndIf
-\EndWhile
-\State The engaged pairs form a stable marriage
-\end{algorithmic}
-\end{algorithm}
-
-The basic idea behind this algorithm can be summarized as ``man proposes, woman disposes'': each currently unattached man proposes to the most desirable woman on his list who has not already rejected him, and this woman then decides whether to accept or reject a proposal.
-
-\begin{theorem}[Proposal Algorithm Terminates]
-\label{thm:proposal-term}
-The Proposal Algorithm terminates with a stable marriage in at most $n^2$ proposals.
-\end{theorem}
-
-\begin{proof}
-A woman once married will stay married during the course of the algorithm, although her mates may change with time. Furthermore, the desirability of her mates (in her view) can only improve with time. Thus at each step either a woman gets married for the first time, or an already married woman obtains a more desirable mate.
-
-An unattached man always has at least one woman available that he can proposition. This is because every woman he has already proposed to is currently married, and if he runs out of women then all women are married---this cannot happen unless all men are married too. Since at each step the proposer will eliminate one woman on his list, and the total size of the lists is $n^2$, we conclude that the algorithm uses at most $n^2$ proposals.
-
-We claim that the final marriage $M$ is stable. Otherwise, let $X$--$y$ be a dissatisfied pair, where in $M$ they are paired as $X$--$x$ and $Y$--$y$. Since $X$ prefers $y$ to $x$, he must have proposed to $y$ before getting married to $x$. Since $y$ either rejected $X$, or accepted him only to jilt him later, her mates thereafter (including $Y$) must be more desirable to her than $X$. Therefore, $y$ must prefer $Y$ to $X$, contradicting the assumption that $y$ is dissatisfied.
-\end{proof}
-
-\subsection{Average-Case Analysis and the Principle of Deferred Decisions}
-
-Our interest here is in performing an average-case analysis of this algorithm. Thus we are considering a probabilistic analysis of a deterministic algorithm. We introduce this analysis here because it touches upon several tools that are important in the analysis of randomized algorithms.
-
-For this average-case analysis, we assume that the men's lists are chosen independently and uniformly at random; the women's lists can be arbitrary but must be fixed in advance. Let the random variable $T_P$ denote the number of proposals made during the execution of the Proposal Algorithm.
-
-We present a very simple technique---the \emph{Principle of Deferred Decisions}---for getting around problems of dependency in the analysis. The idea is to not assume that the entire set of random choices is made in advance. Rather, at each step of the process we fix only the random choices that must be revealed to the algorithm.
-
-The Principle of Deferred Decisions can be used to simplify the average-case analysis of the Proposal Algorithm as follows. We do not assume that the men have chosen their (random) preference list in advance. Each time a man has to make a proposal, he picks a random woman from the set of women not already propositioned by him, and proceeds to propose to her.
-
-Suppose instead that each time a man makes a proposal, he chooses a woman uniformly at random from the set of all $n$ women, including those to whom he has already proposed. Call this new algorithm the \emph{Amnesiac Algorithm}. The output produced by the Amnesiac Algorithm is exactly the same as that of the original Proposal Algorithm. The only difference is that there are some wasted proposals in the Amnesiac Algorithm. Let $T_A$ denote the number of proposals made by the Amnesiac Algorithm. Clearly, $T_A$ stochastically dominates $T_P$: for all $m$, $\Pr[T_A > m] \geq \Pr[T_P > m]$.
-
-The algorithm terminates with a stable marriage once all women have received at least one proposal each. As will become clear in the next section, bounding the value of $T_A$ is a special case of the Coupon Collector's Problem.
+The reader may wonder how the randomized algorithm can benefit if the AND node
+were to return~1, or if the OR node were to return~0.  If the two children of
+these nodes are leaves, then clearly both leaves must be examined.  The point
+is that at an internal AND node in a tree returning a~1, examining the two OR
+children (and evaluating their sub-trees) in a random order is still
+beneficial.  The two OR children of an AND node must also return~1, and this
+is the easy case for the OR nodes.  Similarly, at an internal OR node
+returning~0, the two AND children must return~0, and this is the easy case
+for the AND nodes.
 
 \begin{theorem}
-\label{thm:stable-marr-prob}
-For any constant $c \in \mathbb{R}$, and $m = n \ln n + cn$,
-\[
-\lim_{n \to \infty} \Pr[T_A > m] = 1 - e^{-e^{-c}}.
-\]
-\end{theorem}
-
-\begin{cpplisting}
-\label{code:stable-marriage}
-\begin{lstlisting}[language=C++, frame=single, framerule=0.4pt,
-  rulecolor=\color{gray}, backgroundcolor=\color{gray!5},
-  basicstyle=\ttfamily\footnotesize, keywordstyle=\bfseries,
-  commentstyle=\itshape\color{gray}, numbers=left,
-  numberstyle=\tiny\color{gray}, numbersep=8pt,
-  tabsize=2, showstringspaces=false]
-#include <algorithm>
-#include <iostream>
-#include <random>
-#include <vector>
-
-struct StableMarriage {
-    int n;
-    std::vector<std::vector<int>> men_prefs;
-    std::vector<std::vector<int>> women_prefs;
-    std::vector<int> women_rank;  // rank[w][m]: how much w likes m
-    std::vector<int> next_proposal;
-    std::vector<int> current_wife;
-    std::vector<int> current_husband;
-    int proposals;
-
-    StableMarriage(int n, std::mt19937& rng)
-        : n(n), men_prefs(n), women_prefs(n),
-          women_rank(n, std::vector<int>(n)),
-          next_proposal(n, 0),
-          current_wife(n, -1), current_husband(n, -1),
-          proposals(0) {
-        // Generate random preference lists
-        for (int i = 0; i < n; ++i) {
-            men_prefs[i].resize(n);
-            for (int j = 0; j < n; ++j) men_prefs[i][j] = j;
-            std::shuffle(men_prefs[i].begin(),
-                         men_prefs[i].end(), rng);
-            women_prefs[i].resize(n);
-            for (int j = 0; j < n; ++j) women_prefs[i][j] = j;
-            std::shuffle(women_prefs[i].begin(),
-                         women_prefs[i].end(), rng);
-            for (int j = 0; j < n; ++j)
-                women_rank[i][women_prefs[i][j]] = j;
-        }
-    }
-
-    void run() {
-        std::vector<int> free_men(n);
-        for (int i = 0; i < n; ++i) free_men[i] = i;
-        while (!free_men.empty()) {
-            int man = free_men.back();
-            int woman = men_prefs[man][next_proposal[man]++];
-            ++proposals;
-            if (current_husband[woman] == -1) {
-                current_husband[woman] = man;
-                current_wife[man] = woman;
-                free_men.pop_back();
-            } else if (women_rank[woman][man]
-                       < women_rank[woman][current_husband[woman]]) {
-                int old = current_husband[woman];
-                current_husband[woman] = man;
-                current_wife[man] = woman;
-                current_wife[old] = -1;
-                free_men.pop_back();
-                free_men.push_back(old);
-            }
-        }
-    }
-
-    bool is_stable() const {
-        for (int m = 0; m < n; ++m) {
-            int w = current_wife[m];
-            for (int pref = 0; pref < women_rank[w][m]; ++pref) {
-                int w_pref = women_prefs[w][pref];
-                int m_curr = current_husband[w];
-                if (women_rank[w_pref][w]
-                    < women_rank[w_pref][current_wife[w_pref]])
-                    return false;
-            }
-        }
-        return true;
-    }
-};
-
-int main() {
-    std::mt19937 rng(42);
-    std::cout << "Stable Marriage (Gale-Shapley):\n";
-    for (int n : {4, 8, 16, 32, 64}) {
-        double total_proposals = 0;
-        int trials = 1000;
-        for (int t = 0; t < trials; ++t) {
-            StableMarriage sm(n, rng);
-            sm.run();
-            total_proposals += sm.proposals;
-        }
-        double avg = total_proposals / trials;
-        double theory = n * std::log(n);
-        std::cout << "  n=" << n
-                  << "  avg_proposals=" << avg
-                  << "  n*ln(n)=" << theory << "\n";
-    }
-    return 0;
-}
-\end{lstlisting}
-\end{cpplisting}
-
-\section{The Coupon Collector's Problem}
-\label{sec:coupon}
-
-In the coupon collector's problem, there are $n$ types of coupons and at each trial a coupon is chosen at random. Each random coupon is equally likely to be of any of the $n$ types, and the random choices of the coupons are mutually independent. Let $m$ be the number of trials. The goal is to study the relationship between $m$ and the probability of having collected at least one copy of each of the $n$ types. The reader may wish to make the correspondence between this process and an occupancy problem (Section~3.1) in which $m$ balls are randomly distributed in $n$ bins.
-
-\subsection{An Elementary Analysis}
-
-Let $X$ be a random variable defined to be the number of trials required to collect at least one of each type of coupon. We first determine the expected value of $X$.
-
-Call the $i$th trial $C_i$ a \emph{success} if the type $C_i$ was not drawn in any of the first $i-1$ selections. We divide the sequence into \emph{epochs}, where epoch $i$ begins with the trial following the $i$th success and ends with the trial on which we obtain the $(i+1)$st success. Define the random variable $X_i$, for $0 \leq i \leq n-1$, to be the number of trials in the $i$th epoch, so that $X = \sum_{i=0}^{n-1} X_i$.
-
-The random variable $X_i$ is geometrically distributed with parameter $p_i = (n-i)/n$ (the probability of drawing one of the $n-i$ remaining coupon types). Thus, the expected value of $X_i$ is $1/p_i = n/(n-i)$ and its variance is $(1-p_i)/p_i^2 = i/(n-i)$. By linearity of expectation,
-\[
-\mathbb{E}[X] = \mathbb{E}\Bigl[\sum_{i=0}^{n-1} X_i\Bigr] = \sum_{i=0}^{n-1} \mathbb{E}[X_i] = \sum_{i=1}^{n} \frac{n}{i} = n H_n.
-\]
-By Proposition~B.4 the $n$th Harmonic number $H_n$ is asymptotically equal to $\ln n + \Theta(1)$, implying that $\mathbb{E}[X] = n \ln n + O(n)$.
-
-\begin{theorem}[Coupon Collector Expected Time]
-\label{thm:coupon-expect}
-The expected number of trials to collect all $n$ coupon types is $n H_n = n \ln n + O(n)$.
-\end{theorem}
-
-Since the $X_i$'s are independent, we can determine the variance of $X$ using the additivity of variances:
-\[
-\sigma_X^2 = \sum_{i=0}^{n-1} \sigma_{X_i}^2 = \sum_{i=0}^{n-1} \frac{i}{(n-i)^2} \leq \frac{n}{2} \sum_{i=1}^{n} \frac{1}{i^2} \leq \frac{\pi^2 n}{12}.
-\]
-
-\begin{exercise}
-Use the Chebyshev inequality to find an upper bound on the probability that $X > \beta n \ln n$, for a constant $\beta > 1$.
-\end{exercise}
-
-Let $\mathcal{E}_i$ denote the event that coupon type $i$ is not collected in the first $r$ trials. Using the inequality $(1 - 1/n)^r \leq e^{-r/n}$, we obtain that
-\[
-\Pr[\mathcal{E}_i] = \Bigl(1 - \frac{1}{n}\Bigr)^r \leq e^{-r/n}.
-\]
-This bound is $n^{-\beta}$ for $r = \beta n \ln n$. Using the union bound, we obtain for $r = \beta n \ln n$,
-\[
-\Pr[X > r] = \Pr\Bigl[\bigcup_{i=1}^{n} \mathcal{E}_i\Bigr] \leq \sum_{i=1}^{n} \Pr[\mathcal{E}_i] \leq n \cdot n^{-\beta} = n^{1-\beta}.
-\]
-
-\subsection{The Poisson Heuristic}
-
-Before we show the sharp concentration result for $X$, the following heuristic argument will help to establish some intuition. The heuristic argument is based on the approximation of the binomial distribution by the Poisson distribution.
-
-Let $N_i^{(r)}$ denote the number of times the coupon of type $i$ is chosen during the first $r$ trials; the event $\mathcal{E}_i$ is the same as the event $\{N_i^{(r)} = 0\}$. The random variable $N_i^{(r)}$ has the binomial distribution with parameters $r$ and $p = 1/n$. For suitably small $\lambda$ and as $r$ approaches $\infty$, the Poisson distribution with parameter $\lambda$ is a good approximation to the binomial distribution with parameters $r$ and $p$. In the current setting, we approximate the distribution of $N_i^{(r)}$ by the Poisson distribution with parameter $\lambda = r/n$. A random variable $Y$ has the Poisson distribution with parameter $\lambda$ if for any non-negative integer $y$,
-\[
-\Pr[Y = y] = \frac{\lambda^y e^{-\lambda}}{y!}.
-\]
-Using this approximation,
-\begin{equation}
-\Pr[\mathcal{E}_i] = \Pr[N_i^{(r)} = 0] \approx \frac{\lambda^0 e^{-\lambda}}{0!} = e^{-r/n}.
-\label{eq:poisson-approx}
-\end{equation}
-
-The main benefit of the Poisson approximation is that we can claim the events $\mathcal{E}_i$, for $1 \leq i \leq n$, are ``almost independent'' even though there is some dependence between them. If the approximation in~\eqref{eq:poisson-approx} were exact, we would obtain that the events $\mathcal{E}_i$ are truly independent. Making the heuristic assumption of independence, we obtain that for $1 \leq i \leq n$, the probability that all coupon types are collected in the first $m$ trials is given by
-\[
-\Pr\Bigl[\bigcap_{i=1}^{n} (\overline{\mathcal{E}_i})\Bigr] = \prod_{i=1}^{n} \Pr[\overline{\mathcal{E}_i}] \approx (1 - e^{-m/n})^n \approx e^{-n e^{-m/n}}.
-\]
-Let $m = n(\ln n + c)$ for any constant $c \in \mathbb{R}$. Then,
-\[
-\Pr[X > m] \approx \Pr\Bigl[\bigcup_{i=1}^{n} \mathcal{E}_i\Bigr] \approx 1 - e^{-e^{-c}}.
-\]
-Observe that this probability $e^{-e^{-c}}$ is close to $1$ for large positive $c$, and is negligibly small for large negative $c$. Thus, the probability of having collected all $n$ coupon types abruptly changes from nearly zero to almost one in a small interval centered around $n \ln n$.
-
-\subsection{A Sharp Threshold}
-
-We now convert the heuristic argument from the previous section into a rigorous (but significantly more complex) proof using the Boole--Bonferroni Inequalities (Proposition~C.2).
-
-\begin{lemma}
-\label{lem:coupon-tech}
-Let $c$ be a real constant, and $m = n \ln n + cn$ for positive integer $n$. Then, for any fixed positive integer $k$,
-\[
-\lim_{n \to \infty} \binom{n}{k}\Bigl(1 - \frac{k}{n}\Bigr)^m = \frac{e^{-ck}}{k!}.
-\]
-\end{lemma}
-
-\begin{theorem}[Sharp Threshold for Coupon Collector]
-\label{thm:coupon-sharp}
-Let the random variable $X$ denote the number of trials for collecting each of the $n$ types of coupons. Then, for any constant $c \in \mathbb{R}$, and $m = n \ln n + cn$,
-\[
-\lim_{n \to \infty} \Pr[X > m] = 1 - e^{-e^{-c}}.
-\]
+\label{thm:gametree}
+Given any instance of $T_{2,k}$, the expected number of steps for the
+randomized algorithm is at most $3^k$.  Since $n=4^k$ leaves, the expected
+running time is $n^{\log_4 3}\approx n^{0.793}$.
 \end{theorem}
 
 \begin{proof}
-We have that the event $\{X > m\} = \bigcup_{i=1}^{n} \mathcal{E}_i$. By the Principle of Inclusion--Exclusion,
+We argue by induction on $k$.  The basis ($k=1$) is the single-node case:
+for an AND (or OR) node with two leaves, the expected cost is at most~$3/2$.
+
+Assume the expected cost of evaluating any instance of $T_{2,k-1}$ is at
+most $3^{k-1}$.  Consider first a tree $T$ whose root is an OR node, each of
+whose children is the root of a copy of $T_{2,k-1}$.
+
+\emph{Case 1: OR evaluates to~1.}
+At least one child returns~1.  With probability~$1/2$ this child is chosen
+first, incurring expected cost at most $3^{k-1}$.  With probability~$1/2$
+both sub-trees are evaluated, incurring cost at most $2\times 3^{k-1}$.
+The expected cost is at most
 \[
-\Pr\Bigl[\bigcup_{i=1}^{n} \mathcal{E}_i\Bigr] = \sum_{k=1}^{n} (-1)^{k+1} P_k,
+  \tfrac{1}{2}\cdot 3^{k-1} + \tfrac{1}{2}\cdot 2\cdot 3^{k-1}
+  = \tfrac{3}{2}\cdot 3^{k-1}.
 \]
-where $P_k = \binom{n}{k} (1 - k/n)^m$ is the $k$th elementary symmetric sum. Let $s_k = P_1 - P_2 + P_3 - \cdots + (-1)^{k+1} P_k$ denote the partial sum formed by the first $k$ terms of this series. By the Boole--Bonferroni inequalities (Proposition~C.2), we have the bracketing property of the partial sums:
+
+\emph{Case 2: OR evaluates to~0.}
+Both children must be evaluated, costing at most $2\times 3^{k-1}$.
+
+Now consider the root of $T_{2,k}$, an AND node.
+
+\emph{Case 1: AND evaluates to~1.}
+Both sub-trees return~1.  By the discussion above, the expected cost of
+evaluating each OR sub-tree that returns~1 is at most
+$\frac{3}{2}\cdot 3^{k-1}$.  By linearity of expectation, the total
+expected cost is at most $2\times\frac{3}{2}\times 3^{k-1}=3^k$.
+
+\emph{Case 2: AND evaluates to~0.}
+At least one sub-tree returns~0.  With probability~$1/2$ the sub-tree
+returning~0 is chosen first, costing at most $2\times 3^{k-1}$ (both its OR
+children must be evaluated).  With probability~$1/2$, an additional cost of
+$\frac{3}{2}\cdot 3^{k-1}$ may be incurred for the sibling returning~1.
+The expected cost is at most
 \[
-s_{2j} \leq \Pr\Bigl[\bigcup_{i=1}^{n} \mathcal{E}_i\Bigr] \leq s_{2j+1}.
+  \tfrac{1}{2}\cdot 2\cdot 3^{k-1}
+  + \tfrac{1}{2}\cdot\bigl(2\cdot 3^{k-1}+\tfrac{3}{2}\cdot 3^{k-1}\bigr)
+  \le 3^k.
 \]
-By Lemma~\ref{lem:coupon-tech}, for each $k$, $P_k \to e^{-ck}/k!$ as $n \to \infty$. Define the partial sums of the terms
-\[
-s_k = \sum_{j=1}^{k} (-1)^{j+1} \frac{e^{-ck}}{k!} = 1 - e^{-e^{-c}}.
-\]
-Notice that the right-hand side consists precisely of the first $k$ terms of the power series expansion of $f(c) = 1 - e^{-e^{-c}}$. We conclude that $\lim_{k \to \infty} s_k = f(c)$. The bracketing property of partial sums then implies that
-\[
-\Pr\Bigl[\bigcup_{i=1}^{n} \mathcal{E}_i\Bigr] \to f(c) = 1 - e^{-e^{-c}}
-\]
-as $n \to \infty$.
+In all cases the expected cost is at most $3^k$.
 \end{proof}
 
-By this theorem, for any real constant $c$, we have
-\[
-\lim_{n \to \infty} \Pr[X < n(\ln n - c)] = e^{-e^c}, \quad
-\lim_{n \to \infty} \Pr[X > n(\ln n + c)] = 1 - e^{-e^{-c}}.
-\]
-Thus, with extremely high probability, the number of trials for collecting all $n$ coupon types lies in a small interval centered about its expected value. This result is almost like a deterministic result since it so sharply identifies the threshold value for collecting all coupons. We refer to such results as \emph{sharp threshold results}.
+\subsection{C++ Implementation}
 
-\begin{cpplisting}
-\label{code:coupon}
-\begin{lstlisting}[language=C++, frame=single, framerule=0.4pt,
-  rulecolor=\color{gray}, backgroundcolor=\color{gray!5},
-  basicstyle=\ttfamily\footnotesize, keywordstyle=\bfseries,
-  commentstyle=\itshape\color{gray}, numbers=left,
-  numberstyle=\tiny\color{gray}, numbersep=8pt,
-  tabsize=2, showstringspaces=false]
-#include <cmath>
-#include <iostream>
-#include <random>
+\begin{lstlisting}[
+  caption={Game tree node and randomized evaluator.},
+  label={lst:gametree}]
 #include <vector>
+#include <random>
+#include <chrono>
+#include <algorithm>
+#include <iostream>
 
-// Simulate the coupon collector: return the number of trials
-// needed to collect all n coupon types.
-int simulate_coupon_collector(int n, std::mt19937& rng) {
-    std::uniform_int_distribution<int> dist(0, n - 1);
-    std::vector<bool> collected(n, false);
-    int remaining = n;
-    int trials = 0;
-    while (remaining > 0) {
-        int coupon = dist(rng);
-        ++trials;
-        if (!collected[coupon]) {
-            collected[coupon] = true;
-            --remaining;
-        }
-    }
-    return trials;
+class RandEng {
+public:
+  static RandEng& get() {
+    static RandEng e; return e;
+  }
+  bool coin() {
+    return std::uniform_real_distribution<>(
+             0.0,1.0)(eng_) < 0.5;
+  }
+private:
+  RandEng()
+    : eng_(std::chrono::steady_clock::now()
+           .time_since_epoch().count()) {}
+  std::mt19937 eng_;
+};
+
+enum class NodeType { AND, OR };
+
+struct TreeNode {
+  NodeType type;
+  bool is_leaf;
+  int value;            // valid only if is_leaf
+  std::vector<TreeNode*> children;
+
+  TreeNode(NodeType t) : type(t), is_leaf(false),
+                         value(0) {}
+  TreeNode(int v) : type(NodeType::AND), is_leaf(true),
+                    value(v) {}
+};
+
+// Randomized evaluation of AND-OR tree
+// Returns number of leaves inspected
+struct EvalResult { bool val; int leaves; };
+
+EvalResult eval_and(TreeNode* v);
+EvalResult eval_or(TreeNode* v);
+
+EvalResult eval_and(TreeNode* v) {
+  if (v->is_leaf) return {v->value==1, 1};
+  // pick child at random
+  int n = v->children.size();
+  int pick = std::uniform_int_distribution<>(
+                 0, n-1)(RandEng::get().eng_);
+  auto r = eval_or(v->children[pick]);
+  int cost = r.leaves;
+  if (!r.val) return {false, cost};
+  // must check the other child
+  for (int i=0;i<n;i++) {
+    if (i==pick) continue;
+    auto r2 = eval_or(v->children[i]);
+    cost += r2.leaves;
+    if (!r2.val) return {false, cost};
+  }
+  return {true, cost};
+}
+
+EvalResult eval_or(TreeNode* v) {
+  if (v->is_leaf) return {v->value==1, 1};
+  int n = v->children.size();
+  int pick = std::uniform_int_distribution<>(
+                 0, n-1)(RandEng::get().eng_);
+  auto r = eval_and(v->children[pick]);
+  int cost = r.leaves;
+  if (r.val) return {true, cost};
+  for (int i=0;i<n;i++) {
+    if (i==pick) continue;
+    auto r2 = eval_and(v->children[i]);
+    cost += r2.leaves;
+    if (r2.val) return {true, cost};
+  }
+  return {false, cost};
+}
+\end{lstlisting}
+
+\begin{lstlisting}[
+  caption={Build a random instance of $T_{2,k}$ and evaluate.},
+  label={lst:gametree_driver}]
+// Build complete binary tree of depth 2k
+// with random leaf values
+TreeNode* build_tree(int k, auto& eng) {
+  if (k==0) {
+    int v = std::uniform_int_distribution<>(
+                0,1)(eng);
+    return new TreeNode(v);
+  }
+  // root is AND at even depth, OR at odd
+  TreeNode* node = new TreeNode(NodeType::AND);
+  node->children.push_back(build_tree(k-1,eng));
+  node->children.push_back(build_tree(k-1,eng));
+  return node;
 }
 
 int main() {
-    std::mt19937 rng(42);
-    std::cout << "Coupon Collector Problem:\n";
-    std::cout << "  n   avg_trials  n*H_n"
-              << "  Pr[X>n(ln n+c)] theory vs sim\n";
+  std::mt19937 eng(
+    std::chrono::steady_clock::now()
+      .time_since_epoch().count());
 
-    for (int n : {10, 50, 100, 500, 1000}) {
-        double harmonic = 0.0;
-        for (int i = 1; i <= n; ++i) harmonic += 1.0 / i;
-        double expected_theory = n * harmonic;
-
-        double total = 0;
-        int trials_sim = 1000;
-        for (int t = 0; t < trials_sim; ++t)
-            total += simulate_coupon_collector(n, rng);
-        double avg = total / trials_sim;
-
-        // Check the sharp threshold for c=0 (m = n ln n)
-        double m_threshold = n * std::log(n);
-        int exceed_count = 0;
-        for (int t = 0; t < trials_sim; ++t) {
-            int tc = 0;
-            std::vector<bool> seen(n, false);
-            int rem = n;
-            std::uniform_int_distribution<int> d(0, n - 1);
-            while (rem > 0 && tc < static_cast<int>(m_threshold)) {
-                int c = d(rng);
-                ++tc;
-                if (!seen[c]) { seen[c] = true; --rem; }
-            }
-            if (rem > 0) ++exceed_count;
-        }
-        double sim_prob = static_cast<double>(exceed_count) / trials_sim;
-        double theory_prob = 1.0 - std::exp(-std::exp(0.0));
-        // For c=0: limit = 1 - e^{-1} ~ 0.6321
-        theory_prob = 1.0 - std::exp(-1.0);
-
-        std::cout << "  " << n << "  " << avg
-                  << "  " << expected_theory
-                  << "  theory=" << theory_prob
-                  << " sim=" << sim_prob << "\n";
+  for (int k=1;k<=8;k++) {
+    int n = 1 << (2*k);  // 4^k leaves
+    double total=0;
+    int trials=10000;
+    for (int t=0;t<trials;t++) {
+      TreeNode* root = build_tree(k,eng);
+      auto r = eval_and(root);
+      total += r.leaves;
     }
-    return 0;
+    double avg = total/trials;
+    double bound = std::pow(3,k);
+    std::cout << "k=" << k
+              << " n=" << n
+              << " avg=" << avg
+              << " 3^k=" << bound
+              << " n^0.793="
+              << std::pow(n,0.79248)
+              << "\n";
+  }
 }
 \end{lstlisting}
-\end{cpplisting}
 
-\section*{Notes}
+\begin{remark}
+The algorithm above is a Las Vegas algorithm: it always produces the correct
+answer, and its running time is the random variable.  The expected running
+time of $n^{0.793}$ is strictly better than the $\Theta(n)$ worst case of any
+deterministic algorithm.
+\end{remark}
+
+%==========================================================================
+\section{The Minimax Principle}
+\label{sec:minimax}
+%==========================================================================
+
+The randomized algorithm of the preceding section has an expected running
+time of $n^{0.793}$ on any uniform binary AND-OR tree with $n$ leaves.  Can
+we establish that no randomized algorithm can have a lower expected running
+time?  We are thus seeking a lower bound on the running time of any
+randomized algorithm for this problem.  As a first step toward this end, we
+introduce a standard technique for proving such lower bounds: the minimax
+principle.  Indeed, it is the only known general technique for proving lower
+bounds on the running times of randomized algorithms.
+
+\subsection{Game Theory}
+
+Consider the following game.  Roberta and Charles put their hands behind
+their backs and make a sign for one of the following: stone (closed fist),
+paper (open palm), and scissors (two fingers).  They then simultaneously
+display their chosen sign.  The winner is determined by the following rules:
+paper beats stone by wrapping it, scissors beats paper by cutting it, and
+stone beats scissors by dulling it.  The loser pays \$1 to the winner, and
+the outcome is a draw when the two players choose the same sign.
+
+\begin{figure}[htbp]
+\centering
+\begin{tabular}{l|rrr}
+         & Scissors & Paper  & Stone \\ \hline
+Scissors &    0     &   1    &  -1   \\
+Paper    &   -1     &   0    &   1   \\
+Stone    &    1     &  -1    &   0   \\
+\end{tabular}
+\caption{Payoff matrix for scissors-paper-stone.}
+\label{fig:payoff}
+\end{figure}
+
+This is an instance of a \emph{two-person zero-sum game}, and the matrix is
+called the \emph{payoff matrix}.  It is called a zero-sum game because the
+net amount won by Roberta and Charles is always exactly zero.  In general,
+any two-person zero-sum game can be represented by an $n\times m$ payoff
+matrix~$\mathbf{M}$ with real entries.  The set of possible strategies of the
+row player~$R$ is in correspondence with the rows of~$\mathbf{M}$, and
+likewise for the strategies of the column player~$C$.  The entry $M_{ij}$ is
+the amount paid by~$C$ to~$R$ when~$R$ chooses strategy~$i$ and~$C$ chooses
+strategy~$j$.
+
+Naturally, the goal of the row (column) player is to maximize (minimize) the
+payoff.  Assume that this is a zero-information game, in that neither player
+has any information about the opponent's strategy.  If~$R$ chooses strategy~$i$,
+then she is guaranteed a payoff of $\min_j M_{ij}$, regardless of~$C$'s
+strategy.  An optimal strategy for~$R$ is an~$i$ that maximizes
+$\min_j M_{ij}$.  Let $V_R = \max_i \min_j M_{ij}$ denote the lower bound
+on the value of the payoff to~$R$ when she uses an optimal strategy.  An
+optimal strategy for~$C$ is a~$j$ that gives the best possible upper bound on
+the payoff from~$C$ to~$R$.  A similar argument establishes that~$C$'s
+optimal strategy ensures that his payoff to~$R$ is at most
+$V_C = \min_j \max_i M_{ij}$.
+
+\begin{exercise}
+Show that the following inequality is valid for all payoff matrices:
+\[
+  \max_i \min_j M_{ij} \;\le\; \min_j \max_i M_{ij}.
+\]
+\end{exercise}
+
+In general, the inequality in Exercise~2.1 is strict; for example, in
+scissors-paper-stone, $V_R=-1$ and $V_C=1$.  When these two quantities are
+equal, the game is said to have a \emph{solution} and the value of the game
+is $V=V_R=V_C$.  The solution (or the \emph{saddle-point}) is the specific
+choice of (optimal) strategies that lead to this payoff.
+
+\subsection{Mixed Strategies and the Minimax Theorem}
+
+What happens when a game has no solution?  Then there is no clear-cut optimal
+strategy for any player.  In fact, any knowledge of the opponent's strategy
+can be used to improve the payoff, unlike the case of games with
+saddle-points.  An interesting way to get around this is to introduce
+randomization in the choice of strategies.  So far we have been talking about
+deterministic or \emph{pure strategies}, but now we focus on randomized or
+\emph{mixed strategies}.  A mixed strategy is a probability distribution on
+the set of possible strategies.  The row player picks a vector
+$\mathbf{p}=(p_1,\ldots,p_n)$, which is a probability distribution on the
+rows of~$\mathbf{M}$, i.e., $p_i$ is the probability that~$R$ will choose
+strategy~$i$; similarly, the column player has a vector
+$\mathbf{q}=(q_1,\ldots,q_m)$, which is a probability distribution on the
+columns of~$\mathbf{M}$.  The payoff is now a random variable, and its
+expectation is given by
+\[
+  \mathbb{E}[\text{payoff}]
+  = \mathbf{p}^T \mathbf{M}\, \mathbf{q}
+  = \sum_{i=1}^{n}\sum_{j=1}^{m} p_i\, M_{ij}\, q_j.
+\]
+
+As before, using $V_R$ to denote the best possible lower bound on the
+expected payoff to~$R$ that can be ensured by choosing a strategy~$\mathbf{p}$,
+and using $V_C$ to denote the best possible upper bound on the expected
+payoff by~$C$ by choosing a strategy~$\mathbf{q}$, we obtain
+\[
+  V_R = \max_{\mathbf{p}} \min_{\mathbf{q}} \mathbf{p}^T\mathbf{M}\,\mathbf{q},
+  \qquad
+  V_C = \min_{\mathbf{q}} \max_{\mathbf{p}} \mathbf{p}^T\mathbf{M}\,\mathbf{q}.
+\]
+
+\begin{theorem}[von Neumann's Minimax Theorem]
+\label{thm:neumann}
+For any two-person zero-sum game specified by a matrix~$\mathbf{M}$,
+\[
+  \max_{\mathbf{p}} \min_{\mathbf{q}} \mathbf{p}^T\mathbf{M}\,\mathbf{q}
+  = \min_{\mathbf{q}} \max_{\mathbf{p}} \mathbf{p}^T\mathbf{M}\,\mathbf{q}.
+\]
+\end{theorem}
+
+In other words, the largest expected payoff that~$R$ can guarantee by choosing
+a mixed strategy is equal to the smallest expected payoff that~$C$ can
+guarantee using a mixed strategy.  This common expected payoff value, called
+the \emph{value of the game}, is denoted by~$V$.  A pair of mixed strategies
+$(\mathbf{p},\mathbf{q})$ which respectively maximize the left-hand side and
+minimize the right-hand side of the equation in Theorem~\ref{thm:neumann} is
+called a saddle-point, and the two distributions are called \emph{optimal mixed
+strategies}.
+
+\begin{theorem}[Loomis' Theorem]
+\label{thm:loomis}
+For any two-person zero-sum game specified by a matrix~$\mathbf{M}$,
+\[
+  \max_{\mathbf{p}} \min_j \mathbf{p}^T\mathbf{M}\,\mathbf{e}_j
+  = \min_{\mathbf{q}} \max_i \mathbf{e}_i^T\mathbf{M}\,\mathbf{q},
+\]
+where $\mathbf{e}_k$ denotes a unit vector with a~1 in the $k$th position
+and~0s elsewhere.
+\end{theorem}
+
+\subsection{Yao's Minimax Principle}
+
+We now describe the application of the above game-theoretic results to
+proving lower bounds on the performance of randomized algorithms.  The idea
+is to view the algorithm designer as the column player~$C$ and the adversary
+choosing the input as the row player~$R$.  The columns correspond to the set
+of all possible algorithms; the rows correspond to the set of all possible
+inputs (of a fixed size).  The payoff from~$C$ to~$R$ is some real-valued
+measure of the performance of an algorithm, such as the running time, the
+quality of the solution obtained, communication cost, or space.
+
+Consider a problem where the number of distinct inputs of a fixed size is
+finite, as is the number of distinct (deterministic, terminating, and always
+correct) algorithms for solving that problem.  A pure strategy for~$C$
+corresponds to the choice of a deterministic algorithm, while a pure strategy
+for~$R$ corresponds to a specific input.  Notice that an optimal pure strategy
+for~$C$ corresponds to an optimal deterministic algorithm, and $V_C$ is the
+worst-case running time of any deterministic algorithm for the problem, which
+we call the \emph{deterministic complexity} of the problem.
+
+Our interest is in the interpretation of the mixed strategies for the
+algorithm designer and the adversary.  A mixed strategy for~$C$ is a
+probability distribution over the space of (always correct) deterministic
+algorithms, so it is a Las Vegas randomized algorithm.  An optimal mixed
+strategy for~$C$ is an optimal Las Vegas algorithm.  A mixed strategy for~$R$
+is a distribution over the space of all inputs.  Let us define the
+\emph{distributional complexity} of the problem at hand as the expected
+running time of the best deterministic algorithm for the worst distribution
+on the inputs.
+
+\begin{proposition}[Yao's Minimax Principle]
+\label{prop:yao}
+Let $\Pi$ be a problem with a finite set~$I$ of input instances (of a fixed
+size), and a finite set~$\mathcal{A}$ of deterministic algorithms.  For input
+$I\in I$ and algorithm $A\in\mathcal{A}$, let $C(I,A)$ denote the running
+time of algorithm~$A$ on input~$I$.  For probability distributions~$\mathbf{p}$
+over~$I$ and~$\mathbf{q}$ over~$\mathcal{A}$, let $I_{\mathbf{p}}$ denote a
+random input chosen according to~$\mathbf{p}$ and $A_{\mathbf{q}}$ denote a
+random algorithm chosen according to~$\mathbf{q}$.  Then:
+\[
+  \min_{A\in\mathcal{A}} \mathbb{E}[C(I_{\mathbf{p}}, A)]
+  \;\le\;
+  \max_{I\in I} \mathbb{E}[C(I, A_{\mathbf{q}})].
+\]
+\end{proposition}
+
+In other words, the expected running time of the optimal deterministic
+algorithm for an arbitrarily chosen input distribution~$\mathbf{p}$ is a
+lower bound on the expected running time of the optimal (Las Vegas)
+randomized algorithm for~$\Pi$.  Thus, to prove a lower bound on the
+randomized complexity, it suffices to choose any distribution~$\mathbf{p}$ on
+the input and prove a lower bound on the expected running time of
+deterministic algorithms for that distribution.  The power of this technique
+lies in the flexibility in the choice of~$\mathbf{p}$ and, more importantly,
+the reduction to a lower bound on deterministic algorithms.  It is important
+to remember that the deterministic algorithm ``knows'' the chosen
+distribution~$\mathbf{p}$.
+
+\subsection{C++ Implementation: Computing Mixed Strategy Equilibria}
+
+\begin{lstlisting}[
+  caption={Solving a $2\times 2$ zero-sum game for optimal mixed strategies.},
+  label={lst:minimax}]
+#include <iostream>
+#include <cmath>
+#include <iomanip>
+
+// Solve a 2x2 zero-sum game with payoff matrix M
+// Returns (V, p1, q1) where
+//   V    = game value
+//   p1   = prob row player plays row 0
+//   q1   = prob col player plays col 0
+struct GameSolution {
+  double V, p1, q1;
+};
+
+GameSolution solve_2x2(double M[2][2]) {
+  // Row player optimal: p*M[:,0] = p*M[:,1]
+  // p*M00 + (1-p)*M10 = p*M01 + (1-p)*M11
+  double denom = M[0][0]-M[0][1]-M[1][0]+M[1][1];
+  double p1 = 0.5;
+  if (std::abs(denom) > 1e-12)
+    p1 = (M[1][1]-M[1][0]) / denom;
+  p1 = std::max(0.0, std::min(1.0, p1));
+
+  double denom2 = M[0][0]-M[1][0]-M[0][1]+M[1][1];
+  double q1 = 0.5;
+  if (std::abs(denom2) > 1e-12)
+    q1 = (M[1][1]-M[0][1]) / denom2;
+  q1 = std::max(0.0, std::min(1.0, q1));
+
+  double V = p1*(q1*M[0][0]+(1-q1)*M[0][1])
+           + (1-p1)*(q1*M[1][0]+(1-q1)*M[1][1]);
+  return {V, p1, q1};
+}
+
+int main() {
+  // Scissors-Paper-Stone
+  double M[2][2] = {{0, 1}, {-1, 0}};
+  auto [V,p1,q1] = solve_2x2(M);
+  std::cout << std::fixed << std::setprecision(4);
+  std::cout << "Modified scissors-paper-stone:\n";
+  std::cout << "  V=" << V
+            << " p=(" << p1 << "," << 1-p1 << ")"
+            << " q=(" << q1 << "," << 1-q1 << ")\n";
+}
+\end{lstlisting}
+
+\subsection{Lower Bound for Game Tree Evaluation}
+
+We now apply Yao's Minimax Principle to the problem of game tree evaluation.
+The lower bound that results only applies to algorithms that terminate in a
+finite number of steps on any input and sequence of random choices.
+
+We once again limit our attention to instances of the AND-OR tree $T_{2,k}$.
+We consider the tree as a balanced binary tree of NORs of depth~$2k$.
+
+\begin{exercise}
+Show that the tree $T_{2,k}$ is equivalent to a balanced binary tree all of
+whose leaves are at distance $2k$ from the root, and all of whose internal
+nodes compute the NOR function: a node returns the value~1 if both inputs
+are~0, and~0 otherwise.
+\end{exercise}
+
+In order to prove a lower bound on the expected number of leaves evaluated by
+any randomized algorithm, we have to specify a distribution on instances
+(values for the leaves), and then prove a lower bound on the expected running
+time of any deterministic algorithm on such inputs.
+
+Let $p=(3-\sqrt{5})/2$.  Each leaf of the tree is independently set to~1
+with probability~$p$.  Note that if each input to a NOR node is independently
+1 with probability~$p$, then the probability that its output is~1 is the
+probability that both its inputs are~0, which is
+\[
+  (1-p)^2 = \frac{(\sqrt{5}-1)^2}{4} = \frac{6-2\sqrt{5}}{4}
+  = \frac{3-\sqrt{5}}{2} = p.
+\]
+Thus the value of every node of the NOR tree is~1 with probability~$p$, and
+the value of a node is independent of the values of all the other nodes on
+the same level.
+
+\begin{proposition}
+Let $T$ be a NOR tree each of whose leaves is independently set to~1 with
+probability~$q$ for a fixed value $q\in[0,1]$.  Let $W(T)$ denote the
+minimum, over all deterministic algorithms, of the expected number of steps to
+evaluate~$T$.  Then, there is a depth-first pruning algorithm whose expected
+number of steps to evaluate~$T$ is $W(T)$.
+\end{proposition}
+
+Proposition~2.7 tells us that for the purposes of our lower bound, we may
+restrict our attention to depth-first pruning algorithms.  For a depth-first
+pruning algorithm evaluating this tree, let $W(h)$ be the expected number of
+leaves it inspects in determining the value of a node at distance~$h$ from
+the leaves.  Clearly
+\[
+  W(h) = W(h-1) + (1-p)\times W(h-1) = (2-p)\,W(h-1),
+\]
+where the first term represents the work done in evaluating one of the
+sub-trees, and the second term represents the work done in evaluating the
+other sub-tree (which will be necessary if the first sub-tree returns the
+value~0, an event occurring with probability~$1-p$).  With $p=(3-\sqrt5)/2$,
+we have $2-p = (1+\sqrt5)/2 \approx 1.618$, so $W(h) \ge ((1+\sqrt5)/2)^h$.
+Letting $h=\log_2 n$, we obtain
+\[
+  W(h) \ge \bigl((1+\sqrt5)/2\bigr)^{\log_2 n}
+        = n^{\log_2((1+\sqrt5)/2)} \approx n^{0.694}.
+\]
+
+\begin{theorem}
+\label{thm:lowerbound}
+The expected running time of any randomized algorithm that always evaluates an
+instance of $T_{2,k}$ correctly is at least $n^{0.694}$, where $n=2^{2k}$ is
+the number of leaves.
+\end{theorem}
+
+\begin{remark}
+Our lower bound of $n^{0.694}$ is less than the upper bound of $n^{0.793}$
+that follows from Theorem~\ref{thm:gametree}.  The gap is due to the choice
+of input distribution; a more careful (and considerably harder) analysis with
+a non-independent distribution shows that the algorithm of
+Section~\ref{sec:gametree} is in fact optimal.
+\end{remark}
+
+%==========================================================================
+\section{Randomness and Non-uniformity}
+\label{sec:nonuniform}
+%==========================================================================
+
+A basic issue in the study of randomized algorithms is the extent to which
+randomization is necessary for solving a problem.  When is it possible to
+remove the randomization in a randomized algorithm?  The answer depends on a
+number of aspects of the problem being solved.  The goal of this section is to
+show that this question is more subtle than appears at first, and touches on
+the issue of uniformity in algorithms.
+
+\subsection{Boolean Circuits}
+
+\begin{definition}
+A \emph{Boolean circuit} with $n$ inputs is a directed acyclic graph with the
+following properties:
+\begin{enumerate}
+  \item There are $n$ vertices of in-degree~0; these are called the inputs and
+    are labeled $x_1,x_2,\ldots,x_n$.  There is one vertex with out-degree~0;
+    this is called the output.
+  \item Every vertex $v$ that is not an input or the output is labeled with one
+    Boolean function $b(v)\in\{\mathrm{AND},\mathrm{OR},\mathrm{NOT}\}$.  A
+    vertex labeled NOT has in-degree~1.
+  \item Under an assignment of input values, each vertex $v$ computes the
+    Boolean function $b(v)$ of the values on its incoming edges.
+  \item The \emph{size} of a circuit is the number of vertices in it.
+\end{enumerate}
+\end{definition}
+
+A \emph{randomized circuit} is very similar, except that there may be more
+than~$n$ vertices of in-degree~0, partitioned into two classes:
+\begin{enumerate}
+  \item \textbf{Random inputs}, each of which is assigned an independent
+    random value from $\{0,1\}$.
+  \item The $n$ \textbf{circuit inputs}, labeled $x_1,\ldots,x_n$.
+\end{enumerate}
+
+A randomized circuit is said to \emph{compute} a function $f$ of the inputs
+$x_1,\ldots,x_n$ if:
+\begin{enumerate}
+  \item For inputs for which $f(x_1,\ldots,x_n)=0$, the output is~0 regardless
+    of the values of random inputs.
+  \item If $f(x_1,\ldots,x_n)=1$, the output is~1 with probability at
+    least~$1/2$.
+\end{enumerate}
+
+\begin{definition}
+A sequence $C=C_1,C_2,\ldots$ of circuits is a \emph{circuit family} for $f$
+if $C_n$ has $n$ inputs and computes $f_n(x_1,\ldots,x_n)$ at its output for
+all $n$-bit inputs.  The family $C$ is \emph{polynomial-sized} if the size
+of $C_n$ is bounded above by $p(n)$ for every $n$, where $p(\cdot)$ is a
+polynomial.
+\end{definition}
+
+\subsection{Adleman's Theorem}
+
+\begin{theorem}[Adleman's Theorem]
+\label{thm:adleman}
+If a Boolean function has a randomized, polynomial-sized circuit family, then
+it has a polynomial-sized circuit family.
+\end{theorem}
+
+\begin{proof}
+We show how to turn a given randomized polynomial-sized circuit~$C_n$ for
+$f_n(x_1,\ldots,x_n)$ using random inputs $r_1,\ldots,r_m$, into a
+deterministic polynomial-sized circuit~$D_n$.
+
+Form a matrix~$\mathbf{M}$ with $2^n$ rows, one for each possible input from
+$\{0,1\}^n$.  The matrix has $2^m$ columns, one for each of the possible
+$m$-tuples from $\{0,1\}^m$ that the $r_i$ can assume.  The entry $M_{jk}$
+is~1 if the setting of $r_1,\ldots,r_m$ corresponding to column~$k$ is a
+\emph{witness} for the input corresponding to row~$j$; otherwise, the entry
+is~0.  Eliminate all rows corresponding to inputs for which $f_n$ evaluates
+to~0.
+
+By definition, at least half the entries of every surviving row equal~1.
+Therefore, there must be a column with at least half its entries~1; in other
+words, there is an assignment of~0s and~1s to the $r_i$ that serves as a
+witness to at least half of the possible inputs.  Let this witness be
+$r_1^{(1)},\ldots,r_m^{(1)}$.  Build a circuit $T_1$, which is a copy
+of~$C_n$ with the random inputs ``hard-wired'' to
+$r_1^{(1)},\ldots,r_m^{(1)}$.  Delete the column corresponding to this
+witness, and all rows that had~1s in this column.
+
+The remaining matrix still has the property that every row has at least half
+its entries equal to~1.  Repeat: pick a second witness
+$r_1^{(2)},\ldots,r_m^{(2)}$ that is a witness for at least half the
+remaining inputs and build a circuit~$T_2$.  Continuing in this manner, we
+delete all rows while building at most~$n$ circuits $T_1,\ldots,T_n$.
+
+Take the OR of the outputs of $T_1,\ldots,T_n$.  This is a (deterministic)
+circuit whose size is $O(n)$ times that of the randomized circuit we started
+with.
+\end{proof}
+
+\begin{corollary}
+$\mathrm{RP}\subseteq\mathrm{P/poly}$.
+\end{corollary}
+
+\begin{remark}
+The technique in Theorem~\ref{thm:adleman} is the first example we have seen
+of \emph{derandomization}---where we take a randomized algorithm and remove
+the randomness.  However, the deterministic circuit generated by this process
+is one that works for a particular value of~$n$.  The circuit it produces for
+$n$ inputs may have very little resemblance to the circuit it produces for
+$n+1$ inputs, even if the original randomized circuits were similar.  Any
+``practical'' algorithm will exhibit the property of \emph{uniformity}, which
+is formalized in the literature as follows.
+\end{remark}
+
+\begin{definition}
+An algorithm~$A$ is said to use \emph{advice}~$a$ if on an input of length~$n$
+it is given the string $a(n)$ on a read-only tape.  We say that $A$ decides a
+language~$L$ with advice~$a$ if on an input~$x$ it uses the read-only string
+$a(|x|)$ to decide the membership of~$x$ in~$L$.
+\end{definition}
+
+The class $\mathrm{P/poly}$ consists of all languages~$L$ that have a
+non-uniform polynomial-time algorithm~$A$ such that the length of the advice
+string $a(n)$ is bounded by a polynomial in~$n$.
+
+\begin{exercise}
+Consider any language $L\subseteq\{0,1\}^*$.  We define a Boolean
+function~$f$ corresponding to the language~$L$ as follows.  For any positive
+integer~$n$, let $f_n$ be the Boolean function such that for any
+$x\in\{0,1\}^n$, $f_n(x)$ assumes the value~1 if $x\in L$ and~0 otherwise.
+Show that $L\in\mathrm{P/poly}$ if and only if it has a polynomial-sized
+circuit family.
+\end{exercise}
+
+In summary, the removal of randomness in Theorem~\ref{thm:adleman} only shows
+that this can be done in principle; it is not known how to do this in any
+uniform or practical way.
+
+%==========================================================================
 \addcontentsline{toc}{section}{Notes}
+\section*{Notes}
+%==========================================================================
 
-Comprehensive treatises on occupancy problems are the books by Johnson and Kotz~\cite{JohnsonKotz1977}, and by Kolchin, Chistiakov, and Sevastianov~\cite{Kolchin1978}. Generally, we will be concerned with statements involving asymptotic estimates on random variables and probabilities. We will return to such estimates for occupancy problems in Chapter~4. Recent work by Azar, Broder, Karlin, and Upfal~\cite{Azar1999} builds on the basic occupancy problem and points out many applications to computer science.
+The material of Section~\ref{sec:gametree} is based on a paper of
+Snir~[381].  Most of the material in Section~\ref{sec:minimax} is covered in
+textbooks on game theory.  Some good sources are the books by
+Wang~[213], Luce and Raiffa~[287], and von Neumann and
+Morgenstern~[411].  Theorem~\ref{thm:neumann} is due to von
+Neumann~[408], and Theorem~\ref{thm:loomis} is due to Loomis~[279].  The
+application of the minimax theorems to proving lower bounds on randomized
+algorithms was pointed out by Yao~[419].  Proposition~\ref{prop:yao} is also
+from~[419].
 
-The history of tail inequalities such as the Chebyshev bound dates back to the early days of probability theory. Following Chebyshev's bound~\cite{Chebyshev1867}, Markov~\cite{Markov1912} observed that the same idea could be used with higher moments. Kolmogorov~\cite{Kolmogorov1929} went further and remarked that $\Pr[X \geq r] \leq \mathbb{E}[f(X)]/s$ for any function $f(X)$, provided that $\mathbb{E}[f(X)]$ exists and $f(x) \geq s > 0$ for all $x \geq r$. The latter idea was exploited by Bernstein and by Chernoff in a manner we will describe in Chapter~4.
+In our lower bound for game tree evaluation, the principle that any
+deterministic algorithm may as well determine the value of one sub-tree before
+inspecting any leaves of its sibling (used in
+Section~\ref{sec:minimax}) is due to Tarsi~[393].  Saks and
+Wigderson~[362] refined the lower bound to show that Snir's algorithm is
+optimal among all randomized algorithms.
 
-Classic sources for deterministic selection algorithms are the papers of Blum, Floyd, Pratt, Rivest, and Tarjan~\cite{Blum1973}, and of Sch\"{o}nhage, Paterson, and Pippenger~\cite{Schonhage1976}. The LazySelect algorithm presented here is a variant on one reported by Floyd and Rivest~\cite{Floyd1975}. The lower bound of $2n$ for median selection is due to Bent and John~\cite{Bent1985}.
+Theorem~\ref{thm:adleman} is due to Adleman~[1]; a version of this theorem
+applicable to circuit families with two-sided error is due to Gill~[166].  The
+notion of non-uniformity is studied in depth in the paper by Karp and
+Lipton~[245].
 
-The construction of pairwise independent random variables in Exercise~3.7 is given in Joffe~\cite{Joffe1946}. Its application to the reduction of random bits used by abstract randomized algorithms is due to Chor and Goldreich~\cite{ChorGoldreich1989}; Luby~\cite{Luby1988} presented this idea in the context of derandomizing algorithms.
-
-The stable marriage problem was introduced by Gale and Shapley~\cite{GaleShapley1962}. The average-case analysis using the Principle of Deferred Decisions follows Knuth~\cite{Knuth1976}. The connection to the Coupon Collector's Problem was noted by Irving~\cite{Irving1985}.
-
-The Coupon Collector's Problem is classical; see the books by Feller~\cite{Feller1968} and by Ross~\cite{Ross1996} for textbook treatments. The sharp threshold result of Theorem~3.8 is due to Erd\"{o}s and R\'{e}nyi~\cite{ErdosRenyi1961}.
-
-\section*{Problems}
+%==========================================================================
 \addcontentsline{toc}{section}{Problems}
+\section*{Problems}
+%==========================================================================
 
-\begin{problem}
-{\bf (Balls into Bins---Maximum Load)} Consider the experiment of throwing $m$ balls into $n$ bins, where each ball lands in a bin chosen independently and uniformly at random. Prove that if $m = n$, then the maximum load $L = \max_{1 \leq i \leq n} X_i$ satisfies
+\begin{exercise}[2.1]
+Show that for any deterministic evaluation algorithm, there is an instance of
+$T_{d,k}$ that forces the algorithm to read the values on all $d^{2k}$ leaves.
+\end{exercise}
+
+\begin{exercise}[2.2]
+Generalize the randomized algorithm and analysis of Section~\ref{sec:gametree}
+to trees $T_{d,k}$ for $d>2$.
+\end{exercise}
+
+\begin{exercise}[2.3]
+(Due to R.~Boppana~[362].)  Consider a uniform rooted tree of height~$h$:
+every leaf is at distance~$h$ from the root.  The root, as well as any
+internal node, has three children.  Each leaf has a Boolean value associated
+with it.  Each internal node returns the value returned by the majority of its
+children.  The evaluation problem consists of determining the value of the
+root; at each step, an algorithm can choose one leaf whose value it wishes to
+read.
+\begin{enumerate}[label=(\alph*)]
+\item Show that for any deterministic algorithm, there is an instance that
+  forces it to read all $n=3^h$ leaves.
+\item Consider the recursive randomized algorithm that evaluates two sub-trees
+  of the root chosen at random.  If the values returned disagree, it proceeds
+  to evaluate the third sub-tree.  Show that the expected number of leaves
+  read by this algorithm (on any instance) is at most $n^{0.91}$.
+\end{enumerate}
+\end{exercise}
+
+\begin{exercise}[2.4]
+Determine the value $V_R$ of the following $2\times 2$ matrix game and give
+optimal mixed strategies for the two players.
 \[
-\Pr\Bigl[L \geq \frac{3 \ln n}{\ln \ln n}\Bigr] \leq \frac{1}{n}.
+  \mathbf{M} = \begin{pmatrix} 3 & 1 \\ 0 & 2 \end{pmatrix}
 \]
-\end{problem}
+\end{exercise}
 
-\begin{problem}
-{\bf (Birthday Paradox---Generalized)} Suppose that we have a universe of size $n$ and we sample $m$ elements independently and uniformly at random. Show that the probability of a collision (two sampled elements being equal) is at most $m^2 / (2n)$. Deduce that for $m = O(\sqrt{n})$, a collision is likely.
-\end{problem}
-
-\begin{problem}
-{\bf (LazySelect---Expected Comparisons)} Prove rigorously that the expected number of comparisons performed by LazySelect is $2n + o(n)$. Your analysis should account for the expected number of retries.
-\end{problem}
-
-\begin{problem}
-{\bf (Pairwise Independence)} Let $n$ be a prime and let $a, b$ be chosen independently and uniformly at random from $\mathbb{Z}_n$. For each $i \in \mathbb{Z}_n$, define $Y_i = ai + b \pmod{n}$. Prove that the $Y_i$'s are pairwise independent but not mutually independent.
-\end{problem}
-
-\begin{problem}
-{\bf (Stable Marriage---Optimality)} Show that the Proposal Algorithm is \emph{male-optimal}: every man receives the best partner possible among all stable marriages. Show by example that it is not female-optimal.
-\end{problem}
-
-\begin{problem}
-{\bf (Coupon Collector---Full Distribution)} Derive a more refined estimate of the distribution of $X$, the number of trials to collect all $n$ coupons. Specifically, show that for any constant $c \in \mathbb{R}$,
+\begin{exercise}[2.5]
+(Due to A.~M.~Karp.)  Let $(a_{ij})$ be an $m\times n$ matrix, let the
+vector $(p_1,p_2,\ldots,p_m)$ consist of reals in $[0,1]$ such that
+$\sum_i p_i=1$, and let $(q_1,q_2,\ldots,q_n)$ consist of reals in $[0,1]$
+such that $\sum_j q_j=1$.  Prove:
 \[
-\Pr[X \leq n \ln n + cn] \to e^{-e^{-c}} \quad \text{as } n \to \infty.
+  \min_j \sum_i p_i a_{ij}
+  \;\le\; \sum_{i,j} p_i a_{ij} q_j
+  \;\le\; \max_i \sum_j a_{ij} q_j.
 \]
-\end{problem}
+\end{exercise}
 
-\begin{problem}
-{\bf (Weighted Coupon Collector)} Suppose there are $n$ coupon types, but coupon $i$ is drawn with probability $p_i$ (where $\sum_i p_i = 1$). Let $X$ be the number of trials to collect all $n$ types. Show that
-\[
-\mathbb{E}[X] = \int_0^{\infty} \Bigl(1 - \prod_{i=1}^{n}(1 - e^{-p_i t})\Bigr)\, dt.
-\]
-\end{problem}
+\begin{exercise}[2.6]
+Use Yao's Minimax Principle to prove a lower bound on the expected running
+time of any Las Vegas algorithm for sorting $n$ numbers.
+\end{exercise}
 
-\begin{problem}
-{\bf (Second Moment Method)} Let $X$ be a non-negative random variable with $\mu = \mathbb{E}[X] > 0$ and $\sigma^2 = \operatorname{Var}(X)$. Prove that
-\[
-\Pr[X > 0] \geq \frac{\mu^2}{\mu^2 + \sigma^2}.
-\]
-Show that this is tight.
-\end{problem}
+\begin{exercise}[2.7]
+(Due to A.~M.~Karp.)  You are given an array~$A$ containing $n$ numbers in
+sorted order.  In one step, an algorithm may specify an integer $i\in[1,n]$,
+and is given the value of $A[i]$ in return.  Determine lower and upper bounds
+on the expected number of steps taken by a Las Vegas randomized algorithm to
+determine whether or not a given key~$k$ is present in the array.
+\end{exercise}
 
-\begin{problem}
-{\bf (Birthday Attack on Hash Functions)} Suppose $h : \{0,1\}^* \to \{0,1\}^k$ is a hash function that maps inputs to $n = 2^k$ values. We hash $m$ independent inputs. Using the birthday bound, show that we need $m \approx 2^{k/2}$ inputs to find a collision with probability $\approx 1/2$. What does this imply for the security of hash functions?
-\end{problem}
-
-\begin{problem}
-{\bf (Amnesiac Algorithm)} Consider the Amnesiac Algorithm for the Stable Marriage Problem, where each man proposes to a uniformly random woman (ignoring past rejections). Prove formally that $T_A$ stochastically dominates $T_P$ (the number of proposals in the original Proposal Algorithm), i.e., $\Pr[T_A > m] \geq \Pr[T_P > m]$ for all $m$.
-\end{problem}
+\begin{exercise}[2.8]
+(Due to A.~M.~Karp.)  In a graph with $n$ vertices, where $n$ is even, a
+perfect matching is a set of $n/2$ edges, no two of which meet at a common
+vertex.  Consider a randomized algorithm that takes an $n$-vertex graph as
+input and correctly determines whether the graph has a perfect matching.  At
+each step the algorithm asks a question of the form ``Is there an edge between
+vertex~$i$ and vertex~$j$?''  The complexity of the algorithm is defined as
+the maximum, over all $n$-vertex graphs~$G$, of the expected number of
+questions $C(n)$ asked when the input graph is~$G$.  Prove: $C(n)=O(n^2)$.
+\end{exercise}
 
 \end{document}

@@ -1,4 +1,5 @@
 \documentclass[twoside,12pt]{book}
+
 \usepackage[utf8]{inputenc}
 \usepackage[T1]{fontenc}
 \usepackage{mathpazo}
@@ -6,7 +7,6 @@
 \usepackage{graphicx}
 \usepackage{listings}
 \usepackage{xcolor}
-\usepackage{hyperref}
 \usepackage{enumitem}
 \usepackage{tikz}
 \usepackage{algorithm}
@@ -15,16 +15,45 @@
 \usepackage{geometry}
 \usepackage{fancyhdr}
 \usepackage{titlesec}
-\geometry{papersize={6in,9in},margin=0.75in,top=0.75in,bottom=0.75in,inner=0.9in,outer=0.65in,headheight=14pt}
+\usepackage[colorlinks=true, linkcolor=blue, citecolor=blue, urlcolor=blue, plainpages=false, pdfpagelabels]{hyperref}
+
+\geometry{
+  papersize={6in,9in},
+  margin=0.75in,
+  top=0.75in,bottom=0.75in,
+  inner=0.85in,outer=0.65in,
+  headheight=14pt
+}
+
 \pagestyle{fancy}
 \fancyhf{}
-\fancyhead[LE]{\small\textit{9. Geometric Algorithms and LP}}
+\fancyhead[LE]{\small\textit{9. Data Structures}}
 \fancyhead[RO]{\small\textit{Randomized Algorithms}}
 \fancyfoot[C]{\thepage}
 \renewcommand{\headrulewidth}{0.4pt}
+
 \definecolor{codegray}{rgb}{0.45,0.45,0.45}
-\lstdefinestyle{cppstyle}{basicstyle=\ttfamily\scriptsize,keywordstyle=\bfseries,commentstyle=\itshape\color{codegray},numbers=left,numberstyle=\tiny\color{codegray},numbersep=8pt,frame=single,framerule=0.4pt,rulecolor=\color{codegray},backgroundcolor=\color{gray!5},breaklines=true,tabsize=4,showstringspaces=false,language=C++}
+\lstdefinestyle{cppstyle}{
+  basicstyle=\ttfamily\scriptsize,
+  keywordstyle=\bfseries,
+  commentstyle=\itshape\color{codegray},
+  numbers=left,
+  numberstyle=\tiny\color{codegray},
+  numbersep=8pt,
+  frame=single,
+  framerule=0.4pt,
+  rulecolor=\color{codegray},
+  backgroundcolor=\color{gray!5},
+  breaklines=true,
+  tabsize=4,
+  showstringspaces=false,
+  language=C++,
+  morekeywords={nullptr,size_t,auto,const,constexpr,
+    unordered_map,vector,pair,mt19937,
+    uniform_int_distribution,INT_MAX}
+}
 \lstset{style=cppstyle}
+
 \theoremstyle{plain}
 \newtheorem{theorem}{Theorem}[chapter]
 \newtheorem{lemma}[theorem]{Lemma}
@@ -38,597 +67,499 @@
 \newtheorem{exercise}[theorem]{Exercise}
 \newtheorem{problem}[theorem]{Problem}
 \newenvironment{cpplisting}{\begin{center}\small}{\end{center}}
+
+\newcommand{\Exp}{\operatorname{\mathbb{E}}}
+\newcommand{\Var}{\operatorname{Var}}
+\newcommand{\Cov}{\operatorname{Cov}}
+
 \begin{document}
 
-\chapter*{9 Geometric Algorithms and Linear Programming}
-\addcontentsline{toc}{chapter}{9 Geometric Algorithms and Linear Programming}
-\markboth{9 Geometric Algorithms and Linear Programming}{Randomized Algorithms}
+\chapter*{9 Data Structures}
+\addcontentsline{toc}{chapter}{9 Data Structures}
+\markboth{9 Data Structures}{Randomized Algorithms}
+\label{ch:data-structures}
 
-Computational geometry is one of the richest domains for randomized algorithms. Many fundamental geometric problems---constructing convex hulls, triangulations, trapezoidal decompositions, and solving linear programs---admit elegant randomized algorithms that are both simpler and faster than their best deterministic counterparts. The unifying technique is \emph{randomized incremental construction}: we process the input elements in a random order, maintaining a partial solution that is updated as each new element arrives. The power of this paradigm lies in its analysis via \emph{backward analysis}, which reveals that the expected cost of each insertion step is small precisely because a random element is unlikely to disrupt the existing structure.
+Data structures are the backbone of efficient computation. The ability to maintain a dynamically changing collection of elements while supporting fast search, insertion, and deletion is fundamental to nearly every area of computer science. In this chapter we study how randomization can be used to design data structures that are both simple and provably efficient, often matching or surpassing the performance of their deterministic counterparts while requiring far less structural bookkeeping.
 
-In this chapter we develop the theory and practice of randomized geometric algorithms. We begin with the incremental paradigm and backward analysis, then apply these tools to a sequence of geometric problems: convex hulls, half-space intersections, Delaunay triangulations, trapezoidal decompositions, binary space partitions, and the diameter problem. We then study \emph{random sampling}, a powerful technique for building small-space data structures with provable approximation guarantees. Finally, we tackle linear programming in fixed dimension, presenting Seidel's beautifully simple randomized algorithm and its analysis.
-
-%% ============================================================
-\section{Randomized Incremental Construction}
-\label{sec:ric}
-%% ============================================================
-
-The \emph{randomized incremental construction} (RIC) paradigm is a general approach for solving geometric problems. The recipe is:
-
-\begin{enumerate}[nosep]
-    \item Choose a random permutation $\sigma$ of the $n$ input elements.
-    \item Initialize a solution with the first few elements (typically $O(d)$ for problems in $\mathbb{R}^d$).
-    \item Process the remaining elements one at a time in the order given by $\sigma$.
-    \item After inserting the $i$-th element, update the partial solution to incorporate it.
-\end{enumerate}
-
-The key question is: what is the expected cost of inserting the $i$-th element? The answer comes from \emph{backward analysis}.
-
-\begin{definition}[Backward analysis]
-In backward analysis, we fix the solution after processing all $n$ elements and look backwards: we ask, ``what is the expected cost of going from the solution after $i$ elements to the solution after $i-1$ elements?'' Since the permutation is random, element $i$ is equally likely to be any of the $n$ elements that appear in positions $i, i+1, \ldots, n$.
-\end{definition}
-
-\begin{theorem}[Backward analysis principle]
-\label{thm:backward}
-Suppose that for each subset $S \subseteq \{1, \ldots, n\}$ with $|S| = i$, the number of elements in $S$ whose removal would change the solution is at most $k_i$. Then the expected cost of processing element $i$ in the random permutation is at most $k_i / i$.
-\end{theorem}
-
-\begin{proof}
-Fix any subset $S$ of size $i$. The solution after processing $S$ depends only on $S$, not on the order of processing (assuming the algorithm is order-independent for subsets of the same size). Element $i$ in the permutation is uniformly distributed over all elements of $S$ (by symmetry of random permutations). The element causes a non-trivial update if and only if it is one of the at most $k_i$ ``important'' elements. Hence the expected cost is at most $k_i / i$.
-\end{proof}
-
-\begin{theorem}[Total expected cost]
-\label{thm:ric-total}
-If the expected cost of processing element $i$ is at most $k_i / i$ and $\sum_{i=1}^{n} k_i / i = O(n \log n)$, then the randomized incremental algorithm runs in expected $O(n \log n)$ time.
-\end{theorem}
-
-This theorem is remarkably powerful: it reduces the analysis of a randomized algorithm to a purely combinatorial argument about the structure of the problem. In many geometric problems, $k_i = O(i)$ (a constant fraction of the elements are ``important''), giving the desired $O(n \log n)$ bound.
-
-\begin{remark}
-The beauty of backward analysis is that it works even when the individual insertion costs vary wildly. We never need to bound the cost of inserting a specific element---only the expected cost over the random choice of permutation.
-\end{remark}
+The key insight is that random choices, made independently at insert time, can replace the complex rebalancing logic required by deterministic balanced trees. We study three major paradigms: \emph{randomized balanced search trees} (treaps), \emph{randomized balanced lists} (skip lists), and \emph{hashing} (both universal and perfect). Each paradigm trades different resources---pointer overhead, space, or preprocessing---for expected constant or logarithmic time per operation.
 
 %% ============================================================
-\section{Convex Hulls in the Plane}
-\label{sec:convex-hull}
+\section{The Fundamental Data-structuring Problem}
+\label{sec:fundamental-data-structuring}
 %% ============================================================
 
-The \emph{convex hull} of a set $P$ of $n$ points in the plane is the smallest convex polygon containing all of $P$. It is the intersection of all half-planes containing $P$, and its vertices are a subset of $P$.
+A \emph{dictionary} (also called a \emph{dynamic set}) is a data structure that maintains a set $S$ of elements drawn from some universe $\mathcal{U}$, supporting the following operations:
 
-\begin{definition}[Convex hull]
-The convex hull $\operatorname{conv}(P)$ of a point set $P \subset \mathbb{R}^2$ is the set of all convex combinations of points in $P$:
-\[
-\operatorname{conv}(P) = \left\{ \sum_{i=1}^{n} \lambda_i p_i \;\middle|\; \lambda_i \geq 0,\; \sum_{i=1}^{n} \lambda_i = 1,\; p_i \in P \right\}.
-\]
-\end{definition}
-
-\subsection{Gift wrapping}
-
-The simplest algorithm for computing the convex hull is \emph{gift wrapping} (Jarvis march). Starting from the leftmost point, we repeatedly find the next hull vertex by scanning all remaining points and selecting the one with the smallest angle relative to the current edge. This runs in $O(nh)$ time where $h$ is the number of hull vertices, which is optimal for output-sensitive algorithms but slow when $h = \Theta(n)$.
-
-\subsection{The randomized incremental algorithm}
-
-A better approach uses randomized incremental construction. We process the points in random order and maintain the convex hull of the points seen so far. When a new point $p_{i+1}$ arrives, one of two things happens:
 \begin{itemize}[nosep]
-    \item $p_{i+1}$ is inside the current hull: no update needed.
-    \item $p_{i+1}$ is outside the current hull: it ``sees'' one or more edges of the current hull, and the hull is updated by removing those edges and connecting $p_{i+1}$ to the visible portion.
+    \item \textbf{Insert}$(x)$: Add element $x$ to $S$ (if not already present).
+    \item \textbf{Delete}$(x)$: Remove element $x$ from $S$ (if present).
+    \item \textbf{Search}$(x)$: Return a pointer to the element $x$ in $S$, or report that $x \notin S$.
 \end{itemize}
 
-\begin{theorem}[Randomized incremental convex hull]
-\label{thm:convex-hull}
-The randomized incremental algorithm computes the convex hull of $n$ points in the plane in expected $O(n \log n)$ time.
+When elements carry keys from a totally ordered universe, the dictionary problem becomes the \emph{dynamic dictionary with ordered keys}, and we additionally support \emph{successor} and \emph{predecessor} queries.
+
+\begin{theorem}[Comparison-based lower bound]
+Any dictionary data structure that supports insert, delete, and search on $n$ elements using only comparisons between keys must perform $\Omega(\log n)$ comparisons per operation in the worst case, in any comparison tree model.
 \end{theorem}
 
-\begin{proof}
-We use backward analysis. Consider the solution after $i$ points have been processed: a convex polygon with $h_i$ vertices. We ask: for how many of the $i$ points could the removal of that point change the hull?
+This lower bound is tight: \emph{balanced binary search trees} (such as AVL trees, red--black trees, or B-trees) achieve $O(\log n)$ worst-case time per operation by maintaining explicit balance information through rotations and augmentations. However, the engineering complexity of maintaining perfect balance deterministically is substantial.
 
-A point can only be removed from the hull if it is a vertex of the hull. There are at most $h_i$ such points. But actually, the removal of a hull vertex $v$ changes the hull only if $v$ was inserted at some step $j \leq i$ and caused a non-trivial update. The key observation is that each point can cause at most $O(1)$ changes to the hull structure per update.
+\subsection{The randomized approach}
 
-More precisely, when we remove the last-inserted element (which is uniformly random among the $i$ elements), the expected number of edges added or removed is:
-\[
-\frac{\text{total number of edge changes}}{i} \leq \frac{h_i}{i} \leq \frac{i}{i} = O(1).
-\]
-Summing over $i = 1, \ldots, n$, the total expected cost is:
-\[
-\sum_{i=1}^{n} O(1) = O(n).
-\]
-Combined with the $O(n \log n)$ sorting cost (to find initial points), the total expected time is $O(n \log n)$.
-\end{proof}
+Randomized data structures achieve the same $O(\log n)$ \emph{expected} time per operation by making random decisions that ``happen to'' maintain balance with high probability, without any explicit balancing mechanism.
 
-\begin{remark}
-This matches the $\Omega(n \log n)$ lower bound for convex hulls under algebraic computation tree models. The randomized incremental algorithm is essentially optimal.
-\end{remark}
+\begin{definition}[High probability]
+An event $E_n$ holds \emph{with high probability} (w.h.p.) if for every constant $c > 0$, there exists a constant $n_0$ such that $\Pr[E_n] \geq 1 - n^{-c}$ for all $n \geq n_0$.
+\end{definition}
+
+The randomization approach has several advantages:
+\begin{enumerate}[nosep]
+    \item \textbf{Simplicity:} No complex rebalancing logic is needed.
+    \item \textbf{No worst-case input:} No adversary can consistently force $\Omega(n)$ time on every operation, since the random choices are made at runtime and are hidden from the input.
+    \item \textbf{Worst-case avoidance:} Randomization ``smooths out'' the input distribution, ensuring expected logarithmic performance regardless of the sequence of operations.
+\end{enumerate}
+
+The following three sections develop randomized data structures for the dictionary problem: treaps (Section~\ref{sec:treaps}), skip lists (Section~\ref{sec:skip-lists}), and hash tables (Sections~\ref{sec:hash-tables}--\ref{sec:perfect-hashing}).
+
+%% ============================================================
+\section{Random Treaps}
+\label{sec:treaps}
+%% ============================================================
+
+A \emph{treap} (tree + heap) is a randomized binary search tree that combines the binary search tree property on keys with the heap property on randomly assigned priorities. The treap was introduced by Aragon and Seidel~\cite{aron1989}.
+
+\begin{definition}[Treap]
+A \emph{treap} on $n$ elements is a binary tree $T$ where each node $v$ stores a key $k(v)$ and a priority $p(v)$. The tree satisfies:
+\begin{enumerate}[nosep]
+    \item \textbf{BST property:} For every node $v$, all keys in the left subtree of $v$ are less than $k(v)$, and all keys in the right subtree are greater than $k(v)$.
+    \item \textbf{Heap property:} For every node $v$ (other than the root), $p(v) < p(\text{parent}(v))$. That is, priorities form a min-heap.
+\end{enumerate}
+\end{definition}
+
+The key observation is that once the keys are fixed, there is exactly one binary tree shape that satisfies both the BST property and the heap property simultaneously. Since the priorities are assigned uniformly at random from a sufficiently large range, every permutation of priorities is equally likely, and hence every valid tree shape is equally likely.
 
 \begin{example}
-For $n = 1000$ random points in the unit square, the convex hull typically has $O(\log n)$ vertices (since the expected number of vertices of the convex hull of $n$ random points in a convex region is $O(\log n)$). The incremental algorithm processes most points in $O(1)$ time (since they fall inside the current hull), with occasional expensive steps when a point falls outside.
+Consider the keys $\{1, 2, 3, 4, 5\}$ with random priorities. If the priorities assigned are $(1: 5, 2: 3, 3: 1, 4: 4, 5: 2)$, the treap has node 3 as root (priority 1, the minimum), with left subtree $\{1, 2\}$ and right subtree $\{4, 5\}$. Within the left subtree, node 2 (priority 2) is the root, with 1 as its left child.
 \end{example}
 
-%% ============================================================
-\section{Duality}
-\label{sec:duality}
-%% ============================================================
+\subsection{Search}
 
-\emph{Duality} is a fundamental technique in computational geometry that transforms problems about points into problems about lines (or hyperplanes) and vice versa.
+Searching in a treap is identical to searching in a standard BST: compare the search key with the current node's key, go left if smaller, right if larger, and stop when the key is found or a null pointer is reached.
 
-\begin{definition}[Point-line duality]
-The \emph{primal-dual} transformation in the plane maps a point $p = (a, b)$ to the line $p^* : y = ax - b$, and a line $\ell : y = mx + c$ to the point $\ell^* = (m, -c)$. We extend this to vertical lines and points at infinity.
-\end{definition}
-
-The duality transformation has the crucial property of \emph{order preservation}: point $p$ lies above line $\ell$ if and only if the dual point $\ell^*$ lies above the dual line $p^*$.
-
-\begin{theorem}[Duality preserves above-below]
-For a non-vertical line $\ell: y = mx + c$ and a point $p = (a, b)$:
-\[
-p \text{ is above } \ell \iff b > ma + c \iff -c < ma - b \iff \ell^* \text{ is above } p^*.
-\]
-\end{theorem}
-
-This property has immediate consequences for convex hulls and half-space intersections:
-
-\begin{theorem}[Duality of convex hull and half-space intersection]
-The upper hull of a point set $P$ in the primal plane corresponds to the intersection of the upper half-planes in the dual plane. Specifically, the upper convex hull of $P$ is dual to the boundary of $\bigcap_{p \in P} \{q : q \text{ is above } p^*\}$.
-\end{theorem}
-
-\begin{definition}[Upper and lower hull]
-Given a point set $P$ with distinct $x$-coordinates, the \emph{upper convex hull} is the chain of hull vertices from the leftmost to the rightmost point that forms the upper boundary. The \emph{lower convex hull} is the corresponding lower boundary. Together they form the full convex hull.
-\end{definition}
-
-Duality allows us to solve many geometric problems interchangeably: an algorithm for convex hulls gives an algorithm for half-space intersection and vice versa.
-
-\begin{remark}
-There are many other duality transformations in computational geometry, including projective duality, oriented matroid duality, and point-hyperplane duality in higher dimensions. The primal-dual transformation we study here is the simplest and most commonly used.
-\end{remark}
-
-%% ============================================================
-\section{Half-space Intersections}
-\label{sec:halfspace}
-%% ============================================================
-
-The \emph{half-space intersection problem} asks: given $n$ half-spaces (or half-planes in 2D), compute their intersection. This is the dual problem to the convex hull problem.
-
-\begin{definition}[Half-space intersection]
-A half-plane in $\mathbb{R}^2$ is a set of the form $h_i = \{(x,y) : a_i x + b_i y \leq c_i\}$. The intersection problem asks for $\bigcap_{i=1}^{n} h_i$.
-\end{definition}
-
-By duality, an algorithm for convex hulls directly gives an algorithm for half-space intersection: dualize each half-plane to a point, compute the convex hull of the dual points, and dualize back.
-
-\begin{theorem}[Randomized incremental half-space intersection]
-\label{thm:halfspace}
-The intersection of $n$ half-planes in the plane can be computed in expected $O(n \log n)$ time using a randomized incremental algorithm.
-\end{theorem}
-
-\begin{proof}
-Apply the convex hull algorithm to the dual point set. By duality, the upper (resp.\ lower) hull of the dual points corresponds to the boundary of the half-plane intersection from above (resp.\ below). The randomized incremental convex hull algorithm (Theorem~\ref{thm:convex-hull}) runs in expected $O(n \log n)$ time, and the duality transformation and its inverse each take $O(n)$ time.
-\end{proof}
-
-\begin{remark}
-Half-space intersection in 2D is thus computationally equivalent to convex hull construction in 2D. In higher dimensions ($d \geq 3$), the problems are also dual, but the complexity grows: the convex hull of $n$ points in $\mathbb{R}^d$ can have $\Theta(n^{\lceil d/2 \rceil})$ vertices in the worst case.
-\end{remark}
-
-\begin{example}[Linear programming feasibility]
-A system of linear inequalities $Ax \leq b$ in $\mathbb{R}^2$ asks whether the intersection of $n$ half-planes is non-empty. This can be solved by computing the intersection and checking whether it is empty. For fixed dimension $d$, Seidel's randomized LP algorithm (Section~\ref{sec:lp}) solves this more efficiently.
-\end{example}
-
-%% ============================================================
-\section{Delaunay Triangulations}
-\label{sec:delaunay}
-%% ============================================================
-
-The \emph{Delaunay triangulation} of a point set $P$ is one of the most important structures in computational geometry, with applications in mesh generation, interpolation, geographic information systems, and more.
-
-\begin{definition}[Delaunay triangulation]
-The Delaunay triangulation of a point set $P \subset \mathbb{R}^2$ is a triangulation of the convex hull of $P$ such that no point of $P$ lies inside the circumcircle of any triangle. Equivalently, for every edge $e$ that is not on the convex hull boundary, the two triangles sharing $e$ satisfy the \emph{empty circumcircle property}.
-\end{definition}
-
-\begin{theorem}[Empty circle characterization]
-An edge $e = (p_i, p_j)$ is in the Delaunay triangulation of $P$ if and only if there exists a circle passing through $p_i$ and $p_j$ that contains no other point of $P$ in its interior.
-\end{theorem}
-
-\begin{theorem}[Properties of Delaunay triangulations]
-\label{thm:delaunay-props}
-Let $P$ be a set of $n$ points in general position in $\mathbb{R}^2$. Then:
-\begin{enumerate}[nosep]
-    \item The Delaunay triangulation exists and is unique (in general position).
-    \item It has at most $2n - 5$ triangles and at most $3n - 6$ edges.
-    \item It maximizes the minimum angle among all triangulations of $P$.
-    \item It is the dual graph of the Voronoi diagram of $P$.
-\end{enumerate}
-\end{theorem}
-
-\subsection{The flip algorithm}
-
-A simple approach to computing the Delaunay triangulation is the \emph{flip algorithm}: start with any triangulation, and repeatedly flip edges that violate the empty circumcircle property. An edge $e$ shared by two triangles is flipped by replacing $e$ with the other diagonal of the quadrilateral formed by the two triangles.
-
-\begin{theorem}[Flip algorithm termination]
-The flip algorithm terminates in at most $O(n^2)$ flips. Each flip increases the angle sequence in the lexicographic order, and there are finitely many triangulations.
-\end{theorem}
-
-\subsection{Randomized incremental construction}
-
-A more efficient approach uses randomized incremental construction with flips.
-
-\begin{theorem}[Randomized incremental Delaunay]
-\label{thm:delaunay-ric}
-The Delaunay triangulation of $n$ points in the plane can be computed in expected $O(n \log n)$ time using a randomized incremental algorithm.
-\end{theorem}
-
-\begin{proof}
-We insert points in random order, maintaining the Delaunay triangulation of the points seen so far. When a new point $p$ is inserted inside some triangle $T$:
-\begin{enumerate}[nosep]
-    \item Split $T$ into three new triangles by connecting $p$ to the three vertices of $T$.
-    \item Check each new edge for the empty circumcircle property. If violated, flip the edge.
-    \item After each flip, check the two new edges. Continue until all edges satisfy the property.
-\end{enumerate}
-
-By backward analysis, the expected number of flips per insertion is $O(1)$. The total expected number of flips is $O(n)$. Combined with the $O(n \log n)$ preprocessing, the total expected time is $O(n \log n)$.
-\end{proof}
-
-\begin{remark}
-The Delaunay triangulation is closely related to the Voronoi diagram. The Voronoi diagram partitions $\mathbb{R}^2$ into regions, one per point, where each region consists of all points closer to its defining point than to any other. The Delaunay triangulation is obtained by connecting the Voronoi-adjacent points. The randomized incremental algorithm for Voronoi diagrams follows the same paradigm.
-\end{remark}
-
-%% ============================================================
-\section{Trapezoidal Decompositions}
-\label{sec:trapezoidal}
-%% ============================================================
-
-A \emph{trapezoidal decomposition} (or \emph{trapezoidal map}) of a planar subdivision partitions the plane into trapezoids and triangles by drawing horizontal segments from each vertex to the nearest vertex or edge above and below it.
-
-\begin{definition}[Trapezoidal map]
-Given a set $S$ of non-intersecting line segments in the plane, the trapezoidal map $\mathcal{T}(S)$ is a subdivision of the plane into trapezoids (and possibly triangles) obtained by shooting horizontal rays left and right from each vertex of $S$ until they hit another segment or the boundary.
-\end{definition}
-
-\subsection{Randomized construction and point location}
-
-Trapezoidal maps are used for \emph{point location}: given a query point, determine which face of the subdivision contains it.
-
-\begin{algorithm}
-\caption{Randomized Trapezoidal Map Construction}
-\label{alg:trapezoidal}
+\begin{algorithm}[H]
+\caption{Treap Search}
 \begin{algorithmic}[1]
-\State Initialize $\mathcal{T}$ with a bounding box trapezoid
-\State Shuffle segments randomly: $\sigma \leftarrow$ random permutation of $S$
-\For{$i = 1$ to $n$}
-    \State Find the trapezoid in $\mathcal{T}$ containing the left endpoint of $s_i$
-    \State Split the trapezoid(s) intersected by $s_i$
-    \State Update the search structure (history DAG)
-\EndFor
-\end{algorithmic}
-\end{algorithm}
-
-The construction builds a \emph{history DAG}: a directed acyclic graph where each internal node represents a search decision (``is the query point above or below segment $s_i$?'' or ``is the query point to the left or right of the left endpoint of $s_i$?'') and each leaf represents a trapezoid. A point location query is answered by traversing the DAG from root to leaf.
-
-\begin{theorem}[Trapezoidal map complexity]
-\label{thm:trapezoidal}
-For $n$ non-intersecting line segments, the trapezoidal map has $O(n)$ trapezoids. The randomized incremental construction runs in expected $O(n \log n)$ time and space.
-\end{theorem}
-
-\begin{proof}
-The number of trapezoids is $O(n)$ by Euler's formula for planar subdivisions. The construction time follows from backward analysis: each insertion of segment $s_i$ affects $O(1)$ expected trapezoids. The total expected cost is $\sum_{i=1}^{n} O(1) = O(n)$, plus $O(n \log n)$ for sorting.
-\end{proof}
-
-\begin{theorem}[Point location query]
-\label{thm:point-location}
-After constructing the history DAG in expected $O(n \log n)$ time using $O(n)$ space, point location queries can be answered in $O(\log n)$ expected time.
-\end{theorem}
-
-\begin{proof}
-A query point $q$ is located by starting at the root of the DAG and making a series of comparison decisions, each moving down one level. The expected depth of the DAG is $O(\log n)$, since each decision reduces the expected remaining uncertainty by a constant factor. Each comparison takes $O(1)$ time.
-\end{proof}
-
-\begin{remark}
-The trapezoidal map construction is a fundamental building block for many other geometric algorithms, including polygon triangulation, visibility computations, and point-in-polygon queries. The randomized approach avoids the complex case analysis required by deterministic sweep-line algorithms.
-\end{remark}
-
-%% ============================================================
-\section{Binary Space Partitions}
-\label{sec:bsp}
-%% ============================================================
-
-A \emph{binary space partition} (BSP) tree recursively decomposes space into convex regions by splitting with hyperplanes. BSP trees are widely used in computer graphics for hidden surface removal and rendering.
-
-\begin{definition}[BSP tree]
-A BSP tree for a set of objects in $\mathbb{R}^d$ is a binary tree where each internal node stores a splitting hyperplane, and each leaf stores a region of space. The splitting hyperplane partitions the objects at that node into left and right children. Objects that cross the splitting plane are \emph{fragmented} into sub-objects on each side.
-\end{definition}
-
-\begin{definition}[BSP size]
-The \emph{size} of a BSP tree is the total number of fragments of all input objects across all leaves. A BSP is \emph{good} if its size is $O(n)$ (linear in the number of input objects).
-\end{definition}
-
-\subsection{Randomized BSP construction}
-
-For a set of $n$ line segments in the plane, the randomized BSP algorithm picks a random segment at each recursive step as the splitter.
-
-\begin{algorithm}
-\caption{Randomized BSP for Line Segments}
-\label{alg:bsp}
-\begin{algorithmic}[1]
-\Function{BuildBSP}{segments $S$}
-    \If{$|S| \leq 1$}
-        \State \Return leaf node containing $S$
+\Function{TreapSearch}{$v, k$}
+    \If{$v = \text{null}$}
+        \State \Return{null}
     \EndIf
-    \State Pick $s \in S$ uniformly at random
-    \State $S_{\text{left}} \leftarrow \{t \in S \setminus \{s\} : t \text{ is in left half-space of } s\}$
-    \State $S_{\text{right}} \leftarrow \{t \in S \setminus \{s\} : t \text{ is in right half-space of } s\}$
-    \State $S_{\text{split}} \leftarrow \{t \in S \setminus \{s\} : t \text{ crosses the line of } s\}$
-    \State Split each $t \in S_{\text{split}}$ into $t_{\text{left}}$ and $t_{\text{right}}$
-    \State \Return node with splitting segment $s$, children $\text{BuildBSP}(S_{\text{left}} \cup S_{\text{split,left}})$ and $\text{BuildBSP}(S_{\text{right}} \cup S_{\text{split,right}})$
-\EndFunction
-\end{algorithmic}
-\end{algorithm}
-
-\begin{theorem}[Expected BSP size]
-\label{thm:bsp-size}
-The randomized BSP algorithm for $n$ non-intersecting line segments in the plane produces a BSP of expected size $O(n \log n)$ for arbitrary segments. For many natural input classes (e.g., disjoint segments, segments with bounded density), the expected size is $O(n)$.
-\end{theorem}
-
-\begin{proof}
-A segment $t$ is split by a segment $s$ only if $s$ crosses the line containing $t$. The expected number of splits is analyzed by backward analysis: when segment $s$ is chosen as the splitter, the probability that it splits a specific segment $t$ is at most $c / |S|$ for some constant $c$ depending on the geometric configuration. The total expected splits across the recursion is bounded by $O(n \log n)$ in general, and $O(n)$ for bounded-density inputs.
-\end{proof}
-
-\begin{remark}
-The problem of constructing BSPs of provably linear size for arbitrary line segments in the plane remains open. Paterson and Yao (1990) showed that $\Omega(n \log n / \log \log n)$ fragments are necessary in the worst case.
-\end{remark}
-
-%% ============================================================
-\section{The Diameter of a Point Set}
-\label{sec:diameter}
-%% ============================================================
-
-The \emph{diameter} of a point set $P \subset \mathbb{R}^2$ is the maximum pairwise distance between any two points.
-
-\begin{definition}[Diameter]
-The diameter of $P$ is $\operatorname{diam}(P) = \max_{p, q \in P} \|p - q\|$.
-\end{definition}
-
-The naive approach checks all $\binom{n}{2}$ pairs, yielding $O(n^2)$ time. We can do much better.
-
-\begin{theorem}[Diameter via convex hull]
-\label{thm:diameter-hull}
-The diameter of $P$ equals the diameter of $\operatorname{conv}(P)$, and can be found by examining only pairs of convex hull vertices.
-\end{theorem}
-
-\begin{proof}
-If $p$ and $q$ are not both hull vertices, then one of them lies inside the convex hull of $P$, and the distance can be increased by moving to a hull vertex.
-\end{proof}
-
-\begin{theorem}[Randomized diameter]
-\label{thm:diameter-rand}
-The diameter of $n$ points in $\mathbb{R}^2$ can be computed in expected $O(n)$ time after computing the convex hull, using a prune-and-search approach based on random sampling.
-\end{theorem}
-
-\begin{proof}
-We use the following \emph{prune-and-search} paradigm:
-
-\begin{enumerate}[nosep]
-    \item Compute a random sample $R \subseteq P$ of size $r = \Theta(\sqrt{n})$.
-    \item Compute the diameter of $R$ by brute force: $O(r^2)$ time.
-    \item Use the diameter of $R$ to ``prune'' points of $P$ that cannot be diameter endpoints.
-    \item Recurse on the remaining candidate points.
-\end{enumerate}
-
-The pruning step uses the following observation: if the diameter of $R$ is $\delta$, then any point $p$ with $\|p - q\| < \delta/2$ for all $q \in R$ cannot be a diameter endpoint of $P$ (since the diameter of $P$ is at least $\delta$, and $p$ is too close to all of $R$).
-
-By choosing $r = \Theta(\sqrt{n})$, each level of the recursion removes a constant fraction of points, giving a total expected time of $O(n)$ after the convex hull is computed.
-\end{proof}
-
-\begin{remark}
-The diameter problem illustrates the power of random sampling in computational geometry: a small random sample captures the global structure of the point set, allowing us to prune large fractions of the input with high confidence.
-\end{remark}
-
-%% ============================================================
-\section{Random Sampling}
-\label{sec:sampling}
-%% ============================================================
-
-Random sampling is a fundamental technique in computational geometry, with applications ranging from range searching to conflict management in incremental algorithms.
-
-\begin{definition}[$\varepsilon$-net]
-Let $(X, \mathcal{R})$ be a range space (where $X$ is a set and $\mathcal{R}$ is a family of subsets of $X$) with \emph{doubling dimension} or \emph{Vapnik--Chervonenkis (VC) dimension} $d$. A subset $S \subseteq X$ is an \emph{$\varepsilon$-net} for $\mathcal{R}$ if every range $R \in \mathcal{R}$ with $|R| \geq \varepsilon |X|$ contains at least one point of $S$.
-\end{definition}
-
-\begin{definition}[$\varepsilon$-approximation]
-A subset $S \subseteq X$ is an \emph{$\varepsilon$-approximation} for $\mathcal{R}$ if for every range $R \in \mathcal{R}$:
-\[
-\left| \frac{|R \cap S|}{|S|} - \frac{|R|}{|X|} \right| \leq \varepsilon.
-\]
-\end{definition}
-
-\begin{theorem}[Random sampling: $\varepsilon$-net]
-\label{thm:eps-net}
-Let $(X, \mathcal{R})$ be a range space with VC dimension $d$. A random sample $S \subseteq X$ of size
-\[
-|S| = O\!\left(\frac{1}{\varepsilon} \left(d \log \frac{1}{\varepsilon} + \log \frac{1}{\delta}\right)\right)
-\]
-is an $\varepsilon$-net for $\mathcal{R}$ with probability at least $1 - \delta$.
-\end{theorem}
-
-\begin{proof}
-We use the probabilistic method. Fix a range $R$ with $|R|/|X| \geq \varepsilon$. The probability that $S$ misses $R$ entirely is:
-\[
-\Pr[S \cap R = \emptyset] = \prod_{i=0}^{|S|-1} \left(1 - \frac{|R|}{|X| - i}\right) \leq \left(1 - \varepsilon\right)^{|S|} \leq e^{-\varepsilon |S|}.
-\]
-By the VC dimension bound, the number of distinct ranges is at most $O(|X|^d)$ (using Sauer's lemma). By a union bound over all ranges of size $\geq \varepsilon |X|$, the probability that any such range is missed is at most:
-\[
-O(|X|^d) \cdot e^{-\varepsilon |S|}.
-\]
-Setting this to $\leq \delta$ and solving for $|S|$ gives $|S| = O(\frac{1}{\varepsilon}(d \log |X| + \log \frac{1}{\delta}))$. For uniform distributions, this simplifies to $O(\frac{1}{\varepsilon} \log \frac{1}{\delta})$.
-\end{proof}
-
-\begin{theorem}[Random sampling: $\varepsilon$-approximation]
-\label{thm:eps-approx}
-Let $(X, \mathcal{R})$ be a range space with VC dimension $d$. A random sample $S \subseteq X$ of size
-\[
-|S| = O\!\left(\frac{d}{\varepsilon^2} \log \frac{1}{\delta}\right)
-\]
-is an $\varepsilon$-approximation for $\mathcal{R}$ with probability at least $1 - \delta$.
-\end{theorem}
-
-\begin{remark}
-The VC dimension of half-planes in $\mathbb{R}^2$ is 3. Therefore, a random sample of $O(\frac{1}{\varepsilon} \log \frac{1}{\delta})$ points is an $\varepsilon$-net for half-plane ranges with high probability.
-\end{remark}
-
-\begin{example}[Range searching with sampling]
-To build a small-space range counting data structure, we can use random sampling as a ``coarse'' approximation. For a query range $R$, the sample estimate $|R \cap S| / |S| \cdot n$ approximates $|R \cap P|$ within additive error $\varepsilon n$ with high probability, using only $O(1/\varepsilon^2)$ space.
-\end{example}
-
-%% ============================================================
-\section{Linear Programming}
-\label{sec:lp}
-%% ============================================================
-
-\emph{Linear programming} (LP) in fixed dimension is one of the most important problems in optimization. We study a beautiful randomized algorithm due to Seidel that solves LP in $d$ dimensions with expected running time $O(d! \cdot n)$.
-
-\begin{definition}[Linear program]
-A linear program in standard form is:
-\[
-\begin{array}{ll}
-\text{minimize} & c^T x \\
-\text{subject to} & a_i^T x \leq b_i, \quad i = 1, \ldots, n
-\end{array}
-\]
-where $x \in \mathbb{R}^d$, $c \in \mathbb{R}^d$, $a_i \in \mathbb{R}^d$, and $b_i \in \mathbb{R}$.
-\end{definition}
-
-\subsection{Seidel's randomized LP algorithm}
-
-Seidel's algorithm is a masterpiece of simplicity and elegance. The idea is to process constraints in a random order, maintaining the optimal solution. When a new constraint is added, two cases arise:
-\begin{enumerate}[nosep]
-    \item The current optimum satisfies the new constraint: do nothing.
-    \item The current optimum violates the new constraint: the new optimum lies on the boundary $a_i^T x = b_i$, reducing the problem to a $(d-1)$-dimensional LP.
-\end{enumerate}
-
-\begin{algorithm}
-\caption{Seidel's Randomized LP Algorithm}
-\label{alg:seidel-lp}
-\begin{algorithmic}[1]
-\Function{SolveLP}{$A, b, c, d$}
-    \If{$n = 0$ or $d = 0$}
-        \State \Return origin (or solve trivially)
-    \EndIf
-    \State Shuffle constraints randomly
-    \State $x \leftarrow \text{SolveLP}(A[1..n-1], b[1..n-1], c, d)$ \Comment{solve without last constraint}
-    \If{$a_n^T x \leq b_n$}
-        \State \Return $x$ \Comment{last constraint satisfied}
+    \If{$k = k(v)$}
+        \State \Return{$v$}
+    \ElsIf{$k < k(v)$}
+        \State \Return{TreapSearch($v.\text{left}, k$)}
     \Else
-        \State \Return $\text{SolveLP on hyperplane } a_n^T x = b_n$ \Comment{reduce dimension}
+        \State \Return{TreapSearch($v.\text{right}, k$)}
     \EndIf
 \EndFunction
 \end{algorithmic}
 \end{algorithm}
 
-The reduction to $(d-1)$ dimensions is the key insight. On the hyperplane $a_n^T x = b_n$, we substitute one variable (the one with the largest coefficient in $a_n$) to eliminate it, obtaining an LP in $d-1$ dimensions with $n-1$ constraints.
+\subsection{Insertion}
 
-\begin{theorem}[Seidel's randomized LP]
-\label{thm:seidel-lp}
-Seidel's randomized algorithm solves a linear program with $n$ constraints in $d$ variables in expected time $O(d! \cdot n)$.
+To insert a new element with key $k$ and a freshly generated random priority $p$, we perform a standard BST insertion to find the correct leaf position for $k$, then \emph{rotate} upward whenever the new node's priority is smaller than its parent's priority.
+
+\begin{algorithm}[H]
+\caption{Treap Insertion}
+\begin{algorithmic}[1]
+\Function{TreapInsert}{$T, k$}
+    \State $p \gets$ random priority
+    \State $T \gets$ BST-Insert($T, k, p$)
+    \State $v \gets$ node containing $k$
+    \While{$v \neq \text{root}$ \textbf{and} $p(v) < p(v.\text{parent})$}
+        \If{$v = v.\text{parent}.\text{left}$}
+            \State Right-Rotate($v.\text{parent}$)
+        \Else
+            \State Left-Rotate($v.\text{parent}$)
+        \EndIf
+    \EndWhile
+    \State \Return{$T$}
+\EndFunction
+\end{algorithmic}
+\end{algorithm}
+
+Each rotation takes $O(1)$ time and maintains the BST property. The total number of rotations is at most the depth of the inserted node in the BST, which is $O(n)$ in the worst case but $O(\log n)$ in expectation.
+
+\subsection{Deletion}
+
+Deletion in a treap uses rotations to push the target node down to a leaf, then removes it. Specifically, if we wish to delete node $v$:
+\begin{enumerate}[nosep]
+    \item While $v$ has two children, rotate it with the child that has the smaller priority.
+    \item When $v$ has at most one child, splice $v$ out of the tree.
+\end{enumerate}
+
+\subsection{Join and Split}
+
+Treaps support two additional operations that are useful for more complex data structures:
+
+\begin{definition}[Join and Split]
+\begin{itemize}[nosep]
+    \item \textbf{Join}$(T_1, T_2)$: Given two treaps $T_1$ and $T_2$ where all keys in $T_1$ are less than all keys in $T_2$, merge them into a single treap.
+    \item \textbf{Split}$(T, k)$: Given a treap $T$ and a key $k$, split $T$ into two treaps $T_1$ and $T_2$ where all keys in $T_1$ are $\leq k$ and all keys in $T_2$ are $> k$.
+\end{itemize}
+\end{definition}
+
+\textbf{Join} is implemented by comparing the priorities of the two roots. If the root of $T_1$ has the smaller priority, its right subtree is recursively joined with $T_2$; otherwise, the root of $T_2$'s left subtree is recursively joined with $T_1$. This process follows a single root-to-leaf path, taking $O(\log n)$ expected time.
+
+\textbf{Split} is implemented by descending through the tree: at each node, if $k$ is less than the node's key, the node and its left subtree go to $T_1$, and we split the right subtree; otherwise, the node and its right subtree go to $T_2$, and we split the left subtree. Split takes $O(\log n)$ expected time.
+
+\subsection{Analysis}
+
+The efficiency of treaps hinges on the following observation: the treap is structurally identical to a BST built by inserting elements in order of increasing priority.
+
+\begin{theorem}\label{thm:treap}
+The expected height of a treap on $n$ nodes is $O(\log n)$. Furthermore, the expected cost of each treap operation (insert, delete, search) is $O(\log n)$.
 \end{theorem}
 
 \begin{proof}
-The algorithm is recursive. Let $T(n, d)$ be the expected running time. At each step, we solve a subproblem with $n-1$ constraints in dimension $d$ (cost $T(n-1, d)$), check one constraint (cost $O(d)$), and with probability at most $d/n$ (since at most $d$ constraints can be ``tight'' at the optimum), we recurse on a $(d-1)$-dimensional LP with $n-1$ constraints (cost $T(n-1, d-1)$).
+Consider a fixed set of $n$ keys with priorities drawn uniformly at random from $\{1, 2, \ldots, N\}$ for $N \gg n$. The treap shape is the same as the BST obtained by inserting the keys in priority order. The depth of any node $v$ in the treap is exactly the number of elements that are ancestors of $v$, which equals the number of elements whose priority is smaller than $p(v)$ among those in $v$'s subtree. This is a standard property of random BSTs.
 
-This gives the recurrence:
-\[
-T(n, d) \leq T(n-1, d) + O(d) + \frac{d}{n} \cdot T(n-1, d-1).
-\]
-By induction, $T(n, d) \leq c_d \cdot n$ where $c_d$ satisfies $c_d = c_d + d \cdot c_{d-1} + O(d)$, giving $c_d = O(d \cdot c_{d-1}) = O(d!)$.
+By the well-known analysis of random BSTs (see~\cite{devroye1988}), the expected depth of any node is at most $2 \ln n + O(1)$, and the expected height is $O(\log n)$. Specifically, the probability that the height exceeds $c \log n$ is at most $n^{1-c}$, so the height is $O(\log n)$ with high probability for any constant $c > 1$.
+
+Each operation traverses a single root-to-leaf path (for search, split) or performs at most as many rotations as the depth of the affected node (for insert, delete). Therefore, each operation costs $O(\log n)$ in expectation.
 \end{proof}
 
-\begin{corollary}
-For $d = 2$ (two-dimensional LP), the expected running time is $O(n)$. For $d = 3$, it is $O(n)$ with a larger constant.
-\end{corollary}
-
-\subsection{Clarkson's algorithm}
-
-Clarkson's algorithm (1989) provides an alternative randomized approach with a different trade-off: it maintains a \emph{basis} of at most $d$ constraints and uses random sampling to detect and correct violations.
-
-\begin{theorem}[Clarkson's randomized LP]
-\label{thm:clarkson-lp}
-Clarkson's algorithm solves LP in $d$ dimensions with $n$ constraints in expected $O(d^2 \cdot n)$ time, using $O(d \cdot n)$ space.
-\end{theorem}
-
-Clarkson's approach has the advantage of being more naturally parallelizable and extensible to other optimization problems.
-
-\begin{remark}
-The contrast between Seidel's $O(d! \cdot n)$ and Clarkson's $O(d^2 \cdot n)$ for fixed $d$ illustrates a common trade-off in randomized algorithms: simpler recursive algorithms (Seidel) may have worse constants but cleaner analysis, while more sophisticated approaches (Clarkson) achieve better dependence on $d$ at the cost of additional structural complexity.
-\end{remark}
-
-\begin{remark}
-For large $d$, neither Seidel's nor Clarkson's algorithm is competitive with the simplex method or interior-point methods used in practice. The randomized algorithms are most valuable when $d$ is a small constant (e.g., $d \leq 10$), where the $O(n)$ dependence on $n$ dominates.
-\end{remark}
+\begin{cpplisting}
+\textbf{C++ implementation:} See \texttt{src/chapter8/treap.h} for a complete implementation
+of a treap supporting insert, search, remove, and height measurement.
+\end{cpplisting}
 
 %% ============================================================
-\section*{Notes}
-\label{sec:notes-9}
+\section{Skip Lists}
+\label{sec:skip-lists}
 %% ============================================================
 
-The study of randomized algorithms in computational geometry was pioneered by Seidel (1991), who introduced the randomized incremental framework for linear programming and many other geometric problems. Clarkson and Shor (1989) developed the technique of random sampling and its applications to range searching and conflict management. Mulmuley (1994) provided a comprehensive treatment of randomized algorithms in computational geometry, including detailed analyses of incremental construction and backward analysis.
+A \emph{skip list} is a randomized data structure invented by Pugh~\cite{pugh1990} that achieves $O(\log n)$ expected search time using a layered system of linked lists. Skip lists can be viewed as a probabilistic alternative to balanced trees, trading worst-case guarantees for simplicity and excellent practical performance.
 
-The randomized incremental approach to convex hulls was analyzed by Seidel (1991) and independently by Mulmuley, Mulmuley, and Vazirani (1992). The Delaunay triangulation algorithm of Section~\ref{sec:delaunay} follows the flip-based approach analyzed by Guibas, Knuth, and Sharir (1992).
+\begin{definition}[Skip list]
+A \emph{skip list} for a set $S = \{s_1 < s_2 < \cdots < s_n\}$ of $n$ sorted elements is a collection of linked lists $L_0, L_1, \ldots, L_h$, where:
+\begin{enumerate}[nosep]
+    \item $L_0$ contains all $n$ elements of $S$ in sorted order (the ``base'' list).
+    \item $L_i$ is a random subset of $L_{i-1}$ for each $i \geq 1$.
+    \item Each element in $L_i$ (for $i \geq 1$) is independently promoted to $L_{i+1}$ with probability $1/2$.
+    \item A sentinel $-\infty$ is the first element of every list, and $+\infty$ is the last.
+\end{enumerate}
+\end{definition}
 
-Trapezoidal maps and randomized point location were developed by Mulmuley (1990) and later refined by Mulmuley and Vazirani (1992). The analysis via history DAGs and backward analysis is due to these authors.
-
-Binary space partitions for line segments were studied by Paterson and Yao (1990), who showed that randomized BSPs have expected $O(n \log n)$ size. The question of whether linear-size BSPs exist for all segment sets remains open.
-
-Random sampling and $\varepsilon$-nets were introduced by Haussler and Welzl (1987) and further developed by Matou\v{s}ek (1991). The VC dimension theory underlying Theorems~\ref{thm:eps-net} and~\ref{thm:eps-approx} is due to Vapnik and Chervonenkis (1971).
-
-The diameter problem in the plane was solved optimally in $O(n \log n)$ time by Shamos (1978) using the convex hull, and the prune-and-search approach of Theorem~\ref{thm:diameter-rand} is attributed to various authors including Dobkin and Snyder (1979).
-
+Each node in the skip list contains:
 \begin{itemize}[nosep]
-    \item R.~Seidel, ``Linear Programming and Convex Hulls Made Easy,'' \textit{Proc.\ 2nd ACM Symposium on Computational Geometry}, 1991.
-    \item K.~L.~Clarkson and R.~Shor, ``Applications of Random Sampling in Computational Geometry, II,'' \textit{Discrete \& Computational Geometry}, 4:387--421, 1989.
-    \item K.~Mulmuley, \textit{Computational Geometry: An Introduction Through Randomized Algorithms}, Prentice Hall, 1994.
-    \item D.~Haussler and E.~Welzl, ``$\varepsilon$-Nets and Simplex Range Queries,'' \textit{Discrete \& Computational Geometry}, 2:127--151, 1987.
-    \item J.~Matou\v{s}ek, ``Efficient Polyhedron Intersection Queries,'' \textit{Proc.\ 7th ACM Symposium on Computational Geometry}, 1991.
-    \item M.~S.~Paterson and F.~F.~Yao, ``Binary Space Partitions for Rectangles,'' \textit{SIAM J.\ Comput.}, 19(2):296--309, 1990.
-    \item L.~Guibas, D.~E.~Knuth, and M.~Sharir, ``Randomized Incremental Construction of Delaunay and Voronoi Diagrams,'' \textit{Algorithmica}, 7:381--413, 1992.
-    \item D.~P.~Dobkin and J.~I.~Munro, ``Finding the Diameter of a Set of Points,'' \textit{Proc.\ 11th ACM STOC}, 1979.
+    \item A \emph{key} (the element value).
+    \item An array of \emph{forward pointers}, one per level, pointing to the next element at that level.
+    \item The \emph{level} of the node: the highest level at which it appears.
 \end{itemize}
 
+\subsection{Search}
+
+Search in a skip list starts at the topmost level of the sentinel and proceeds rightward and downward:
+
+\begin{algorithm}[H]
+\caption{Skip List Search}
+\begin{algorithmic}[1]
+\Function{SkipSearch}{$\text{head}, k$}
+    \State $v \gets \text{head}$
+    \State $i \gets \text{top level}$
+    \While{$i \geq 0$}
+        \While{$v.\text{forward}[i].\text{key} < k$}
+            \State $v \gets v.\text{forward}[i]$
+        \EndWhile
+        \State $i \gets i - 1$
+    \EndWhile
+    \State $v \gets v.\text{forward}[0]$
+    \If{$v.\text{key} = k$}
+        \State \Return{$v$}
+    \Else
+        \State \Return{null}
+    \EndIf
+\EndFunction
+\end{algorithmic}
+\end{algorithm}
+
+The key insight is that at level $i$, each step ``skips'' over approximately $2^i$ elements. The expected number of steps at level $i$ is $O(1)$ (since each forward pointer skips an expected 2 elements at the next level down). Summing over $O(\log n)$ levels gives $O(\log n)$ expected search time.
+
+\subsection{Insertion and Deletion}
+
+Insertion and deletion follow the same pattern as search: we locate the correct position using the same search procedure, maintaining an update vector of the last node seen at each level. We then splice in (or remove) the new (or deleted) node at each level, adjusting forward pointers.
+
+The level of a new node is determined by \emph{coin flips}: flip a fair coin until it comes up tails; the number of heads plus one is the node's level. This gives a geometric distribution with parameter $1/2$:
+\[
+\Pr[\text{level} = i] = 2^{-i}, \quad i \geq 1.
+\]
+
+\subsection{Analysis}
+
+\begin{theorem}\label{thm:skip-list}
+The expected search time in a skip list of $n$ elements is $O(\log n)$, and the expected space is $O(n)$.
+\end{theorem}
+
+\begin{proof}
+Let $N_i$ denote the expected number of elements examined at level $i$ during a search. At level $i$, each step moves to the next element in $L_i$, and the expected distance between consecutive elements in $L_i$ is $2$ (since each element in $L_{i-1}$ is promoted to $L_i$ with probability $1/2$). Therefore, the expected number of steps at level $i$ is at most $n/2^i$ (the number of elements in $L_i$) divided by the expected gap size.
+
+A cleaner argument proceeds by backwards analysis. At each level, the expected number of forward pointer traversals is $O(1)$. The maximum level is $\Theta(\log n)$ with high probability, since the probability that any element reaches level $c \log n$ is at most $n \cdot 2^{-c \log n} = n^{1-c}$.
+
+For the space: the expected number of nodes at level $i$ is $n/2^i$. Summing over all levels:
+\[
+\sum_{i=0}^{\infty} \frac{n}{2^i} = 2n = O(n).
+\]
+\end{proof}
+
+\begin{remark}
+Skip lists have excellent practical performance due to their cache-friendly sequential access patterns. In practice, skip lists often outperform balanced trees despite their lack of worst-case guarantees.
+\end{remark}
+
+\subsection{Comparison with balanced BSTs}
+
+\begin{table}[H]
+\centering
+\begin{tabular}{@{}lccc@{}}
+\toprule
+\textbf{Feature} & \textbf{Treap} & \textbf{Skip List} & \textbf{AVL Tree} \\
+\midrule
+Search (expected) & $O(\log n)$ & $O(\log n)$ & $O(\log n)$ \\
+Search (worst) & $O(n)$ & $O(n)$ & $O(\log n)$ \\
+Insert (expected) & $O(\log n)$ & $O(\log n)$ & $O(\log n)$ \\
+Space & $O(n)$ & $O(n)$ & $O(n)$ \\
+Simplicity & High & Very High & Low \\
+Cache performance & Moderate & Good & Moderate \\
+\bottomrule
+\end{tabular}
+\caption{Comparison of randomized and deterministic balanced tree structures.}
+\end{table}
+
+\begin{cpplisting}
+\textbf{C++ implementation:} See \texttt{src/chapter8/skip\_list.h} for a complete
+implementation of a skip list with configurable maximum level and geometric promotion.
+\end{cpplisting}
+
 %% ============================================================
+\section{Hash Tables}
+\label{sec:hash-tables}
+%% ============================================================
+
+Hash tables provide a fundamentally different approach to the dictionary problem: rather than maintaining sorted order, they map elements directly to positions in an array using a hash function. With a good hash function, each operation takes $O(1)$ \emph{expected} time, which is optimal.
+
+\begin{definition}[Hash function]
+A \emph{hash function} $h: \mathcal{U} \to \{0, 1, \ldots, m-1\}$ maps elements from a universe $\mathcal{U}$ to an array of $m$ slots. The quality of the hash function is determined by how uniformly it distributes elements across the array.
+\end{definition}
+
+\subsection{Universal hash families}
+
+The idea of universal hashing, introduced by Carter and Wegman~\cite{carter1979}, is to choose the hash function randomly from a family of hash functions at the beginning of the computation, before any elements are known.
+
+\begin{definition}[Universal hash family]
+A family $\mathcal{H}$ of hash functions from $\mathcal{U}$ to $\{0, 1, \ldots, m-1\}$ is called \emph{universal} if for all $x \neq y$ in $\mathcal{U}$:
+\[
+\Pr_{h \in \mathcal{H}}[h(x) = h(y)] \leq \frac{1}{m}.
+\]
+That is, for any two distinct elements, the probability of a collision is at most $1/m$.
+\end{definition}
+
+\begin{definition}[Pairwise independent hash family]
+A family $\mathcal{H}$ is \emph{pairwise independent} (or \emph{2-universal}) if for all $x \neq y$ and all $a, b \in \{0, \ldots, m-1\}$:
+\[
+\Pr_{h \in \mathcal{H}}[h(x) = a \text{ and } h(y) = b] = \frac{1}{m^2}.
+\]
+\end{definition}
+
+A standard universal hash family is the \emph{multiply-shift} family. Let $p$ be a prime larger than $|\mathcal{U}|$. For $a \in \{1, \ldots, p-1\}$ and $b \in \{0, \ldots, p-1\}$, define:
+\[
+h_{a,b}(x) = ((ax + b) \bmod p) \bmod m.
+\]
+The family $\mathcal{H} = \{h_{a,b} : a \in \{1, \ldots, p-1\}, b \in \{0, \ldots, p-1\}\}$ is universal.
+
+\begin{theorem}\label{thm:universal-hash}
+If $\mathcal{H}$ is a universal hash family and $n$ elements are hashed into an array of size $m$ using a randomly chosen $h \in \mathcal{H}$, then the expected number of collisions is at most $n^2/(2m)$.
+\end{theorem}
+
+\begin{proof}
+The number of collisions is $\sum_{i < j} \mathbf{1}[h(x_i) = h(x_j)]$. By linearity of expectation and universality:
+\[
+\mathbb{E}[\text{collisions}] = \sum_{i < j} \Pr[h(x_i) = h(x_j)] \leq \binom{n}{2} \cdot \frac{1}{m} < \frac{n^2}{2m}.
+\]
+\end{proof}
+
+\subsection{Collision resolution}
+
+Since the hash function maps a larger universe to a smaller array, collisions (two elements hashing to the same slot) are inevitable. There are two primary approaches:
+
+\paragraph{Chaining.} Each slot $j$ contains a linked list (or other collection) of all elements with $h(x) = j$. A search at slot $j$ scans this list. If the hash function is universal and $m = \Theta(n)$, the expected length of each chain is $O(1)$, giving $O(1)$ expected search time.
+
+\paragraph{Open addressing.} All elements are stored directly in the array. When a collision occurs, we probe a sequence of alternative slots (determined by a probe sequence) until an empty slot is found. With uniform hashing, the expected number of probes is $O(1/(1-\alpha))$, where $\alpha = n/m$ is the \emph{load factor}.
+
+\begin{algorithm}[H]
+\caption{Hash Table with Chaining}
+\begin{algorithmic}[1]
+\Function{HashInsert}{$T, x$}
+    \State $j \gets h(x)$
+    \State Prepend $x$ to $T[j]$
+\EndFunction
+\State
+\Function{HashSearch}{$T, x$}
+    \State $j \gets h(x)$
+    \State Search for $x$ in $T[j]$
+    \State \Return{result of search}
+\EndFunction
+\end{algorithmic}
+\end{algorithm}
+
+\begin{theorem}\label{thm:hash-table}
+With universal hashing and chaining, the expected time per operation (insert, search, delete) is $O(1 + n/m)$. Choosing $m = \Theta(n)$ gives $O(1)$ expected time per operation.
+\end{theorem}
+
+\subsection{Linear probing}
+
+In linear probing, when a collision occurs at slot $j$, we examine slots $j+1, j+2, \ldots$ (wrapping around) until an empty slot is found. Linear probing has excellent cache performance due to sequential memory access, but its analysis is more complex.
+
+The expected number of probes for a successful search with load factor $\alpha < 1$ is:
+\[
+\frac{1}{2}\left(1 + \frac{1}{1-\alpha}\right),
+\]
+and for an unsuccessful search:
+\[
+\frac{1}{2}\left(1 + \frac{1}{(1-\alpha)^2}\right).
+\]
+
+These bounds hold under the \emph{simple uniform hashing} assumption: each key is equally likely to hash to any slot, independently of other keys.
+
+\begin{cpplisting}
+\textbf{C++ implementation:} See \texttt{src/chapter8/hash\_table.h} for a complete
+implementation of a universal hash table with chaining and the multiply-shift hash family.
+\end{cpplisting}
+
+%% ============================================================
+\section{Hashing with \texorpdfstring{$O(1)$}{O(1)} Search Time}
+\label{sec:perfect-hashing}
+%% ============================================================
+
+Universal hashing provides $O(1)$ \emph{expected} time per operation, but not worst-case bounds. The \emph{perfect hashing} problem asks for a hash table that achieves $O(1)$ \emph{worst-case} search time using $O(n)$ space.
+
+\subsection{FKS perfect hashing}
+
+The seminal result of Fredman, Koml\'{o}s, and Szemer\'{e}di~\cite{fredman1984} achieves this via a two-level hashing scheme:
+
+\begin{definition}[FKS perfect hashing]
+The FKS scheme uses two levels of hashing:
+\begin{enumerate}[nosep]
+    \item \textbf{Level 1:} A primary hash function $h_1: \mathcal{U} \to \{0, 1, \ldots, m-1\}$ with $m = n$ is chosen from a universal family. This maps elements to $n$ ``buckets.''
+    \item \textbf{Level 2:} For each bucket $i$ containing $n_i$ elements, a secondary hash function $h_i: \text{bucket}_i \to \{0, 1, \ldots, n_i^2 - 1\}$ is chosen from a universal family. The secondary table for bucket $i$ has size $n_i^2$.
+\end{enumerate}
+\end{definition}
+
+The key insight is that the secondary hash function is chosen \emph{after} the bucket is known, so we can search for a hash function that maps the $n_i$ elements to distinct positions (a \emph{perfect hash function} for that bucket).
+
+\begin{theorem}\label{thm:fks}
+With probability at least $1/2$, a randomly chosen primary hash function in the FKS scheme maps every bucket $i$ to at most $O(n_i^2)$ total secondary table space. The total space is $O(n)$ with high probability, and search time is $O(1)$ worst-case.
+\end{theorem}
+
+\begin{proof}
+The total secondary table space is $\sum_{i=0}^{m-1} n_i^2$. By the Cauchy--Schwarz inequality:
+\[
+\sum_{i=0}^{m-1} n_i^2 \geq \frac{(\sum n_i)^2}{m} = \frac{n^2}{m} = n.
+\]
+The question is whether the total space is $O(n)$ in expectation.
+
+Let $X_{i,j,k}$ be the indicator that elements $x_j$ and $x_k$ (with $j \neq k$) hash to the same slot in bucket $i$. For a fixed pair of elements that both land in bucket $i$, the probability that they collide in the secondary hash table (of size $n_i^2$) is at most $1/n_i^2$. The expected total number of collisions across all buckets is:
+\[
+\mathbb{E}[\text{collisions}] = \sum_{i=0}^{m-1} \binom{n_i}{2} \cdot \frac{1}{n_i^2} < \sum_{i=0}^{m-1} \frac{1}{2} = \frac{m}{2} = \frac{n}{2}.
+\]
+Since the expected number of collisions is less than $n/2$, by the probabilistic method, there exists a choice of secondary hash functions with fewer than $n/2$ collisions, which implies a total secondary table size of $O(n)$.
+
+By trying $O(\log n)$ random primary hash functions, we can ensure the $O(n)$ bound holds with high probability. The search procedure: compute $h_1(x)$ to find the bucket, then compute $h_{h_1(x)}(x)$ to find the exact slot, both in $O(1)$ time.
+\end{proof}
+
+\subsection{Dynamic perfect hashing}
+
+A limitation of FKS hashing is that it requires rebuilding when the number of elements changes significantly. \emph{Dynamic perfect hashing} addresses this by periodically rebuilding the entire table when the load factor deviates too far from 1. Specifically:
+
+\begin{itemize}[nosep]
+    \item When the number of elements exceeds $n$ (the table size), rebuild with a new table of size $\Theta(n^2)$ using a new primary hash function, then rehash all elements.
+    \item When the number of elements drops below $n/4$, rebuild with a table of size $\Theta(n)$ using a new primary hash function, then rehash all elements.
+\end{itemize}
+
+The amortized cost of each insert or delete is $O(1)$, and search is always $O(1)$ worst-case.
+
+\begin{theorem}\label{thm:dynamic-perfect}
+Dynamic perfect hashing achieves $O(1)$ worst-case search time and $O(1)$ amortized expected time per insertion and deletion, using $O(n)$ space.
+\end{theorem}
+
+\begin{proof}
+The rebuild cost when expanding from $n$ elements to $2n$ elements is $O(n^2)$ (the secondary table size). Amortized over $n$ insertions, this gives $O(n)$ per element, which is not $O(1)$.
+
+To fix this, we use a more careful analysis. When we have $n$ elements and the table size is $m = \Theta(n^2)$, we rebuild when $n$ exceeds $m$. The rebuild cost is $O(n^2)$. We can charge this cost to the $n/2$ elements that were inserted since the last rebuild, giving an amortized cost of $O(n)$ per element, which is too high.
+
+The correct approach uses a different table size strategy. Set the table size to $m = c \cdot n$ for a suitable constant $c$. Then the secondary table sizes satisfy $\sum n_i^2 = O(n)$ by the FKS analysis, and the rebuild cost is $O(n)$, giving $O(1)$ amortized cost.
+\end{proof}
+
+\begin{cpplisting}
+\textbf{C++ implementation:} See \texttt{src/chapter8/hash\_table.h} for an implementation
+of FKS-style two-level perfect hashing with dynamic resizing.
+\end{cpplisting}
+
+%% ============================================================
+\addcontentsline{toc}{section}{Notes}
+\section*{Notes}
+%% ============================================================
+
+\begin{enumerate}[nosep]
+    \item \textbf{Treaps} were introduced by Aragon and Seidel~\cite{aron1989}. Their analysis builds on the correspondence between treaps and random BSTs, which was studied by Devroye~\cite{devroye1988} and others. The join and split operations on treaps enable efficient implementations of persistent data structures and priority queues.
+    \item \textbf{Skip lists} were invented by Pugh~\cite{pugh1990} as a simpler alternative to balanced trees. The original paper includes extensive experimental comparisons. Variants include \emph{scoreable skip lists}, \emph{indexable skip lists}, and \emph{concurrent skip lists} for parallel computing.
+    \item \textbf{Universal hashing} was introduced by Carter and Wegman~\cite{carter1979}. The multiply-shift family $h_{a,b}(x) = ((ax+b) \bmod p) \bmod m$ is one of the simplest and most practical universal families. For a prime-free alternative, the \emph{multiply-mod-prime} family $h_a(x) = \lfloor m \cdot ((ax \bmod p)/p) \rfloor$ due to Dietzfelbinger et al.~\cite{dietzfelbinger1997} achieves similar guarantees.
+    \item \textbf{Perfect hashing} was achieved by Fredman, Koml\'{o}s, and Szemer\'{e}di~\cite{fredman1984}, who showed that $O(n)$ space and $O(1)$ worst-case search time are simultaneously achievable. Their paper is notable for its use of the probabilistic method. Dietzfelbinger et al.~\cite{dietzfelbinger1994} later gave a simpler and more practical construction.
+    \item \textbf{ cuckoo hashing} was introduced by Pagh and Rodler~\cite{pagh2004} and achieves $O(1)$ worst-case lookup time with $O(n)$ space using two hash functions. The analysis uses properties of random graphs.
+    \item \textbf{Bloom filters}~\cite{bloom1970} are a related probabilistic data structure that supports membership queries with a small false positive rate using $O(n)$ bits of space.
+\end{enumerate}
+
+%% ============================================================
+\addcontentsline{toc}{section}{Problems}
 \section*{Problems}
-\label{sec:problems-9}
 %% ============================================================
 
-\begin{problem}[9.1]
-Implement the randomized incremental convex hull algorithm for points in the plane. Test it on $n = 10^4$ random points in the unit square. Verify that the number of hull vertices matches the expected $O(\log n)$ for uniform random points.
+\begin{problem}[8.1]
+Prove that the treap deletion algorithm (rotating a node down to a leaf, then removing it) maintains both the BST property and the heap property. What is the maximum number of rotations required to delete a node at depth $d$?
 \end{problem}
 
-\begin{problem}[9.2]
-Prove that the upper hull of a set $P$ of points in the plane corresponds under point-line duality to the boundary of the intersection of the upper half-planes $\{y \leq a_i x - b_i\}$ for each $(a_i, b_i) = p^*$.
+\begin{problem}[8.2]
+Design a treap-based algorithm to find the $k$-th smallest element in $O(\log n)$ expected time. Hint: augment each node with the size of its subtree.
 \end{problem}
 
-\begin{problem}[9.3]
-Show that the Delaunay triangulation of $n$ points in the plane has at most $2n - 5$ triangles when the points are in general position (no four cocircular). Hint: use Euler's formula for planar graphs.
+\begin{problem}[8.3]
+Analyze the expected number of levels in a skip list of $n$ elements. What is the probability that the maximum level exceeds $2 \log_2 n$?
 \end{problem}
 
-\begin{problem}[9.4]
-Analyze the flip algorithm for Delaunay triangulations. Show that each flip increases the minimum angle in the triangulation, and that the algorithm terminates in $O(n^2)$ flips.
+\begin{problem}[8.4]
+Prove that the family $\mathcal{H}_{a,b} = \{h_{a,b}(x) = ((ax + b) \bmod p) \bmod m : a \in \{1, \ldots, p-1\}, b \in \{0, \ldots, p-1\}\}$ is a universal hash family when $p$ is prime and $m \leq p$.
 \end{problem}
 
-\begin{problem}[9.5]
-Prove that the expected number of trapezoids in a randomized trapezoidal map of $n$ non-intersecting line segments is $O(n)$. Hint: use the linearity of expectation over pairs of segments.
+\begin{problem}[8.5]
+Show that with universal hashing and chaining, the expected length of the longest chain is $O(\log n / \log \log n)$ when $m = n$. Hint: use the coupon collector's argument or the analysis of maximum load in balls-and-bins.
 \end{problem}
 
-\begin{problem}[9.6]
-Derive the recurrence for Seidel's LP algorithm and prove that $T(n, d) = O(d! \cdot n)$. What is the constant in the $O$-notation?
+\begin{problem}[8.6]
+Analyze the expected number of probes for a successful search in a hash table with linear probing and load factor $\alpha$. Derive the formula $\frac{1}{2}(1 + 1/(1-\alpha))$.
 \end{problem}
 
-\begin{problem}[9.7]
-For a range space $(X, \mathcal{R})$ where $X$ is a set of $n$ points in $\mathbb{R}^2$ and $\mathcal{R}$ is the set of all half-plane ranges, what is the VC dimension? Use Theorem~\ref{thm:eps-net} to determine the sample size needed for a $0.1$-net with probability $0.99$.
+\begin{problem}[8.7]
+In the FKS perfect hashing scheme, explain why the secondary hash function for bucket $i$ can be chosen to be perfect (no collisions) among the $n_i$ elements. What is the expected number of trials?
 \end{problem}
 
-\begin{problem}[9.8]
-Implement Seidel's randomized LP algorithm for $d = 2$. Test it on random linear programs with 1000 constraints and verify that it runs in approximately $O(n)$ time.
+\begin{problem}[8.8]
+Design a randomized data structure that supports insert, delete, and \emph{range counting}: given $a$ and $b$, return the number of elements in the set with keys in $[a, b]$. Your data structure should support each operation in $O(\log n)$ expected time.
 \end{problem}
 
-\begin{problem}[9.9]
-Show that the diameter of a point set $P$ in $\mathbb{R}^2$ can be computed in $O(n)$ time after computing the convex hull, using the rotating calipers technique.
+\begin{problem}[8.9]
+Implement a skip list and compare its performance (in terms of actual wall-clock time) with a std::map (a red--black tree) on random workloads of $10^6$ insertions, $10^6$ searches, and $10^6$ deletions. Which data structure is faster in practice, and by how much?
 \end{problem}
 
-\begin{problem}[9.10]
-\textbf{(Research)} Design a randomized incremental algorithm for computing the Voronoi diagram of $n$ points in the plane. Analyze the expected running time using backward analysis and show that it is $O(n \log n)$.
+\begin{problem}[8.10]
+\textbf{(Research)} A \emph{Cuckoo hash table} uses two hash functions $h_1$ and $h_2$ and stores each element $x$ in one of two positions: $h_1(x)$ or $h_2(x)$. When both positions are occupied, the existing element is ``kicked out'' to its alternate position. Prove that with $m = O(n)$ slots, the expected insertion time is $O(1)$, but that there is a constant probability of insertion failure when $m < n(1 + \epsilon)$ for some $\epsilon > 0$. How can multiple hash functions resolve this?
 \end{problem}
-
 
 \end{document}
