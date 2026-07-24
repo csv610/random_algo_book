@@ -12463,7 +12463,7 @@ ratios with low execution overhead.
 %==========================================================================
 
 \subsection{HyperLogLog}
-Deployed in **Google BigQuery, Elasticsearch, Amazon Redshift, and Redis**. It is used to 
+Deployed in \textbf{Google BigQuery, Elasticsearch, Amazon Redshift, and Redis}. It is used to 
 estimate the number of unique active users (UAUs) over massive logs. HLL calculates 
 billions of distinct IDs using a constant $12$ KB footprint instead of gigabytes of RAM.
 
@@ -12473,9 +12473,99 @@ DDoS attacks by tracking heavy-hitter IP addresses in fast hardware memory. It i
 used by Twitter/X to detect trending keywords and topics in real-time streams.
 
 \subsection{Johnson-Lindenstrauss Random Projection}
-A core component of **Vector Databases (Pinecone, Milvus, Qdrant)** and recommendation 
+A core component of \textbf{Vector Databases (Pinecone, Milvus, Qdrant)} and recommendation 
 systems. It compresses 1000+ dimensional deep learning embeddings to 100 dimensions 
 while preserving relative cosine distances, accelerating AI vector searches by up to 100x.
+
+%==========================================================================
+\chapter{Modern Relevancy and Frontiers of Randomized Algorithms}
+\label{app:relevancy}
+\addcontentsline{toc}{chapter}{F Modern Relevancy and Frontiers of Randomized Algorithms}
+\markboth{F Modern Relevancy and Frontiers of Randomized Algorithms}{Randomized Algorithms}
+%==========================================================================
+
+This appendix provides a critical evaluation of the practical relevance of the 
+algorithms covered in this book for modern software engineering, alongside an overview 
+of newer randomized algorithms that represent active areas of industry development.
+
+%==========================================================================
+\section{Relevancy Status Matrix}
+%==========================================================================
+
+The table below catalogs the algorithms covered in this book and ranks their 
+practical deployment status in modern industry:
+
+\begin{table}[h]
+\centering
+\begin{tabular}{|l|l|l|}
+\hline
+\textbf{Algorithm / Structure} & \textbf{Relevancy} & \textbf{Primary Domain} \\ \hline
+Universal Hashing & High & Programming Languages, Hash Tables \\ \hline
+Skip Lists & High & Databases (MemTables, Redis) \\ \hline
+HyperLogLog & High & Big Data Analytics (BigQuery, Redshift) \\ \hline
+Count-Min Sketch & High & Network Routing, Streaming Analytics \\ \hline
+Johnson-Lindenstrauss Projection & High & Vector Databases, AI Embeddings \\ \hline
+Rabin-Karp Search & High & Plagiarism Detection, String Search \\ \hline
+Randomized SVD & High & Machine Learning (scikit-learn PCA) \\ \hline
+Treaps & Medium & Coordinate range search engines \\ \hline
+RIC Convex Hull & Medium & GIS, Computational Geometry \\ \hline
+Karger-Stein Min-Cut & Low (Theoretical) & Graph partitioning models \\ \hline
+KKT MST & Low (Theoretical) & Expected linear MST studies \\ \hline
+Seidel's LP Solver & Low (Theoretical) & Fixed-dimension LP research \\ \hline
+\end{tabular}
+\caption{Practical relevancy status of the textbook's algorithms in modern industry.}
+\label{tab:relevancy-matrix}
+\end{table}
+
+%==========================================================================
+\section{Analysis of Relevancy}
+%==========================================================================
+
+\subsection{Why Some Classic Algorithms Have Low Practical Relevancy}
+\begin{itemize}
+    \item \textbf{KKT MST}: Although theoretically $O(M)$ expected linear time, it is rarely implemented in practice because the constant factor is massive compared to Kruskal's or Prim's algorithms, which run in $O(M \log N)$ but benefit from extremely simple, cache-friendly array layouts.
+    \item \textbf{Seidel's LP Solver}: Seidel's algorithm assumes the dimension $d$ is fixed and small. In real-world industry (operations research, logistics), linear programs have thousands of variables ($d > 10,000$). In these environments, deterministic simplex or interior-point methods are vastly superior.
+\end{itemize}
+
+\subsection{Why Modern Sketches Have High Relevancy}
+Streaming and dimensionality reduction algorithms are the cornerstones of modern cloud scale. When datasets grow to petabytes, deterministic structures (like exact sets and full matrices) become too expensive to store in RAM. Approximating answers using bounded-error randomized algorithms is often the only viable engineering choice.
+
+%==========================================================================
+\section{Newer and Missing Algorithmic Frontiers}
+%==========================================================================
+
+The following randomized algorithms are widely deployed in the software industry today but represent newer developments that lie beyond the classical textbook topics:
+
+\subsection{Bloom Filters and Cuckoo Filters (Membership Testing)}
+Used in databases (like \textbf{Apache Cassandra, RocksDB, Google Bigtable}) to avoid expensive disk lookups. 
+\begin{itemize}
+    \item \textbf{How it works}: Uses a bit array and multiple random hash functions to check if an element is a member of a set. It returns either ``definitely not in set'' or ``possibly in set'' with a tiny false positive rate.
+    \item \textbf{Cuckoo Filters}: A newer alternative (2014) that supports dynamic deletion of items by utilizing cuckoo hashing principles, replacing classic Bloom filters in modern index designs.
+\end{itemize}
+
+\subsection{Locality-Sensitive Hashing - LSH (Nearest Neighbors)}
+Popularized for high-speed recommendation systems and duplicate web page clustering.
+\begin{itemize}
+    \item \textbf{How it works}: Unlike standard hashing which minimizes collisions, LSH uses randomized hash functions designed to *maximize* collisions for similar items, allowing sub-linear time nearest neighbor searches in high dimensions.
+\end{itemize}
+
+\subsection{Count-Sketch (Frequency with Sign)}
+Used in advanced streaming queries where data elements can be subtracted (e.g., items leaving a queue).
+\begin{itemize}
+    \item \textbf{How it works}: It generalizes the Count-Min sketch by introducing a second random hash function that maps elements to $\pm 1$, keeping the frequency estimator unbiased and permitting negative updates.
+\end{itemize}
+
+\subsection{Markov Chain Monte Carlo - MCMC (Bayesian Inference)}
+Crucial in modern statistical modeling, physics simulations, and generative AI.
+\begin{itemize}
+    \item \textbf{How it works}: Uses algorithms like \textbf{Metropolis-Hastings} and \textbf{Gibbs Sampling} to generate random samples from complex, high-dimensional probability distributions where direct sampling is mathematically impossible.
+\end{itemize}
+
+\subsection{Randomized Distributed Consensus (Ben-Or's Protocol)}
+The backbone of fault-tolerant distributed networks and blockchain protocols.
+\begin{itemize}
+    \item \textbf{How it works}: When multiple nodes in a network need to agree on a state (e.g., a transaction ledger) in the presence of adversarial faults, they use randomized coin-tossing steps to break deadlocks and guarantee fast agreement with high probability.
+\end{itemize}
 
 \backmatter
 
