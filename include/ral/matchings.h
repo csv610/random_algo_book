@@ -6,15 +6,12 @@
 #include <algorithm>
 #include <random>
 #include <functional>
-#include <atomic>
-#include <thread>
-#include <latch>
 #include "compat_print.h"
 #include <queue>
 #include <limits>
 #include <cassert>
 
-namespace randalgo {
+namespace ral {
 
 // ---------------------------------------------------------------------------
 // Random Maximal Matching -- each edge considered independently with

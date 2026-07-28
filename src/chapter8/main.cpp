@@ -22,13 +22,13 @@ int main() {
     std::cout << "Randomized Algorithms - Implementation Demos\n\n";
 
     print_section("7.1 Freivalds' Matrix Multiplication Verification");
-    chapter8::demonstrate_freivalds();
+    ral::demonstrate_freivalds();
 
     print_section("7.2 Polynomial Identity Testing (Schwartz-Zippel)");
-    chapter8::demonstrate_polynomial();
+    ral::demonstrate_poly_identity_testing();
 
     print_section("7.6 Rabin-Karp Pattern Matching");
-    chapter8::demonstrate_rabin_karp();
+    ral::demonstrate_rabin_karp();
 
     std::cout << "\n" << std::string(60, '=') << "\n";
     std::cout << "  All demos completed.\n";

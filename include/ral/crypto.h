@@ -10,7 +10,7 @@
 #include <cmath>
 #include <chrono>
 
-namespace randalgo {
+namespace ral {
 
 // ---------------------------------------------------------------------------
 // Shared PRNG -- seeded from high-resolution clock for reproducibility demos
@@ -26,7 +26,7 @@ static inline std::mt19937_64& crypto_rng() {
 // 1. Quadratic Residue -- Euler's criterion: a is a QR mod p iff
 //    a^((p-1)/2) == 1 (mod p).
 // ---------------------------------------------------------------------------
-bool is_quadratic_residue(long long a, long long p) {
+inline bool is_quadratic_residue(long long a, long long p) {
     if (a < 0 || a >= p) a = ((a % p) + p) % p;
     if (a == 0) return true;
     long long euler = mod_pow(a, (p - 1) / 2, p);
@@ -39,7 +39,7 @@ bool is_quadratic_residue(long long a, long long p) {
 //            -1  if a is a QNR mod p
 //             0  if p | a
 // ---------------------------------------------------------------------------
-int legendre_symbol(long long a, long long p) {
+inline int legendre_symbol(long long a, long long p) {
     if (!is_prime_trial(p)) {
         throw std::runtime_error("Legendre symbol requires prime modulus");
     }
@@ -59,7 +59,7 @@ int legendre_symbol(long long a, long long p) {
 //      (2a / n) = (-1)^((n^2-1)/8) * (a / n)  [if n is odd]
 //      (a / n) = (b / a) * (-1)^((a-1)(n-1)/4)  [quadratic reciprocity]
 // ---------------------------------------------------------------------------
-int jacobi_symbol(long long a, long long n) {
+inline int jacobi_symbol(long long a, long long n) {
     if (n <= 0 || n % 2 == 0) {
         throw std::runtime_error("Jacobi symbol requires odd positive n");
     }
@@ -100,7 +100,7 @@ struct RSAKeyPair {
     long long n;  // modulus
 };
 
-RSAKeyPair generate_rsa_keypair(long long p, long long q, long long e) {
+inline RSAKeyPair generate_rsa_keypair(long long p, long long q, long long e) {
     long long n = p * q;
     long long phi_n = (p - 1) * (q - 1);
 
@@ -117,11 +117,11 @@ RSAKeyPair generate_rsa_keypair(long long p, long long q, long long e) {
 //    Encrypt: c = m^e mod n
 //    Decrypt: m = c^d mod n
 // ---------------------------------------------------------------------------
-long long rsa_encrypt(long long m, long long e, long long n) {
+inline long long rsa_encrypt(long long m, long long e, long long n) {
     return mod_pow(m, e, n);
 }
 
-long long rsa_decrypt(long long c, long long d, long long n) {
+inline long long rsa_decrypt(long long c, long long d, long long n) {
     return mod_pow(c, d, n);
 }
 
@@ -132,7 +132,7 @@ long long rsa_decrypt(long long c, long long d, long long n) {
 //      a^d != 1 (mod n) AND a^(2^j * d) != -1 (mod n)  for all 0 <= j < r
 //    then n is composite.
 // ---------------------------------------------------------------------------
-bool miller_rabin(long long n, int k = 20) {
+inline bool miller_rabin(long long n, int k = 20) {
     if (n < 2) return false;
     if (n == 2 || n == 3) return true;
     if (n % 2 == 0) return false;
@@ -171,7 +171,7 @@ bool miller_rabin(long long n, int k = 20) {
 //    n is composite if for some random a:
 //      a^((n-1)/2) != (a / n) (mod n)
 // ---------------------------------------------------------------------------
-bool solovay_strassen(long long n, int k = 20) {
+inline bool solovay_strassen(long long n, int k = 20) {
     if (n < 2) return false;
     if (n == 2 || n == 3) return true;
     if (n % 2 == 0) return false;
@@ -194,7 +194,7 @@ bool solovay_strassen(long long n, int k = 20) {
 // 8. Fermat Primality Test
 //    n is composite if a^(n-1) != 1 (mod n) for some random a.
 // ---------------------------------------------------------------------------
-bool fermat_primality_test(long long n, int k = 20) {
+inline bool fermat_primality_test(long long n, int k = 20) {
     if (n < 2) return false;
     if (n == 2 || n == 3) return true;
     if (n % 2 == 0) return false;
@@ -211,7 +211,7 @@ bool fermat_primality_test(long long n, int k = 20) {
 // ---------------------------------------------------------------------------
 // 9. Demonstration
 // ---------------------------------------------------------------------------
-void demonstrate_crypto() {
+inline void demonstrate_crypto() {
     println("=== Cryptographic Algorithms ===\n");
 
     // --- RSA Key Generation & Encryption/Decryption ---

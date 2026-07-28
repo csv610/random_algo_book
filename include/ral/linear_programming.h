@@ -8,14 +8,14 @@
 #include <cmath>
 #include <chrono>
 
-namespace chapter10 {
+namespace ral {
 
 // Seidel's randomized LP algorithm (1991)
 // Solves:  minimize  c^T x  subject to  a_i^T x <= b_i  for i = 1..n
 // where the number of constraints n can be large but dimension d is fixed.
 // Expected running time: O(d! * n) for fixed d.
 
-bool satisfies(const std::vector<double>& x,
+inline bool satisfies(const std::vector<double>& x,
                const std::vector<double>& a, double b, double eps = 1e-9) {
     double val = 0.0;
     for (size_t i = 0; i < x.size(); i++) {
@@ -26,7 +26,7 @@ bool satisfies(const std::vector<double>& x,
 
 // Solve a system of k equations in d variables via Gaussian elimination.
 // Returns the solution vector of length d.
-std::vector<double> solve_equality_system(
+inline std::vector<double> solve_equality_system(
     const std::vector<std::vector<double>>& A,
     const std::vector<double>& b, int d) {
     int k = static_cast<int>(A.size());
@@ -71,7 +71,7 @@ std::vector<double> solve_equality_system(
 
 // Seidel's randomized LP in d dimensions (recursive).
 // constraints is a list of (a, b) pairs for a^T x <= b.
-std::vector<double> seidel_lp_rec(
+inline std::vector<double> seidel_lp_rec(
     const std::vector<std::pair<std::vector<double>, double>>& constraints,
     const std::vector<double>& c, int d, std::mt19937& rng) {
 
@@ -175,7 +175,7 @@ std::vector<double> seidel_lp_rec(
 }
 
 // Main entry point for Seidel's randomized LP
-std::vector<double> randomized_lp(const std::vector<std::vector<double>>& A,
+inline std::vector<double> randomized_lp(const std::vector<std::vector<double>>& A,
                                    const std::vector<double>& b,
                                    const std::vector<double>& c,
                                    int d) {
@@ -197,7 +197,7 @@ struct LPResult {
     bool feasible;
 };
 
-LPResult solve_lp(const std::vector<std::vector<double>>& A,
+inline LPResult solve_lp(const std::vector<std::vector<double>>& A,
                   const std::vector<double>& b,
                   const std::vector<double>& c, int d) {
     LPResult result;
@@ -212,7 +212,7 @@ LPResult solve_lp(const std::vector<std::vector<double>>& A,
     return result;
 }
 
-void demonstrate_lp() {
+inline void demonstrate_lp() {
     std::random_device rd;
     std::mt19937 rng(rd());
 

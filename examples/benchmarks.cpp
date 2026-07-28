@@ -120,7 +120,7 @@ void benchmark_graph_algorithms(std::mt19937& rng) {
     for (int n : {50, 100}) {
         auto wg = make_random_weighted_graph(n, 0.3, rng);
         t.reset();
-        double w1 = randalgo::kruskal_mst(wg);
+        double w1 = ral::kruskal_mst(wg);
         double t_krus = t.elapsed_ms();
 
         t.reset();
@@ -265,7 +265,7 @@ void benchmark_algebraic_algorithms(std::mt19937& rng) {
         auto C = multiply_long_long(A, B);
 
         t.reset();
-        bool v1 = chapter8::freivalds_verify(A, B, C, 5, rng);
+        bool v1 = ral::freivalds_verify(A, B, C, 5, rng);
         double t_frei = t.elapsed_ms();
 
         t.reset();
@@ -289,7 +289,7 @@ void benchmark_algebraic_algorithms(std::mt19937& rng) {
         text[text_len - 2] = 'B'; 
 
         t.reset();
-        auto matches1 = chapter8::rabin_karp_search(text, pattern);
+        auto matches1 = ral::rabin_karp_search(text, pattern);
         double t_rk = t.elapsed_ms();
 
         t.reset();
@@ -390,12 +390,12 @@ void benchmark_probability_selection(std::mt19937& rng) {
 
         std::vector<int> copy1 = S;
         t.reset();
-        int v1 = chapter1::randomized_find(copy1, k);
+        int v1 = ral::randomized_find(copy1, k);
         double t_qs = t.elapsed_ms();
 
         std::vector<int> copy2 = S;
         t.reset();
-        auto v2 = chapter4::lazy_select(copy2, k, rng);
+        auto v2 = ral::lazy_select(copy2, k, rng);
         double t_ls = t.elapsed_ms();
 
         std::vector<int> copy3 = S;
@@ -421,7 +421,7 @@ void benchmark_probability_selection(std::mt19937& rng) {
         std::uniform_int_distribution<int> page_dist(1, 20);
         for (int i = 0; i < count; ++i) reqs[i] = page_dist(rng);
 
-        int lru_m = randalgo::deterministic_lru(5, reqs);
+        int lru_m = ral::deterministic_lru(5, reqs);
         int mark_m = ral::marking_paging(5, reqs);
 
         std::cout << "    " << std::setw(4) << count 
@@ -483,6 +483,298 @@ void benchmark_modern_algorithms(std::mt19937& rng) {
     }
 }
 
+void benchmark_reservoir_sampling(std::mt19937& rng) {
+    std::cout << "\n==============================================================\n";
+    std::cout << "  CATEGORY 7: Reservoir Sampling\n";
+    std::cout << "==============================================================\n";
+
+    Timer t;
+    int k = 100;
+
+    std::cout << "\n--- 7.1 Reservoir Sampling (k=" << k << ") ---\n";
+    std::cout << "  Stream Size   Basic Reservoir   Weighted Reservoir   std::sample\n";
+    std::cout << "  -------------------------------------------------------------------\n";
+    for (int n : {1000, 10000, 100000}) {
+        std::vector<int> stream(n);
+        for (int i = 0; i < n; ++i) stream[i] = i;
+
+        std::vector<double> weights(n, 1.0);
+        std::uniform_real_distribution<double> wdist(0.1, 10.0);
+        for (int i = 0; i < n; ++i) weights[i] = wdist(rng);
+
+        t.reset();
+        auto s1 = ral::reservoir_sample(stream, k, rng);
+        double t_basic = t.elapsed_ms();
+
+        t.reset();
+        auto s2 = ral::weighted_reservoir_sample(stream, weights, k, rng);
+        double t_weighted = t.elapsed_ms();
+
+        std::vector<int> out(k);
+        t.reset();
+        std::sample(stream.begin(), stream.end(), out.begin(), k, rng);
+        double t_std = t.elapsed_ms();
+
+        (void)s1; (void)s2;
+
+        std::cout << "  " << std::setw(7) << n
+                  << "     " << std::setw(10) << std::fixed << std::setprecision(4) << t_basic << " ms"
+                  << "       " << std::setw(10) << t_weighted << " ms"
+                  << "      " << std::setw(10) << t_std << " ms\n";
+    }
+}
+
+void benchmark_pollard_rho(std::mt19937& rng) {
+    std::cout << "\n==============================================================\n";
+    std::cout << "  CATEGORY 8: Pollard's Rho Factorization\n";
+    std::cout << "==============================================================\n";
+
+    Timer t;
+
+    std::cout << "\n--- 8.1 Factorization of Increasing-Size Integers ---\n";
+    std::cout << "  Number               Type          Time (ms)   Factors\n";
+    std::cout << "  -----------------------------------------------------------------\n";
+
+    std::vector<std::pair<long long, std::string>> numbers = {
+        {1000003LL, "prime"},
+        {1000000007LL, "prime"},
+        {123456789012345LL, "composite"},
+        {600851475143LL, "composite"}
+    };
+
+    for (auto& [n, label] : numbers) {
+        t.reset();
+        auto factors = ral::pollard_rho_factorize(n, rng);
+        double elapsed = t.elapsed_ms();
+
+        std::cout << "  " << std::setw(16) << n
+                  << "   " << std::setw(11) << std::left << label << std::right
+                  << "   " << std::setw(8) << std::fixed << std::setprecision(3) << elapsed
+                  << "     ";
+        for (size_t i = 0; i < factors.size(); ++i) {
+            if (i > 0) std::cout << " * ";
+            std::cout << factors[i];
+        }
+        std::cout << "\n";
+    }
+}
+
+void benchmark_welzl_mec(std::mt19937& rng) {
+    std::cout << "\n==============================================================\n";
+    std::cout << "  CATEGORY 9: Minimum Enclosing Circle\n";
+    std::cout << "==============================================================\n";
+
+    Timer t;
+
+    std::cout << "\n--- 9.1 Welzl MEC vs Brute-Force O(n^4) ---\n";
+    std::cout << "  Points   Welzl (ms)   Brute-Force (ms)   Radius Match\n";
+    std::cout << "  ---------------------------------------------------------\n";
+
+    for (int n : {10, 20, 50, 100, 500}) {
+        std::uniform_real_distribution<double> dist(-100.0, 100.0);
+        std::vector<ral::Point2D_mec> pts(n);
+        for (auto& p : pts) p = {dist(rng), dist(rng)};
+
+        t.reset();
+        auto c_welzl = ral::welzl_mec(pts, rng);
+        double t_welzl = t.elapsed_ms();
+
+        std::cout << "  " << std::setw(5) << n
+                  << "   " << std::setw(9) << std::fixed << std::setprecision(4) << t_welzl;
+
+        if (n <= 50) {
+            t.reset();
+            double min_r = 1e18;
+            for (int i = 0; i < n; ++i) {
+                for (int j = i + 1; j < n; ++j) {
+                    auto c2 = ral::circle_from_2(pts[i], pts[j]);
+                    bool covers = true;
+                    for (auto& p : pts) { covers &= c2.contains(p); if (!covers) break; }
+                    if (covers && c2.radius < min_r) min_r = c2.radius;
+                }
+                for (int j = i + 1; j < n; ++j) {
+                    for (int k = j + 1; k < n; ++k) {
+                        auto c3 = ral::circle_from_3(pts[i], pts[j], pts[k]);
+                        bool covers = true;
+                        for (auto& p : pts) { covers &= c3.contains(p); if (!covers) break; }
+                        if (covers && c3.radius < min_r) min_r = c3.radius;
+                    }
+                }
+            }
+            double t_bf = t.elapsed_ms();
+            bool match = std::abs(c_welzl.radius - min_r) < 1e-6;
+            std::cout << "   " << std::setw(11) << t_bf
+                      << "         " << (match ? "YES" : "NO") << "\n";
+        } else {
+            std::cout << "       (skipped)           ---\n";
+        }
+    }
+}
+
+void benchmark_streaming(std::mt19937& rng) {
+    std::cout << "\n==============================================================\n";
+    std::cout << "  CATEGORY 10: Streaming Algorithms\n";
+    std::cout << "==============================================================\n";
+
+    Timer t;
+
+    std::cout << "\n--- 10.1 Streaming Sketch Performance & Memory ---\n";
+    std::cout << "  Stream Size   CMS Time    FM Time    MG Time    Est. Memory\n";
+    std::cout << "  ----------------------------------------------------------------\n";
+
+    for (int n : {10000, 100000, 1000000}) {
+        std::uniform_int_distribution<int> val_dist(1, 1000);
+
+        t.reset();
+        ral::StreamingCountMinSketch cms(0.001, 0.01, rng);
+        for (int i = 0; i < n; ++i) {
+            cms.update("item_" + std::to_string(val_dist(rng)));
+        }
+        double t_cms = t.elapsed_ms();
+        double mem_cms = static_cast<double>(cms.depth()) * cms.width() * sizeof(long long) / 1024.0;
+
+        t.reset();
+        ral::FlajoletMartin fm(64, rng);
+        for (int i = 0; i < n; ++i) {
+            fm.update("item_" + std::to_string(val_dist(rng)));
+        }
+        double t_fm = t.elapsed_ms();
+        double mem_fm = 64.0 * sizeof(uint64_t) / 1024.0 + 64.0 * sizeof(uint64_t) / 1024.0;
+
+        t.reset();
+        ral::MisraGries mg(10);
+        for (int i = 0; i < n; ++i) {
+            mg.update("item_" + std::to_string(val_dist(rng)));
+        }
+        double t_mg = t.elapsed_ms();
+        double mem_mg = 10.0 * (64.0 + sizeof(long long)) / 1024.0;
+
+        std::cout << "  " << std::setw(8) << n
+                  << "    " << std::setw(6) << std::fixed << std::setprecision(3) << t_cms << " ms"
+                  << "   " << std::setw(6) << t_fm << " ms"
+                  << "   " << std::setw(6) << t_mg << " ms"
+                  << "    CMS:" << std::setprecision(1) << mem_cms << "KB"
+                  << " FM:" << mem_fm << "KB"
+                  << " MG:" << mem_mg << "KB\n";
+    }
+}
+
+void benchmark_lsh(std::mt19937& rng) {
+    std::cout << "\n==============================================================\n";
+    std::cout << "  CATEGORY 11: Locality-Sensitive Hashing\n";
+    std::cout << "==============================================================\n";
+
+    Timer t;
+
+    int dim = 50;
+    int n = 1000;
+    int num_queries = 100;
+    int k_neighbors = 10;
+    int num_hashes = 16;
+
+    std::cout << "\n--- 11.1 LSH vs Brute-Force Nearest Neighbor ---\n";
+    std::cout << "  Vectors   Dim   LSH Time     BF Time      Recall@" << k_neighbors << "\n";
+    std::cout << "  -----------------------------------------------------------\n";
+
+    std::normal_distribution<double> norm(0.0, 1.0);
+    std::vector<std::vector<double>> data(n, std::vector<double>(dim));
+    for (int i = 0; i < n; ++i) {
+        for (int j = 0; j < dim; ++j) data[i][j] = norm(rng);
+    }
+
+    ral::LSHIndex index(dim, num_hashes, rng);
+    for (int i = 0; i < n; ++i) index.insert(data[i], i);
+
+    std::vector<std::vector<double>> queries(num_queries, std::vector<double>(dim));
+    for (int i = 0; i < num_queries; ++i) {
+        for (int j = 0; j < dim; ++j) queries[i][j] = norm(rng);
+    }
+
+    t.reset();
+    std::vector<std::vector<ral::LSHResult>> lsh_results(num_queries);
+    for (int i = 0; i < num_queries; ++i) {
+        lsh_results[i] = index.query(queries[i], k_neighbors);
+    }
+    double t_lsh = t.elapsed_ms();
+
+    t.reset();
+    std::vector<std::vector<ral::LSHResult>> bf_results(num_queries);
+    for (int i = 0; i < num_queries; ++i) {
+        bf_results[i] = ral::brute_force_nn(data, queries[i], k_neighbors);
+    }
+    double t_bf = t.elapsed_ms();
+
+    int total_recall = 0;
+    for (int i = 0; i < num_queries; ++i) {
+        for (auto& lr : lsh_results[i]) {
+            for (auto& br : bf_results[i]) {
+                if (lr.index == br.index) { total_recall++; break; }
+            }
+        }
+    }
+    double recall = 100.0 * total_recall / (num_queries * k_neighbors);
+
+    std::cout << "  " << std::setw(5) << n
+              << "   " << std::setw(3) << dim
+              << "   " << std::setw(7) << std::fixed << std::setprecision(3) << t_lsh << " ms"
+              << "   " << std::setw(8) << t_bf << " ms"
+              << "     " << std::setprecision(1) << recall << "%\n";
+}
+
+void benchmark_differential_privacy(std::mt19937& rng) {
+    std::cout << "\n==============================================================\n";
+    std::cout << "  CATEGORY 12: Differential Privacy\n";
+    std::cout << "  (epsilon = 1.0)\n";
+    std::cout << "==============================================================\n";
+
+    Timer t;
+    double eps = 1.0;
+
+    std::cout << "\n--- 12.1 Private Mean (Laplace Mechanism) ---\n";
+    std::cout << "  Dataset Size   True Mean     Private Mean   Abs Error    Time (ms)\n";
+    std::cout << "  -------------------------------------------------------------------\n";
+
+    for (int n : {1000, 10000, 100000}) {
+        std::normal_distribution<double> dist(50000.0, 15000.0);
+        std::vector<double> data(n);
+        double true_sum = 0.0;
+        for (int i = 0; i < n; ++i) {
+            data[i] = std::max(10000.0, dist(rng));
+            true_sum += data[i];
+        }
+        double true_mean = true_sum / n;
+
+        t.reset();
+        double priv_mean = ral::private_mean(data, 100000.0, eps, rng);
+        double elapsed = t.elapsed_ms();
+
+        std::cout << "  " << std::setw(8) << n
+                  << "    " << std::setw(10) << std::fixed << std::setprecision(2) << true_mean
+                  << "     " << std::setw(10) << priv_mean
+                  << "   " << std::setw(8) << std::setprecision(2) << std::abs(priv_mean - true_mean)
+                  << "   " << std::setw(8) << std::setprecision(4) << elapsed << "\n";
+    }
+
+    std::cout << "\n--- 12.2 Private Histogram (Laplace Mechanism) ---\n";
+    std::cout << "  Dataset Size   Buckets   Time (ms)\n";
+    std::cout << "  -----------------------------------\n";
+
+    for (int n : {1000, 10000, 100000}) {
+        int buckets = 10;
+        std::uniform_int_distribution<int> bucket_dist(0, buckets - 1);
+        std::vector<int> data(n);
+        for (int i = 0; i < n; ++i) data[i] = bucket_dist(rng);
+
+        t.reset();
+        auto hist = ral::private_histogram(data, buckets, eps, rng);
+        double elapsed = t.elapsed_ms();
+
+        std::cout << "  " << std::setw(8) << n
+                  << "       " << std::setw(2) << buckets
+                  << "     " << std::setw(8) << std::fixed << std::setprecision(4) << elapsed << "\n";
+    }
+}
+
 int main() {
     std::cout << "==============================================================\n";
     std::cout << "          RAL Full Randomized Algorithms Benchmark Suite\n";
@@ -496,6 +788,12 @@ int main() {
     benchmark_geometry_algorithms(rng);
     benchmark_probability_selection(rng);
     benchmark_modern_algorithms(rng);
+    benchmark_reservoir_sampling(rng);
+    benchmark_pollard_rho(rng);
+    benchmark_welzl_mec(rng);
+    benchmark_streaming(rng);
+    benchmark_lsh(rng);
+    benchmark_differential_privacy(rng);
 
     std::cout << "\n==============================================================\n";
     return 0;

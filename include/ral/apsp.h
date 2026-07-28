@@ -15,7 +15,7 @@
 #include <bit>
 #include "random_utils.h"
 
-namespace randalgo {
+namespace ral {
 
 // ============================================================
 // All-Pairs Shortest Paths
@@ -28,7 +28,7 @@ using BoolMatrix = std::vector<std::vector<bool>>;
 
 // ---- Baseline: Floyd-Warshall O(n^3) ----
 
-Matrix floyd_warshall(const Matrix& W) {
+inline Matrix floyd_warshall(const Matrix& W) {
     int n = static_cast<int>(W.size());
     Matrix D = W;
 
@@ -42,7 +42,7 @@ Matrix floyd_warshall(const Matrix& W) {
 
 // ---- Min-Plus Matrix Multiplication O(n^3) ----
 
-Matrix min_plus_product(const Matrix& A, const Matrix& B) {
+inline Matrix min_plus_product(const Matrix& A, const Matrix& B) {
     int n = static_cast<int>(A.size());
     Matrix C(n, std::vector<double>(n, INF));
 
@@ -56,7 +56,7 @@ Matrix min_plus_product(const Matrix& A, const Matrix& B) {
 
 // ---- APSP via Repeated Min-Plus Squaring O(n^3 log n) ----
 
-Matrix apsp_repeated_squaring(const Matrix& W) {
+inline Matrix apsp_repeated_squaring(const Matrix& W) {
     int n = static_cast<int>(W.size());
     Matrix D = W;
 
@@ -70,7 +70,7 @@ Matrix apsp_repeated_squaring(const Matrix& W) {
 
 // ---- Boolean Matrix Multiply (for Seidel) ----
 
-BoolMatrix bool_matrix_multiply(const BoolMatrix& A, const BoolMatrix& B) {
+inline BoolMatrix bool_matrix_multiply(const BoolMatrix& A, const BoolMatrix& B) {
     int n = static_cast<int>(A.size());
     BoolMatrix C(n, std::vector<bool>(n, false));
 
@@ -84,7 +84,7 @@ BoolMatrix bool_matrix_multiply(const BoolMatrix& A, const BoolMatrix& B) {
 
 // ---- Seidel's Algorithm for Unweighted Undirected Graphs ----
 
-Matrix seidel_apsp_unweighted(const BoolMatrix& adj) {
+inline Matrix seidel_apsp_unweighted(const BoolMatrix& adj) {
     int n = static_cast<int>(adj.size());
 
     // Compute boolean powers iteratively: A^1, A^2, ..., A^(n-1)
@@ -114,7 +114,7 @@ Matrix seidel_apsp_unweighted(const BoolMatrix& adj) {
 
 // ---- Graph Generators ----
 
-Matrix random_weighted_graph_matrix(int n, double p) {
+inline Matrix random_weighted_graph_matrix(int n, double p) {
     Matrix W(n, std::vector<double>(n, INF));
     for (int i : std::views::iota(0, n)) W[i][i] = 0;
 
@@ -138,7 +138,7 @@ Matrix random_weighted_graph_matrix(int n, double p) {
     return W;
 }
 
-BoolMatrix random_unweighted_graph(int n, double p) {
+inline BoolMatrix random_unweighted_graph(int n, double p) {
     BoolMatrix adj(n, std::vector<bool>(n, false));
 
     for (int i : std::views::iota(0, n))
@@ -158,7 +158,7 @@ BoolMatrix random_unweighted_graph(int n, double p) {
 
 // ---- Verification ----
 
-bool verify_apsp(const Matrix& computed, const Matrix& expected, double eps = 0.1) {
+inline bool verify_apsp(const Matrix& computed, const Matrix& expected, double eps = 0.1) {
     int n = static_cast<int>(computed.size());
     for (int i : std::views::iota(0, n))
         for (int j : std::views::iota(0, n))
@@ -169,7 +169,7 @@ bool verify_apsp(const Matrix& computed, const Matrix& expected, double eps = 0.
 
 // ---- Demonstration ----
 
-void demonstrate_apsp() {
+inline void demonstrate_apsp() {
     println("=== All-Pairs Shortest Paths ===\n");
 
     // Test 1: Small graph with known distances

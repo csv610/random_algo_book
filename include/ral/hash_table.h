@@ -8,7 +8,7 @@
 #include <cassert>
 #include <cmath>
 
-namespace chapter9 {
+namespace ral {
 
 // Mersenne prime 2^31 - 1, used as modulus in hash functions
 static constexpr long long HASH_PRIME = 2147483647LL; // 2^31 - 1

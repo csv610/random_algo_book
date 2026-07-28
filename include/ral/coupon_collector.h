@@ -7,11 +7,12 @@
 #include <iostream>
 #include <iomanip>
 #include <cmath>
+#include <numbers>
 
-namespace chapter4 {
+namespace ral {
 
 // Simulate coupon collector: return number of trials to collect all n types
-int simulate_coupon_collector(int n, std::mt19937& rng) {
+inline int simulate_coupon_collector(int n, std::mt19937& rng) {
     std::uniform_int_distribution<int> dist(0, n - 1);
     std::vector<bool> collected(n, false);
     int remaining = n;
@@ -27,7 +28,7 @@ int simulate_coupon_collector(int n, std::mt19937& rng) {
     return trials;
 }
 
-void demonstrate_coupon_collector() {
+inline void demonstrate_coupon_collector() {
     std::cout << "Coupon Collector Problem (Section 3.6)\n\n";
 
     std::cout << "Experiment: Average trials vs n*H_n\n\n";
@@ -102,7 +103,7 @@ void demonstrate_coupon_collector() {
         }
         double mean = sum / trials_var;
         double var = sum_sq / trials_var - mean * mean;
-        double bound = M_PI * M_PI * n / 12.0;
+        double bound = std::numbers::pi * std::numbers::pi * n / 12.0;
         std::cout << "  " << std::setw(4) << n
                   << "    " << std::setw(8) << var
                   << "    " << std::setw(8) << bound << "\n";

@@ -15,7 +15,7 @@
 #include <ranges>
 #include "random_utils.h"
 
-namespace randalgo {
+namespace ral {
 
 // ============================================================
 // Minimum Cut: Karger's Algorithm & Karger-Stein
@@ -23,71 +23,55 @@ namespace randalgo {
 
 struct Multigraph {
     int n;
-    std::unordered_map<int, std::unordered_map<long long, int>> adj;
+    std::unordered_map<int, std::unordered_map<int, int>> adj;
 
     explicit Multigraph(int n) : n(n) {}
 
-    static long long make_key(int u, int v) {
-        return static_cast<long long>(std::min(u, v)) * 1000000LL + std::max(u, v);
-    }
-
     void add_edge(int u, int v) {
         if (u == v) return;
-        long long key = make_key(u, v);
-        adj[u][key]++;
-        adj[v][key]++;
+        adj[u][v]++;
+        adj[v][u]++;
     }
 
     [[nodiscard]] int get_mult(int u, int v) const {
         auto it = adj.find(u);
         if (it == adj.end()) return 0;
-        auto it2 = it->second.find(make_key(u, v));
+        auto it2 = it->second.find(v);
         return it2 == it->second.end() ? 0 : it2->second;
     }
 
     [[nodiscard]] std::vector<std::pair<int, int>> all_edges() const {
         std::vector<std::pair<int, int>> edges;
         for (const auto& [u, nbrs] : adj)
-            for (const auto& [key, mult] : nbrs) {
-                int v = static_cast<int>(key % 1000000LL);
+            for (const auto& [v, mult] : nbrs)
                 if (u < v)
                     for ([[maybe_unused]] int i : std::views::iota(0, mult))
                         edges.emplace_back(u, v);
-            }
         return edges;
     }
 
     [[nodiscard]] int total_edges() const {
         int count = 0;
         for (const auto& [u, nbrs] : adj)
-            for (const auto& [key, mult] : nbrs) {
-                int v = static_cast<int>(key % 1000000LL);
+            for (const auto& [v, mult] : nbrs)
                 if (u < v) count += mult;
-            }
         return count;
     }
 };
 
 // Contract edge (u, v): merge v into u
-void contract_edge(Multigraph& G, int u, int v) {
-    // Transfer all edges from v to u
+inline void contract_edge(Multigraph& G, int u, int v) {
     if (G.adj.contains(v)) {
-        for (const auto& [key, mult] : G.adj[v]) {
-            int w1 = static_cast<int>(key / 1000000LL);
-            int w2 = static_cast<int>(key % 1000000LL);
-            int w = (w1 == v) ? w2 : w1;
+        for (const auto& [w, mult] : G.adj[v]) {
             if (w == u) continue;  // skip self-loops
-
-            long long new_key = Multigraph::make_key(u, w);
-            G.adj[u][new_key] += mult;
-            G.adj[w][new_key] += mult;
+            G.adj[u][w] += mult;
+            G.adj[w][u] += mult;
         }
     }
 
-    // Remove v from all adjacency lists
     G.adj.erase(v);
     for (auto& [node, nbrs] : G.adj)
-        nbrs.erase(Multigraph::make_key(u, v));
+        nbrs.erase(v);
 
     G.n--;
 }
@@ -96,7 +80,7 @@ void contract_edge(Multigraph& G, int u, int v) {
 // Karger's Contraction Algorithm
 // ============================================================
 
-int karger_min_cut_size(Multigraph G) {
+inline int karger_min_cut_size(Multigraph G) {
     while (G.n > 2) {
         auto edges = G.all_edges();
         if (edges.empty()) break;
@@ -108,7 +92,7 @@ int karger_min_cut_size(Multigraph G) {
     return static_cast<int>(G.all_edges().size());
 }
 
-int karger_repeated(Multigraph graph, int num_trials) {
+inline int karger_repeated(Multigraph graph, int num_trials) {
     return std::ranges::min(
         std::views::iota(0, num_trials)
         | std::views::transform([&](int) { return karger_min_cut_size(graph); })
@@ -119,7 +103,7 @@ int karger_repeated(Multigraph graph, int num_trials) {
 // Karger-Stein Recursive Contraction
 // ============================================================
 
-int karger_stein_rec(Multigraph G, int threshold = 6) {
+inline int karger_stein_rec(Multigraph G, int threshold = 6) {
     if (G.n <= threshold)
         return karger_min_cut_size(G);
 
@@ -135,12 +119,12 @@ int karger_stein_rec(Multigraph G, int threshold = 6) {
         contract_edge(G1, u, v);
     }
 
-    Multigraph G2 = G1;  // independent copy for second call
+    Multigraph G2 = G1;
     return std::min(karger_stein_rec(G1, threshold),
                     karger_stein_rec(G2, threshold));
 }
 
-int karger_stein(Multigraph graph, int repetitions = 1) {
+inline int karger_stein(Multigraph graph, int repetitions = 1) {
     return std::ranges::min(
         std::views::iota(0, repetitions)
         | std::views::transform([&](int) { return karger_stein_rec(graph); })
@@ -151,7 +135,7 @@ int karger_stein(Multigraph graph, int repetitions = 1) {
 // Ground Truth: Max-Flow for Verification
 // ============================================================
 
-int max_flow_bfs(const std::vector<std::vector<int>>& capacity, int s, int t) {
+inline int max_flow_bfs(const std::vector<std::vector<int>>& capacity, int s, int t) {
     int n = static_cast<int>(capacity.size());
     auto residual = capacity;
     int total_flow = 0;
@@ -185,14 +169,12 @@ int max_flow_bfs(const std::vector<std::vector<int>>& capacity, int s, int t) {
     return total_flow;
 }
 
-int exact_min_cut(const Multigraph& G, int num_vertices) {
+inline int exact_min_cut(const Multigraph& G, int num_vertices) {
     std::vector<std::vector<int>> cap(num_vertices, std::vector<int>(num_vertices, 0));
 
     for (const auto& [u, nbrs] : G.adj)
-        for (const auto& [key, mult] : nbrs) {
-            int v = static_cast<int>(key % 1000000LL);
+        for (const auto& [v, mult] : nbrs)
             if (u < v) cap[u][v] = cap[v][u] = mult;
-        }
 
     return std::ranges::min(
         std::views::iota(1, num_vertices)
@@ -204,7 +186,7 @@ int exact_min_cut(const Multigraph& G, int num_vertices) {
 // Graph Generators
 // ============================================================
 
-Multigraph random_multigraph(int n, int num_edges) {
+inline Multigraph random_multigraph(int n, int num_edges) {
     Multigraph G(n);
     for ([[maybe_unused]] int _ : std::views::iota(0, num_edges)) {
         int u = rng().rand_int(0, n - 1);
@@ -219,10 +201,9 @@ Multigraph random_multigraph(int n, int num_edges) {
 // Demonstration
 // ============================================================
 
-void demonstrate_min_cut() {
+inline void demonstrate_min_cut() {
     println("=== Minimum Cut Algorithms ===\n");
 
-    // Test 1: Six-vertex graph with known min-cut value
     println("Test 1: Small graph (known min-cut)");
     {
         Multigraph G(6);
@@ -250,7 +231,6 @@ void demonstrate_min_cut() {
         println("  P(failure all {} runs) <= {:.6f}\n", trials, fail_prob);
     }
 
-    // Test 2: Timing comparison
     println("Test 2: Timing comparison on random graphs");
     for (int n : {20, 50, 100}) {
         int m = 3 * n;
@@ -275,7 +255,6 @@ void demonstrate_min_cut() {
         println("    All match: {}\n", (exact_val == karger_val && exact_val == ks_val) ? "YES" : "NO");
     }
 
-    // Test 3: Empirical success probability
     println("Test 3: Empirical success probability");
     {
         int n = 30;

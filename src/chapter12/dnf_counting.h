@@ -9,7 +9,7 @@
 #include <chrono>
 #include <cassert>
 
-namespace randalgo {
+namespace ral {
 
 // ---------------------------------------------------------------------------
 // Data structures for DNF formulas

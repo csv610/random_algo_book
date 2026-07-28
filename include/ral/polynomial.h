@@ -8,7 +8,7 @@
 #include <algorithm>
 #include <chrono>
 
-namespace randalgo {
+namespace ral {
 
 // ---------------------------------------------------------------------------
 // Polynomial class -- coefficients stored as long long, arithmetic mod p.
@@ -125,7 +125,7 @@ static inline std::mt19937_64& poly_rng() {
 //   for random r. If f != 0 with degree <= d over field Z_p, then
 //   Pr[f(r)=0] <= d/p. Repeated trials give high confidence.
 // ---------------------------------------------------------------------------
-bool schwartz_zippel_test(const Polynomial& poly, long long p, int num_trials = 20) {
+inline bool schwartz_zippel_test(const Polynomial& poly, long long p, int num_trials = 20) {
     if (poly.is_zero()) return true;
 
     std::uniform_int_distribution<long long> dist(0, p - 1);
@@ -144,7 +144,7 @@ bool schwartz_zippel_test(const Polynomial& poly, long long p, int num_trials = 
 //   Tests whether poly1 == poly2 (mod p) by checking if poly1 - poly2
 //   is identically zero using Schwartz-Zippel.
 // ---------------------------------------------------------------------------
-bool polynomial_identity_test(const Polynomial& poly1,
+inline bool polynomial_identity_test(const Polynomial& poly1,
                                const Polynomial& poly2,
                                long long p,
                                int num_trials = 20) {
@@ -155,7 +155,7 @@ bool polynomial_identity_test(const Polynomial& poly1,
 // ---------------------------------------------------------------------------
 // Demonstration
 // ---------------------------------------------------------------------------
-void demonstrate_polynomial() {
+inline void demonstrate_polynomial() {
     println("=== Polynomial Operations over Finite Fields ===\n");
 
     long long p = 97;  // A small prime

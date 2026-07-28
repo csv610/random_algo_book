@@ -21,13 +21,13 @@ int main() {
     std::cout << "Randomized Algorithms - C++ Implementations\n";
 
     print_header("9.2 Convex Hull (Randomized Incremental)");
-    chapter10::demonstrate_convex_hull();
+    ral::demonstrate_convex_hull();
 
     print_header("9.5 Delaunay Triangulation (Incremental with Flips)");
-    chapter10::demonstrate_delaunay();
+    ral::demonstrate_delaunay();
 
     print_header("9.10 Linear Programming (Seidel's Algorithm)");
-    chapter10::demonstrate_lp();
+    ral::demonstrate_lp();
 
     std::cout << "\n========================================\n";
     std::cout << "  All demonstrations complete.\n";

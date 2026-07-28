@@ -4,7 +4,7 @@
 #include "routing.h"
 #include "martingales.h"
 
-using namespace chapter5;
+using namespace ral;
 
 void print_header() {
     std::cout << "+==============================================================+\n";

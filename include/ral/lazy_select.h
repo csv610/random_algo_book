@@ -9,7 +9,7 @@
 #include <iomanip>
 #include <cmath>
 
-namespace chapter4 {
+namespace ral {
 
 struct SelectResult {
     int value;
@@ -19,7 +19,7 @@ struct SelectResult {
 
 // LazySelect: find k-th smallest element (1-indexed)
 // Uses O(n^{3/4}) samples, expects 2n + o(n) comparisons
-SelectResult lazy_select(std::vector<int>& S, int k, std::mt19937& rng) {
+inline SelectResult lazy_select(std::vector<int>& S, int k, std::mt19937& rng) {
     int n = static_cast<int>(S.size());
     int sample_size = std::max(1, static_cast<int>(std::ceil(std::pow(n, 0.75))));
     std::uniform_int_distribution<int> dist(0, n - 1);
@@ -38,9 +38,9 @@ SelectResult lazy_select(std::vector<int>& S, int k, std::mt19937& rng) {
 
         // Step 3: compute indices t, h
         double x = static_cast<double>(k) * std::pow(n, -0.25);
-        int t = std::max(static_cast<int>(std::floor(x - std::sqrt(n))), 1);
-        int h = std::min(static_cast<int>(std::ceil(x + std::sqrt(n))),
-                         sample_size - 1);
+        int t = std::clamp(static_cast<int>(std::floor(x - std::sqrt(n))), 1, sample_size - 1);
+        int h = std::clamp(static_cast<int>(std::ceil(x + std::sqrt(n))),
+                         1, sample_size - 1);
         int a_val = R[t];
         int b_val = R[h];
 
@@ -77,13 +77,13 @@ SelectResult lazy_select(std::vector<int>& S, int k, std::mt19937& rng) {
 }
 
 // Deterministic median selection (for comparison)
-int deterministic_select(std::vector<int>& S, int k) {
+inline int deterministic_select(std::vector<int>& S, int k) {
     std::vector<int> copy = S;
     std::nth_element(copy.begin(), copy.begin() + k - 1, copy.end());
     return copy[k - 1];
 }
 
-void demonstrate_lazy_select() {
+inline void demonstrate_lazy_select() {
     std::cout << "LazySelect Algorithm (Section 3.3)\n";
     std::cout << "Finds k-th smallest element with expected 2n + o(n) comparisons\n\n";
 

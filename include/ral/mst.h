@@ -13,7 +13,7 @@
 #include "apsp.h"
 #include "random_utils.h"
 
-namespace randalgo {
+namespace ral {
 
 // ============================================================
 // Minimum Spanning Tree: Karger-Klein-Tarjan Algorithm
@@ -62,7 +62,7 @@ struct DSU {
 
 // ---- Kruskal's MST (for reference / verification) ----
 
-double kruskal_mst(const WeightedGraph& G) {
+inline double kruskal_mst(const WeightedGraph& G) {
     auto edges = G.edges;
     std::sort(edges.begin(), edges.end());
 
@@ -88,7 +88,7 @@ double kruskal_mst(const WeightedGraph& G) {
 
 // Compute the max-edge-on-path for all pairs via BFS from each vertex
 // Returns a matrix max_on_path[u][v] = max weight edge on path from u to v in F
-std::vector<std::vector<double>> max_on_path_in_forest(
+inline std::vector<std::vector<double>> max_on_path_in_forest(
     int n, const std::vector<Edge>& forest_edges) {
 
     std::vector<std::vector<std::pair<int,double>>> adj(n);
@@ -123,7 +123,7 @@ std::vector<std::vector<double>> max_on_path_in_forest(
 }
 
 // Find all F-light edges of G given a forest F
-std::vector<Edge> find_f_light_edges(
+inline std::vector<Edge> find_f_light_edges(
     const WeightedGraph& G, const std::vector<Edge>& forest_edges) {
 
     auto max_w = max_on_path_in_forest(G.n, forest_edges);
@@ -144,7 +144,7 @@ std::vector<Edge> find_f_light_edges(
 
 // ---- Sample edges randomly with probability p ----
 
-WeightedGraph sample_graph(const WeightedGraph& G, double p) {
+inline WeightedGraph sample_graph(const WeightedGraph& G, double p) {
     WeightedGraph H(G.n);
     for (const auto& e : G.edges) {
         if (rng().coin_flip(p)) {
@@ -165,7 +165,7 @@ struct BoruvkaResult {
     BoruvkaResult(int n) : contracted(n) {}
 };
 
-BoruvkaResult boruvka_step(const WeightedGraph& G) {
+inline BoruvkaResult boruvka_step(const WeightedGraph& G) {
     int n = G.n;
     DSU dsu(n);
 
@@ -236,7 +236,7 @@ BoruvkaResult boruvka_step(const WeightedGraph& G) {
 
 // ---- Complete Kruskal on a subgraph (for small graphs) ----
 
-double kruskal_on_subgraph(const WeightedGraph& G) {
+inline double kruskal_on_subgraph(const WeightedGraph& G) {
     if (G.n <= 1 || G.edges.empty()) return 0;
     auto edges = G.edges;
     std::sort(edges.begin(), edges.end());
@@ -261,7 +261,7 @@ double kruskal_on_subgraph(const WeightedGraph& G) {
 
 // Recursive KKT MST
 // Returns the MST weight
-double kkt_mst_rec(const WeightedGraph& G, int recursion_depth = 0) {
+inline double kkt_mst_rec(const WeightedGraph& G, int recursion_depth = 0) {
     int n = G.n;
 
     // Base case: small graph, use Kruskal directly
@@ -322,7 +322,7 @@ double kkt_mst_rec(const WeightedGraph& G, int recursion_depth = 0) {
 }
 
 // Main entry point for KKT MST
-double kkt_mst(const WeightedGraph& G) {
+inline double kkt_mst(const WeightedGraph& G) {
     return kkt_mst_rec(G, 0);
 }
 
@@ -330,7 +330,7 @@ double kkt_mst(const WeightedGraph& G) {
 // Verification
 // ============================================================
 
-bool verify_mst(const WeightedGraph& G, double mst_weight) {
+inline bool verify_mst(const WeightedGraph& G, double mst_weight) {
     double expected = kruskal_mst(G);
     return std::abs(mst_weight - expected) < 1e-6;
 }
@@ -339,7 +339,7 @@ bool verify_mst(const WeightedGraph& G, double mst_weight) {
 // Graph Generators
 // ============================================================
 
-WeightedGraph random_weighted_graph(int n, double p) {
+inline WeightedGraph random_weighted_graph(int n, double p) {
     WeightedGraph G(n);
     for (int i = 0; i < n; i++) {
         for (int j = i + 1; j < n; j++) {
@@ -360,7 +360,7 @@ WeightedGraph random_weighted_graph(int n, double p) {
     return G;
 }
 
-WeightedGraph random_dense_graph(int n) {
+inline WeightedGraph random_dense_graph(int n) {
     WeightedGraph G(n);
     for (int i = 0; i < n; i++) {
         for (int j = i + 1; j < n; j++) {
@@ -375,7 +375,7 @@ WeightedGraph random_dense_graph(int n) {
 // Demonstration
 // ============================================================
 
-void demonstrate_mst() {
+inline void demonstrate_mst() {
     std::cout << "=== Minimum Spanning Tree (Karger-Klein-Tarjan) ===\n\n";
 
     // Test 1: Small known graph

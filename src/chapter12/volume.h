@@ -9,7 +9,7 @@
 #include <chrono>
 #include <cassert>
 
-namespace randalgo {
+namespace ral {
 
 // ---------------------------------------------------------------------------
 // Polytope in H-representation:  { x \in R^n : Ax <= b }

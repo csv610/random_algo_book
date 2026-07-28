@@ -21,7 +21,7 @@
 
 #include "random_utils.h"
 
-namespace randalgo {
+namespace ral {
 
 // ============================================================
 // PageCache: basic cache abstraction
@@ -80,7 +80,7 @@ struct PageCache {
 // Deterministic LRU (Least Recently Used)
 // ============================================================
 
-int deterministic_lru(int cache_size, const std::vector<int>& requests, bool verbose = false) {
+inline int deterministic_lru(int cache_size, const std::vector<int>& requests, bool verbose = false) {
     PageCache cache(cache_size);
     int misses = 0;
 
@@ -108,7 +108,7 @@ int deterministic_lru(int cache_size, const std::vector<int>& requests, bool ver
 // Deterministic FIFO (First In First Out)
 // ============================================================
 
-int deterministic_fifo(int cache_size, const std::vector<int>& requests, bool verbose = false) {
+inline int deterministic_fifo(int cache_size, const std::vector<int>& requests, bool verbose = false) {
     PageCache cache(cache_size);
     int misses = 0;
 
@@ -136,7 +136,7 @@ int deterministic_fifo(int cache_size, const std::vector<int>& requests, bool ve
 // On a miss, evict a uniformly random page from the cache.
 // ============================================================
 
-int random_paging(int cache_size, const std::vector<int>& requests, bool verbose = false) {
+inline int random_paging(int cache_size, const std::vector<int>& requests, bool verbose = false) {
     PageCache cache(cache_size);
     int misses = 0;
     auto& engine = rng().engine();
@@ -177,7 +177,7 @@ int random_paging(int cache_size, const std::vector<int>& requests, bool verbose
 // When all pages are marked, reset all marks and start new round.
 // ============================================================
 
-int marking_algorithm(int cache_size, const std::vector<int>& requests, bool verbose = false) {
+inline int marking_algorithm(int cache_size, const std::vector<int>& requests, bool verbose = false) {
     PageCache cache(cache_size);
     std::unordered_set<int> marked;
     int misses = 0;
@@ -235,7 +235,7 @@ int marking_algorithm(int cache_size, const std::vector<int>& requests, bool ver
 // Uses a set of (next_use, page) pairs for efficient lookup.
 // ============================================================
 
-int optimal_offline(int cache_size, const std::vector<int>& requests, bool verbose = false) {
+inline int optimal_offline(int cache_size, const std::vector<int>& requests, bool verbose = false) {
     int n = static_cast<int>(requests.size());
 
     // Precompute next_use[i] = next index where requests[i] appears, or INT_MAX
@@ -301,7 +301,7 @@ int optimal_offline(int cache_size, const std::vector<int>& requests, bool verbo
 // Competitive Ratio: run an algorithm and OPT, return ratio
 // ============================================================
 
-double compute_competitive_ratio(
+inline double compute_competitive_ratio(
     std::function<int(int, const std::vector<int>&, bool)> algorithm,
     int cache_size,
     const std::vector<int>& requests)
@@ -316,7 +316,7 @@ double compute_competitive_ratio(
 // Random sequence generator
 // ============================================================
 
-std::vector<int> generate_random_requests(int length, int num_pages) {
+inline std::vector<int> generate_random_requests(int length, int num_pages) {
     std::vector<int> requests(length);
     auto& engine = rng().engine();
     std::uniform_int_distribution<int> dist(1, num_pages);
@@ -328,7 +328,7 @@ std::vector<int> generate_random_requests(int length, int num_pages) {
 // Demonstration
 // ============================================================
 
-void demonstrate_paging() {
+inline void demonstrate_paging() {
     println("=== Paging Algorithms (Chapter 13) ===\n");
 
     // ---- Small example with verbose output ----

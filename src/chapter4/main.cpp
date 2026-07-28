@@ -7,6 +7,7 @@
 #include "coupon_collector.h"
 
 using namespace chapter4;
+using namespace ral;
 
 void print_header() {
     std::cout << "+==============================================================+\n";

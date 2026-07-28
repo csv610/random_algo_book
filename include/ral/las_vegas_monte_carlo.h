@@ -6,17 +6,17 @@
 #include <iostream>
 #include <cmath>
 #include <climits>
+#include <numbers>
 #include "random_utils.h"
 
-namespace chapter1 {
-using randalgo::rng;
+namespace ral {
 
 // ============================================================
 // Las Vegas Algorithm: Randomized QuickSort
 // Always gives correct result, running time is random
 // ============================================================
 
-int partition(std::vector<int>& arr, int low, int high) {
+inline int partition(std::vector<int>& arr, int low, int high) {
     int pivot_idx = rng().rand_int(low, high);
     std::swap(arr[pivot_idx], arr[high]);
     int pivot = arr[high];
@@ -32,7 +32,7 @@ int partition(std::vector<int>& arr, int low, int high) {
     return i + 1;
 }
 
-void randomized_quicksort(std::vector<int>& arr, int low, int high) {
+inline void randomized_quicksort(std::vector<int>& arr, int low, int high) {
     if (low < high) {
         int pi = partition(arr, low, high);
         randomized_quicksort(arr, low, pi - 1);
@@ -41,7 +41,7 @@ void randomized_quicksort(std::vector<int>& arr, int low, int high) {
 }
 
 // Las Vegas algorithm: expected running time O(n log n); output is always correct
-void demonstrate_las_vegas() {
+inline void demonstrate_las_vegas() {
     std::cout << "=== Las Vegas Algorithm: Randomized QuickSort ===\n\n";
     
     // Test with different sizes
@@ -77,7 +77,7 @@ void demonstrate_las_vegas() {
 
 // Randomized min-cut with one-sided error (like RP)
 // Returns a cut that is at least as large as the true min-cut
-int randomized_min_cut_monte_carlo(const std::vector<std::pair<int, int>>& edges, int n, int num_trials) {
+inline int randomized_min_cut_monte_carlo(const std::vector<std::pair<int, int>>& edges, int n, int num_trials) {
     int min_cut = INT_MAX;
     
     for (int trial = 0; trial < num_trials; trial++) {
@@ -133,7 +133,7 @@ int randomized_min_cut_monte_carlo(const std::vector<std::pair<int, int>>& edges
 
 // Monte Carlo with two-sided error
 // Returns an estimate that may be too high or too low
-double estimate_pi_monte_carlo(int num_samples) {
+inline double estimate_pi_monte_carlo(int num_samples) {
     int inside_circle = 0;
     
     for (int i = 0; i < num_samples; i++) {
@@ -148,7 +148,7 @@ double estimate_pi_monte_carlo(int num_samples) {
     return 4.0 * inside_circle / num_samples;
 }
 
-void demonstrate_monte_carlo() {
+inline void demonstrate_monte_carlo() {
     std::cout << "=== Monte Carlo Algorithms ===\n\n";
     
     // Example 1: Pi estimation (two-sided error)
@@ -157,7 +157,7 @@ void demonstrate_monte_carlo() {
     
     for (int n : sample_sizes) {
         double pi_estimate = estimate_pi_monte_carlo(n);
-        double error = std::abs(pi_estimate - M_PI);
+        double error = std::abs(pi_estimate - std::numbers::pi);
         std::cout << "   Samples: " << n << ", Estimate: " << pi_estimate 
                   << ", Error: " << error << "\n";
     }

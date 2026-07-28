@@ -6,31 +6,32 @@
 #include <stdexcept>
 #include <algorithm>
 #include <numeric>
+#include <climits>
 
-namespace randalgo {
+namespace ral {
 
 // ---------------------------------------------------------------------------
 // 1. Modular Exponentiation -- binary method, O(log exp)
-//    Computes (base^exp) mod mod_val using repeated squaring.
+//    Computes (base^exp) mod mod_val using __int128 to avoid overflow.
 // ---------------------------------------------------------------------------
-long long mod_pow(long long base, long long exp, long long mod_val) {
+inline long long mod_pow(long long base, long long exp, long long mod_val) {
     if (mod_val == 1) return 0;
-    long long result = 1;
-    base %= mod_val;
+    __int128 result = 1;
+    __int128 b = base % mod_val;
     while (exp > 0) {
         if (exp & 1) {
-            result = (result * base) % mod_val;
+            result = (result * b) % mod_val;
         }
-        base = (base * base) % mod_val;
+        b = (b * b) % mod_val;
         exp >>= 1;
     }
-    return result;
+    return static_cast<long long>(result);
 }
 
 // ---------------------------------------------------------------------------
-// 2. GCD -- Euclidean algorithm
+// 2. GCD -- Euclidean algorithm (iterative)
 // ---------------------------------------------------------------------------
-long long gcd(long long a, long long b) {
+inline long long gcd(long long a, long long b) {
     a = std::abs(a);
     b = std::abs(b);
     while (b != 0) {
@@ -41,7 +42,7 @@ long long gcd(long long a, long long b) {
 }
 
 // ---------------------------------------------------------------------------
-// 3. Extended GCD -- finds (g, x, y) such that ax + by = g = gcd(a, b)
+// 3. Extended GCD -- iterative, finds (g, x, y) such that ax + by = g = gcd(a, b)
 // ---------------------------------------------------------------------------
 struct ExtendedGCDResult {
     long long g; // gcd
@@ -49,19 +50,32 @@ struct ExtendedGCDResult {
     long long y; // coefficient for b
 };
 
-ExtendedGCDResult extended_gcd(long long a, long long b) {
-    if (a == 0) return {b, 0, 1};
-    auto [g, x1, y1] = extended_gcd(b % a, a);
-    long long x = y1 - (b / a) * x1;
-    long long y = x1;
-    return {g, x, y};
+inline ExtendedGCDResult extended_gcd(long long a, long long b) {
+    long long old_r = a, r = b;
+    long long old_s = 1, s = 0;
+    long long old_t = 0, t = 1;
+
+    while (r != 0) {
+        long long q = old_r / r;
+        long long tmp_r = r;      r = old_r - q * r;      old_r = tmp_r;
+        long long tmp_s = s;      s = old_s - q * s;      old_s = tmp_s;
+        long long tmp_t = t;      t = old_t - q * t;      old_t = tmp_t;
+    }
+
+    // Ensure g is non-negative
+    if (old_r < 0) {
+        old_r = -old_r;
+        old_s = -old_s;
+        old_t = -old_t;
+    }
+    return {old_r, old_s, old_t};
 }
 
 // ---------------------------------------------------------------------------
 // 4. Modular Inverse -- using extended Euclidean algorithm
 //    Returns x such that (a * x) == 1 (mod mod_val).
 // ---------------------------------------------------------------------------
-long long mod_inverse(long long a, long long mod_val) {
+inline long long mod_inverse(long long a, long long mod_val) {
     auto [g, x, y] = extended_gcd(a, mod_val);
     if (g != 1) {
         throw std::runtime_error("Modular inverse does not exist (gcd != 1)");
@@ -73,7 +87,7 @@ long long mod_inverse(long long a, long long mod_val) {
 // 5. Trial Division Primality Test
 //    Tests divisibility by 2, 3, then all numbers of the form 6k +/- 1.
 // ---------------------------------------------------------------------------
-bool is_prime_trial(long long n) {
+inline bool is_prime_trial(long long n) {
     if (n < 2) return false;
     if (n == 2 || n == 3) return true;
     if (n % 2 == 0 || n % 3 == 0) return false;
@@ -86,38 +100,37 @@ bool is_prime_trial(long long n) {
 // ---------------------------------------------------------------------------
 // 6. Chinese Remainder Theorem
 //    Solves the system: x == a_i (mod n_i) for pairwise coprime n_i.
-//    Uses constructive method: M = prod(n_i), x = sum(a_i * M_i * y_i)
-//    where M_i = M/n_i and y_i = M_i^{-1} mod n_i.
+//    Uses __int128 for intermediate products to avoid overflow.
 // ---------------------------------------------------------------------------
 struct Congruence {
     long long a; // remainder
     long long n; // modulus
 };
 
-long long chinese_remainder_theorem(const std::vector<Congruence>& system) {
+inline long long chinese_remainder_theorem(const std::vector<Congruence>& system) {
     if (system.empty()) {
         throw std::runtime_error("Empty system of congruences");
     }
 
-    long long M = 1;
+    __int128 M = 1;
     for (const auto& c : system) {
         M *= c.n;
     }
 
-    long long x = 0;
+    __int128 x = 0;
     for (const auto& c : system) {
-        long long M_i = M / c.n;
-        long long y_i = mod_inverse(M_i, c.n);
-        x = (x + c.a * M_i % M * y_i % M) % M;
+        __int128 M_i = M / c.n;
+        long long y_i = mod_inverse(static_cast<long long>(M_i), c.n);
+        x = (x + static_cast<__int128>(c.a) * M_i % M * y_i % M) % M;
     }
-    return ((x % M) + M) % M;
+    return static_cast<long long>(((x % M) + M) % M);
 }
 
 // ---------------------------------------------------------------------------
 // 7. Euler's Totient Function -- compute phi(n)
 //    phi(n) = n * prod((1 - 1/p)) for all prime factors p of n.
 // ---------------------------------------------------------------------------
-long long euler_totient(long long n) {
+inline long long euler_totient(long long n) {
     long long result = n;
     for (long long p = 2; p * p <= n; ++p) {
         if (n % p == 0) {
@@ -136,7 +149,7 @@ long long euler_totient(long long n) {
 // ---------------------------------------------------------------------------
 // 8. Demonstration -- tests all number theory routines
 // ---------------------------------------------------------------------------
-void demonstrate_number_theory() {
+inline void demonstrate_number_theory() {
     println("=== Number Theory Algorithms ===\n");
 
     // --- Modular Exponentiation ---

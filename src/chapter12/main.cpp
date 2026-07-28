@@ -14,10 +14,10 @@ int main() {
     println("Randomized Algorithms -- C++23 Implementations\n");
 
     print_header("11.1 DNF Counting (Karp-Luby Algorithm)");
-    randalgo::demonstrate_dnf_counting();
+    ral::demonstrate_dnf_counting();
 
     print_header("11.2 Volume of a Convex Body");
-    randalgo::demonstrate_volume();
+    ral::demonstrate_volume();
 
     println("========================================");
     println("  All demonstrations complete.");

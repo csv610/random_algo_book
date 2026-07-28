@@ -6,7 +6,7 @@
 #include <cassert>
 #include <cmath>
 
-namespace chapter9 {
+namespace ral {
 
 struct TreapNode {
     int key;
@@ -140,8 +140,21 @@ public:
     Treap(const Treap&) = delete;
     Treap& operator=(const Treap&) = delete;
 
+    Treap(Treap&& other) noexcept : root_(other.root_), rng_(other.rng_) {
+        other.root_ = nullptr;
+    }
+
+    Treap& operator=(Treap&& other) noexcept {
+        if (this != &other) {
+            destroy(root_);
+            root_ = other.root_;
+            other.root_ = nullptr;
+        }
+        return *this;
+    }
+
     void insert(int key) {
-        std::uniform_int_distribution<int> dist(1, 2000000000);
+        std::uniform_int_distribution<long long> dist(1, 2000000000LL * 2000);
         int priority = dist(rng_);
         root_ = insert_impl(root_, key, priority);
     }

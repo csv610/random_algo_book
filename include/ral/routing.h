@@ -7,12 +7,12 @@
 #include <random>
 #include <cmath>
 
-namespace chapter5 {
+namespace ral {
 
 // Simulate random routing of n packets to n memory modules.
 // Each packet independently selects a destination uniformly at random.
 // Returns the maximum queue length (congestion).
-int simulate_routing(int n, std::mt19937& rng) {
+inline int simulate_routing(int n, std::mt19937& rng) {
     std::vector<int> queues(n, 0);
     std::uniform_int_distribution<int> dist(0, n - 1);
     for (int i = 0; i < n; i++) {
@@ -25,7 +25,7 @@ int simulate_routing(int n, std::mt19937& rng) {
 // In each round, each processor sends a packet to a random destination.
 // After each round, delivered packets are removed.
 // Returns the number of rounds needed until all packets are delivered.
-int simulate_routing_rounds(int n, std::mt19937& rng) {
+inline int simulate_routing_rounds(int n, std::mt19937& rng) {
     std::vector<int> remaining(n, 1); // each processor has 1 packet
     int rounds = 0;
     std::uniform_int_distribution<int> dist(0, n - 1);
@@ -109,7 +109,7 @@ int simulate_routing_rounds(int n, std::mt19937& rng) {
 // Compute the theoretical Chernoff-based upper bound on max congestion
 // Pr[max queue >= t] <= n * exp(-mu*(t*ln(t/mu) - (t - mu)))
 // for mu = 1 (each module gets expected 1 packet)
-double theoretical_congestion_bound(int n, double t) {
+inline double theoretical_congestion_bound(int n, double t) {
     if (t <= 1.0) return 1.0;
     double mu = 1.0;
     double log_ratio = std::log(t / mu);
@@ -118,7 +118,7 @@ double theoretical_congestion_bound(int n, double t) {
 }
 
 // Find the smallest t such that the Chernoff bound gives Pr[max >= t] < 1/n^c
-int theoretical_max_congestion(int n, double c) {
+inline int theoretical_max_congestion(int n, double c) {
     double target = std::pow(n, -c);
     for (int t = 1; t <= n; t++) {
         if (theoretical_congestion_bound(n, static_cast<double>(t)) < target) {
@@ -128,7 +128,7 @@ int theoretical_max_congestion(int n, double c) {
     return n;
 }
 
-void demonstrate_routing() {
+inline void demonstrate_routing() {
     std::mt19937 rng(42);
 
     std::cout << std::fixed << std::setprecision(4);

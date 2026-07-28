@@ -7,7 +7,7 @@
 #include "binary_planar_partition.h"
 #include "probabilistic_recurrence.h"
 
-using namespace chapter1;
+using namespace ral;
 
 void print_header() {
     std::cout << "+==============================================================+\n";
@@ -26,7 +26,7 @@ int main() {
     
     // Section 1.1: Min-Cut Algorithm
     print_section(1, "A Min-Cut Algorithm");
-    demonstrate_min_cut();
+    demonstrate_karger_basic();
     
     // Section 1.2: Las Vegas and Monte Carlo
     print_section(2, "Las Vegas and Monte Carlo");

@@ -15,7 +15,7 @@
 #include <sstream>
 #include <string>
 
-namespace randalgo {
+namespace ral {
 
 // ---------------------------------------------------------------------------
 // PRAM (Parallel Random Access Machine) simulation
@@ -26,7 +26,7 @@ public:
     int num_processors;
     std::vector<long long> global_memory;
     std::vector<std::vector<long long>> local_memory;
-    mutable std::mt19937 rng{std::random_device{}()};
+    std::mt19937 rng{std::random_device{}()};
 
     explicit PRAM(int p, int mem_size = 0)
         : num_processors(p),
@@ -35,8 +35,9 @@ public:
 
     // Execute a parallel step: every processor i runs fn(i, global_memory) and
     // the results are gathered into a per-processor vector.
+    // The callback receives a const reference to prevent data races.
     std::vector<long long> execute_step(
-        std::function<long long(int, std::vector<long long>&)> fn) {
+        std::function<long long(int, const std::vector<long long>&)> fn) {
 
         std::vector<long long> results(num_processors);
         std::vector<std::jthread> threads;
@@ -71,7 +72,7 @@ public:
             println("\nStep {}/{}  (stride = {}):", d + 1, steps, stride);
 
             std::vector<long long> old_x = x;
-            auto results = execute_step([&](int i, std::vector<long long>&) -> long long {
+            auto results = execute_step([&](int i, const std::vector<long long>&) -> long long {
                 if (i < p && i >= stride) {
                     return old_x[i] + old_x[i - stride];
                 }
@@ -113,14 +114,14 @@ public:
             std::vector<int> old_next = next_cur;
             bool any_active = false;
 
-            auto rank_results = execute_step([&](int i, std::vector<long long>&) -> long long {
+            auto rank_results = execute_step([&](int i, const std::vector<long long>&) -> long long {
                 if (i < n && old_next[i] != -1) {
                     return old_rank[i] + old_rank[old_next[i]];
                 }
                 return old_rank[i];
             });
 
-            auto next_results = execute_step([&](int i, std::vector<long long>&) -> long long {
+            auto next_results = execute_step([&](int i, const std::vector<long long>&) -> long long {
                 if (i < n && old_next[i] != -1) {
                     return static_cast<long long>(old_next[old_next[i]]);
                 }
@@ -168,7 +169,7 @@ public:
             std::vector<int> old_label = label;
             bool changed = false;
 
-            auto results = execute_step([&](int i, std::vector<long long>&) -> long long {
+            auto results = execute_step([&](int i, const std::vector<long long>&) -> long long {
                 if (i >= n) return 0;
                 int mn = old_label[i];
                 for (int nb : adj[i]) mn = std::min(mn, old_label[nb]);
@@ -180,7 +181,7 @@ public:
                 if (label[i] != old_label[i]) changed = true;
             }
 
-            println("Round {}: labels = [{}]", round + 1, fmt_join_int(label));
+            println("Round {}: labels = [{}]", round + 1, fmt_join(label));
             if (!changed) break;
         }
 
@@ -227,10 +228,6 @@ private:
             oss << v[i];
         }
         return oss.str();
-    }
-
-    static std::string fmt_join_int(const std::vector<int>& v) {
-        return fmt_join(v);
     }
 };
 

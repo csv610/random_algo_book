@@ -5,16 +5,13 @@
 #include <algorithm>
 #include <random>
 #include <functional>
-#include <atomic>
-#include <thread>
-#include <latch>
 #include "compat_print.h"
 #include <cmath>
 #include <sstream>
 #include <numeric>
 #include <cassert>
 
-namespace randalgo {
+namespace ral {
 
 // ---------------------------------------------------------------------------
 // Graph representation

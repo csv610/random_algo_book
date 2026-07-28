@@ -6,22 +6,23 @@
 #include <random>
 #include <vector>
 #include <numeric>
+#include <numbers>
 
-namespace chapter5 {
+namespace ral {
 
 // Compute the Azuma-Hoeffding bound: Pr[|X_n - X_0| >= t] <= 2*exp(-t^2 / (2 * sum(c_i^2)))
 // Parameters:
 //   n         - number of steps in the martingale
 //   max_diff  - uniform bound on |X_i - X_{i-1}| (all c_i = max_diff)
 //   t         - deviation threshold
-double azuma_hoeffding_bound(int n, double max_diff, double t) {
+inline double azuma_hoeffding_bound(int n, double max_diff, double t) {
     double sum_c2 = n * max_diff * max_diff;
     return 2.0 * std::exp(-t * t / (2.0 * sum_c2));
 }
 
 // Compute the Azuma-Hoeffding bound with non-uniform differences
 // c[i] is the bound on |X_i - X_{i-1}| for i = 1..n
-double azuma_hoeffding_bound(const std::vector<double>& c, double t) {
+inline double azuma_hoeffding_bound(const std::vector<double>& c, double t) {
     double sum_c2 = 0.0;
     for (double ci : c) {
         sum_c2 += ci * ci;
@@ -85,7 +86,7 @@ struct GraphEdgeMartingale {
 // changes the max by at most the spacing 1/n for the conditional expectation).
 
 // Simulate the Doob martingale for max of n uniforms
-std::vector<double> max_uniform_martingale(int n, std::mt19937& rng) {
+inline std::vector<double> max_uniform_martingale(int n, std::mt19937& rng) {
     std::uniform_real_distribution<double> dist(0.0, 1.0);
     std::vector<double> x(n);
     for (int i = 0; i < n; i++) x[i] = dist(rng);
@@ -129,7 +130,7 @@ std::vector<double> max_uniform_martingale(int n, std::mt19937& rng) {
     return martingale;
 }
 
-void demonstrate_martingales() {
+inline void demonstrate_martingales() {
     std::mt19937 rng(42);
 
     std::cout << std::fixed << std::setprecision(6);
@@ -199,7 +200,7 @@ void demonstrate_martingales() {
                   << ", |X_n - X_0| = " << actual_dev << "\n";
         std::cout << "  sqrt(2 * sum(c_i^2)) = " << bound_1sigma << "\n";
         std::cout << "  Azuma-Hoeffding Pr[dev >= bound] <= 2*exp(-1) = "
-                  << 2.0 / M_E << "\n";
+                  << 2.0 / std::numbers::e << "\n";
     }
 
     // Part 3: Maximum of n uniforms martingale

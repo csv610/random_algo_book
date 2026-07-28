@@ -21,13 +21,13 @@ int main() {
     std::cout << "Randomized Algorithms - C++ Implementations\n";
 
     print_header("8.2 Random Treaps");
-    chapter9::demonstrate_treap();
+    ral::demonstrate_treap();
 
     print_header("8.3 Skip Lists");
-    chapter9::demonstrate_skip_list();
+    ral::demonstrate_skip_list();
 
     print_header("8.4 - 8.5 Hash Tables");
-    chapter9::demonstrate_hashing();
+    ral::demonstrate_hashing();
 
     std::cout << "\n========================================\n";
     std::cout << "  All demonstrations complete.\n";

@@ -5,7 +5,7 @@
 #include <iomanip>
 #include <cassert>
 
-namespace chapter8 {
+namespace ral {
 
 // Freivalds' algorithm: verify AB = C
 // Returns true if verification passes (AB = C likely), false if AB != C detected

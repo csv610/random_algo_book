@@ -5,11 +5,11 @@
 #include <iostream>
 #include <cassert>
 
-namespace chapter8 {
+namespace ral {
 
 // Compute Karp-Rabin fingerprint of string s
 // f(s) = s[0]*base^(n-1) + s[1]*base^(n-2) + ... + s[n-1] (mod mod)
-long long string_fingerprint(const std::string& s, long long base, long long mod) {
+inline long long string_fingerprint(const std::string& s, long long base, long long mod) {
     long long hash = 0;
     for (char c : s) {
         hash = (hash * base + (unsigned char)c) % mod;
@@ -18,7 +18,7 @@ long long string_fingerprint(const std::string& s, long long base, long long mod
 }
 
 // Compute base^(len-1) mod mod (needed for rolling hash)
-long long power_mod(long long base, long long exp, long long mod) {
+inline long long power_mod(long long base, long long exp, long long mod) {
     long long result = 1;
     base %= mod;
     while (exp > 0) {
@@ -33,7 +33,7 @@ long long power_mod(long long base, long long exp, long long mod) {
 
 // Rabin-Karp pattern matching
 // Returns all starting indices where pattern occurs in text
-std::vector<int> rabin_karp_search(const std::string& text, const std::string& pattern) {
+inline std::vector<int> rabin_karp_search(const std::string& text, const std::string& pattern) {
     std::vector<int> matches;
     int n = (int)text.size();
     int m = (int)pattern.size();
@@ -82,7 +82,7 @@ std::vector<int> rabin_karp_search(const std::string& text, const std::string& p
     return matches;
 }
 
-void demonstrate_rabin_karp() {
+inline void demonstrate_rabin_karp() {
     std::cout << "=== Rabin-Karp Pattern Matching ===\n\n";
 
     // Test 1: Basic matching

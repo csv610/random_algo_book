@@ -7,7 +7,7 @@
 #include <cassert>
 #include <cmath>
 
-namespace chapter10 {
+namespace ral {
 
 struct Point2D {
     double x, y;
@@ -22,17 +22,17 @@ struct Point2D {
     }
 };
 
-double cross_product(const Point2D& O, const Point2D& A, const Point2D& B) {
+inline double cross_product(const Point2D& O, const Point2D& A, const Point2D& B) {
     return (A.x - O.x) * (B.y - O.y) - (A.y - O.y) * (B.x - O.x);
 }
 
-double dist2(const Point2D& a, const Point2D& b) {
+inline double dist2(const Point2D& a, const Point2D& b) {
     double dx = a.x - b.x, dy = a.y - b.y;
     return dx * dx + dy * dy;
 }
 
 // Jarvis march (gift wrapping) -- O(nh) where h = hull size
-std::vector<Point2D> gift_wrap_hull(std::vector<Point2D> points) {
+inline std::vector<Point2D> gift_wrap_hull(std::vector<Point2D> points) {
     int n = static_cast<int>(points.size());
     if (n < 3) return points;
 
@@ -63,15 +63,9 @@ std::vector<Point2D> gift_wrap_hull(std::vector<Point2D> points) {
 
 // Randomized incremental convex hull -- expected O(n log n)
 // Maintains upper and lower chains separately
-std::vector<Point2D> convex_hull(std::vector<Point2D> points) {
+inline std::vector<Point2D> convex_hull(std::vector<Point2D> points) {
     int n = static_cast<int>(points.size());
     if (n < 3) return points;
-
-    std::random_device rd;
-    std::mt19937 rng(rd());
-
-    // Shuffle the points
-    std::shuffle(points.begin(), points.end(), rng);
 
     // Sort by x to initialize with two leftmost points
     std::sort(points.begin(), points.end(), [](const Point2D& a, const Point2D& b) {
@@ -135,7 +129,7 @@ std::vector<Point2D> convex_hull(std::vector<Point2D> points) {
     return hull;
 }
 
-void demonstrate_convex_hull() {
+inline void demonstrate_convex_hull() {
     std::random_device rd;
     std::mt19937 rng(rd());
     std::uniform_real_distribution<double> dist(-1000.0, 1000.0);

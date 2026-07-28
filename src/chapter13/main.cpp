@@ -8,9 +8,9 @@ int main() {
     println("|       Chapter 12: Parallel and Distributed Algorithms       |");
     println("+==============================================================+");
 
-    randalgo::demonstrate_pram();
-    randalgo::demonstrate_mis();
-    randalgo::demonstrate_matchings();
+    ral::demonstrate_pram();
+    ral::demonstrate_mis();
+    ral::demonstrate_matchings();
 
     println("\nDone.");
     return 0;

@@ -3,7 +3,7 @@
 #include <set>
 #include <chrono>
 
-namespace chapter10 {
+namespace ral {
 
 struct Triangle {
     int v[3];
@@ -15,21 +15,21 @@ struct Triangle {
     }
 };
 
-struct Edge {
+struct DelaunayEdge {
     int v[2];
-    Edge() { v[0] = v[1] = -1; }
-    Edge(int a, int b) {
+    DelaunayEdge() { v[0] = v[1] = -1; }
+    DelaunayEdge(int a, int b) {
         v[0] = std::min(a, b);
         v[1] = std::max(a, b);
     }
-    bool operator<(const Edge& o) const {
+    bool operator<(const DelaunayEdge& o) const {
         if (v[0] != o.v[0]) return v[0] < o.v[0];
         return v[1] < o.v[1];
     }
 };
 
 // In-circle test: positive if p is inside circumcircle of CCW triangle (a,b,c)
-double in_circumcircle(const Point2D& p, const Point2D& a,
+inline double in_circumcircle(const Point2D& p, const Point2D& a,
                        const Point2D& b, const Point2D& c) {
     double ax = a.x - p.x, ay = a.y - p.y;
     double bx = b.x - p.x, by = b.y - p.y;
@@ -46,7 +46,7 @@ double in_circumcircle(const Point2D& p, const Point2D& a,
 }
 
 // Randomized incremental Delaunay triangulation with Bowyer-Watson cavity
-std::vector<Triangle> delaunay_triangulation(std::vector<Point2D> points) {
+inline std::vector<Triangle> delaunay_triangulation(std::vector<Point2D> points) {
     int n = static_cast<int>(points.size());
     if (n < 3) return {};
 
@@ -93,12 +93,12 @@ std::vector<Triangle> delaunay_triangulation(std::vector<Point2D> points) {
         }
 
         // Find boundary edges of the polygonal hole
-        std::vector<Edge> polygon;
+        std::vector<DelaunayEdge> polygon;
         std::set<int> bad_set(bad.begin(), bad.end());
         for (int tidx : bad) {
             const Triangle& bt = triangles[tidx];
             for (int j = 0; j < 3; j++) {
-                Edge e(bt.v[j], bt.v[(j + 1) % 3]);
+                DelaunayEdge e(bt.v[j], bt.v[(j + 1) % 3]);
                 bool shared = false;
                 for (int tidx2 : bad) {
                     if (tidx2 == tidx) continue;
@@ -136,7 +136,7 @@ std::vector<Triangle> delaunay_triangulation(std::vector<Point2D> points) {
     return result;
 }
 
-void demonstrate_delaunay() {
+inline void demonstrate_delaunay() {
     std::random_device rd;
     std::mt19937 rng(rd());
     std::uniform_real_distribution<double> dist(-500.0, 500.0);

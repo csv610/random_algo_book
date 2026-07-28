@@ -6,12 +6,11 @@
 #include <cmath>
 #include "random_utils.h"
 
-namespace chapter1 {
-using randalgo::rng;
+namespace ral {
 
 // Randomized Find algorithm (select kth smallest)
 // This is a Las Vegas algorithm - always correct, expected O(n) time
-int randomized_find(std::vector<int>& arr, int k) {
+inline int randomized_find(std::vector<int>& arr, int k) {
     if (arr.size() == 1) return arr[0];
     
     // Pick random pivot
@@ -43,7 +42,7 @@ struct FindAnalysis {
     FindAnalysis() : total_calls(0), max_depth(0) {}
 };
 
-int randomized_find_analyzed(std::vector<int>& arr, int k, int depth, FindAnalysis& analysis) {
+inline int randomized_find_analyzed(std::vector<int>& arr, int k, int depth, FindAnalysis& analysis) {
     analysis.total_calls++;
     analysis.max_depth = std::max(analysis.max_depth, depth);
     
@@ -70,7 +69,7 @@ int randomized_find_analyzed(std::vector<int>& arr, int k, int depth, FindAnalys
 
 // Theorem 1.3: Probabilistic Recurrence
 // If E[X] >= g(m) at each step, then expected steps to reach 1 is <= integral from 1 to n of dx/g(x)
-void demonstrate_probabilistic_recurrence() {
+inline void demonstrate_probabilistic_recurrence() {
     std::cout << "=== Probabilistic Recurrence (Section 1.4) ===\n\n";
     
     // Test the Find algorithm
@@ -113,7 +112,7 @@ void demonstrate_probabilistic_recurrence() {
 }
 
 // Geometric distribution demonstration
-void demonstrate_geometric_distribution() {
+inline void demonstrate_geometric_distribution() {
     std::cout << "=== Geometric Distribution ===\n\n";
     
     // Simulate biased coin: probability p of heads
@@ -145,7 +144,7 @@ void demonstrate_geometric_distribution() {
 }
 
 // Analyze expected number of recursive calls as problem size reduces
-void analyze_recursion_depth() {
+inline void analyze_recursion_depth() {
     std::cout << "=== Recursion Depth Analysis ===\n\n";
     
     // For Find algorithm: at each step, expected reduction is at least n/4

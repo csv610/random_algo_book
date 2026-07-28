@@ -1,6 +1,6 @@
 # Randomized Algorithms Library (RAL)
 
-A self-contained, header-only C++23 library of randomized algorithms, based on the textbook **"Randomized Algorithms with C++"** by **Chaman Singh Verma**. 
+A self-contained, header-only C++23 library of **102 randomized algorithms**, based on the textbook **"Randomized Algorithms with C++"** by **Chaman Singh Verma**.
 
 RAL is designed to be highly reusable, modular, and performant, mirroring the structure and ergonomics of the Standard Template Library (STL).
 
@@ -8,42 +8,20 @@ RAL is designed to be highly reusable, modular, and performant, mirroring the st
 
 ## Features
 
-RAL provides implementations for key randomized algorithms across five major domains:
+102 distinct algorithms across 24 categories in 49 headers:
 
-*   **Graph Algorithms (`ral/graph.h`)**:
-    *   Karger-Stein Randomized Min-Cut ($O(n^2 \log^3 n)$)
-    *   Karger-Klein-Tarjan (KKT) Linear-Time Minimum Spanning Tree
-    *   Seidel's All-Pairs Shortest Path (APSP) for unweighted undirected graphs
-    *   Luby's Parallel Maximal Independent Set (MIS)
-    *   Randomized Maximal & Maximum Matchings
-*   **Data Structures (`ral/data_structures.h`)**:
-    *   Randomized Treap (Binary Search Tree + Heap)
-    *   Skip List (probabilistic alternative to balanced BSTs)
-    *   Universal Hash Table (chaining-based)
-    *   Perfect Hash Table (Fredman-Komlos-Szemeredi $O(1)$ worst-case lookup)
-*   **Algebraic Algorithms (`ral/algebraic.h`)**:
-    *   Freivalds' Matrix Multiplication Verification
-    *   Schwartz-Zippel Polynomial Identity Testing (PIT)
-    *   Rabin-Karp Randomized String Matching
-    *   Modular Polynomial Arithmetic, Chinese Remainder Theorem (CRT), and RSA Cryptography
-*   **Geometric & LP Algorithms (`ral/geometry.h`)**:
-    *   Randomized Incremental Construction (RIC) Convex Hull & Delaunay Triangulation
-    *   Seidel's Randomized Linear Programming Solver
-    *   Binary Planar Partitions (BSP Trees)
-*   **Probability & Online Algorithms (`ral/probability.h`)**:
-    *   QuickSort & QuickSelect / LazySelect (expected linear-time selection)
-    *   Chernoff & Azuma-Hoeffding Concentration Bounds
-    *   Parallel Packet Routing in Hypercubes
-    *   Online Paging Algorithms (LRU, FIFO, Marking Paging)
-    *   Online K-Server Metric Algorithms & Oblivious/Adaptive Adversaries
-*   **Sketching & Streaming Algorithms (`ral/sketching.h`)**:
-    *   HyperLogLog (HLL) Cardinality Estimation
-    *   Count-Min Sketch Frequency Estimation
-    *   MinHash Jaccard Similarity Estimation
-*   **Random Projections (`ral/random_projection.h`)**:
-    *   Johnson-Lindenstrauss Dimensionality Reduction
-*   **Randomized Numerical Linear Algebra (`ral/randomized_linear_algebra.h`)**:
-    *   Randomized Range Finder (RandNLA)
+| Category | Examples | Algorithms Covered |
+|----------|----------|-------------------|
+| Number Theory | 7 | mod_pow, gcd, extended_gcd, mod_inverse, primality, CRT, Euler totient |
+| Cryptography | 9 | QR, RSA, Miller-Rabin, Solovay-Strassen, Fermat, Legendre, Jacobi |
+| Graph Algorithms | 15 | Karger, Karger-Stein, exact min-cut, Kruskal, KKT MST, Floyd-Warshall, Seidel APSP, repeated squaring, bool matrix multiply, blossom matching, bipartite matching, packet routing, random cut, max-flow, multigraph |
+| Data Structures | 10 | Universal hashing, FKS perfect hashing, skip list, treap, LRU paging, marking paging, lazy select, Seidel LP, weighted universal hashing, two-level hashing |
+| Geometry | 10 | Gift-wrap hull, randomized hull, Delaunay, Welzl MEC (iter+recursive), binary planar partition, sailor problem, two-point, amplified two-point, point-in-polygon |
+| Algebraic/Strings | 12 | Polynomial multiply, Horner's, Karatsuba, PIT, Freivalds, Rabin-Karp, string fingerprint, randomized SVD, JL projection, random projection, matrix concentration, matrix multiply |
+| Probabilistic | 12 | Chernoff (formula+simulation), coupon collector, Azuma, potential method, K-smaller, linear expectation, randomized quicksort, Monte Carlo min-cut, Monte Carlo pi, oblivious adversary, adaptive adversary |
+| New Algorithms | 13 | Reservoir sampling (basic+weighted+generic), randomized rounding (basic+best-of+Chernoff), Pollard's rho (factor+factorize+prime), SimHash, hyperplane LSH, E2LSH, LSH index |
+| Industrial Apps | 10 | Count-Min Sketch, Flajolet-Martin, Misra-Gries, SA-TSP, SA-knapsack, SA-generic, randomized response, Laplace mechanism, private mean, private histogram |
+| Online/Parallel | 3 | K-server, maximal independent set, PRAM simulation |
 
 ---
 
@@ -51,16 +29,27 @@ RAL provides implementations for key randomized algorithms across five major dom
 
 ```
 RandomAlgo/
-  ├── include/              <-- The Header-Only Library (Copy this to your project)
-  │    ├── ral.h            <-- Umbrella library header
-  │    └── ral/             <-- Module headers (graph.h, data_structures.h, etc.)
+  ├── include/              <-- Header-Only Library (copy to your project)
+  │    ├── ral.h            <-- Umbrella header (includes all 49 modules)
+  │    └── ral/             <-- 49 module headers
   │
-  ├── src/                  <-- Chapter benchmarks and verification drivers
-  │    ├── chapter1/
-  │    ├── chapter2/
-  │    └── ...
+  ├── examples/             <-- 101 standalone examples + 7 aggregate demos + benchmarks
+  │    ├── example_modular_exponentiation.cpp
+  │    ├── example_karger_min_cut.cpp
+  │    ├── example_treap.cpp
+  │    ├── ...
+  │    └── benchmarks.cpp
   │
-  ├── examples/             <-- Runnable library usage examples
+  ├── tests/                <-- Unit test suite
+  │    ├── test_framework.h
+  │    ├── test_core_algorithms.cpp     (41 suites, 2563 assertions)
+  │    ├── test_new_algorithms.cpp      (5 suites, 86 assertions)
+  │    └── test_industrial_apps.cpp     (3 suites, 38 assertions)
+  │
+  ├── src/                  <-- Chapter verification drivers
+  │    ├── chapter1/ ... chapter15/
+  │
+  ├── coverage_report/      <-- Generated by `make coverage`
   ├── Makefile
   └── README.md
 ```
@@ -69,13 +58,17 @@ RandomAlgo/
 
 ## Installation
 
-Since RAL is header-only, there is no building or linking required. Simply copy the `include/` directory (or the nested `ral.h` and `ral/` folders) into your project's include path.
+RAL is header-only. Copy `include/ral.h` and `include/ral/` into your project's include path:
+
+```bash
+cp -r include/ral.h include/ral/ /path/to/your/project/include/
+```
+
+No building or linking required.
 
 ---
 
-## Quick Start Example
-
-Here is a simple example showing how to use RAL in your own C++ project:
+## Quick Start
 
 ```cpp
 #include <iostream>
@@ -83,44 +76,182 @@ Here is a simple example showing how to use RAL in your own C++ project:
 #include <ral.h>
 
 int main() {
-    // 1. Seed a standard C++ random engine
     std::mt19937 rng(1337);
 
-    // 2. Initialize a Randomized Treap
+    // Randomized Treap
     ral::Treap treap(rng);
-
-    // 3. Perform operations
     treap.insert(10);
     treap.insert(20);
     treap.insert(5);
+    std::cout << "Treap size: " << treap.size() << "\n";
+    std::cout << "Search 20: " << (treap.search(20) ? "Found" : "Not Found") << "\n";
 
-    std::cout << "Treap Size: " << treap.size() << "\n";
-    std::cout << "Searching for 20: " << (treap.search(20) ? "Found" : "Not Found") << "\n";
+    // Reservoir sampling from a stream
+    std::vector<int> stream(1000);
+    std::iota(stream.begin(), stream.end(), 0);
+    auto sample = ral::reservoir_sample(stream, 10, rng);
+    std::cout << "Sampled " << sample.size() << " elements\n";
+
+    // Pollard's rho factorization
+    auto factors = ral::prime_factorization(600851475143LL, rng);
+    for (auto& [p, e] : factors)
+        std::cout << p << "^" << e << " ";
+    std::cout << "\n";
 
     return 0;
 }
 ```
 
-### Compiling
-Compile using any C++23 compatible compiler (e.g., GCC 13+ or Clang 16+):
 ```bash
 g++ -std=c++23 -Ipath/to/include -o main main.cpp
 ```
 
 ---
 
-## Building and Running Included Examples
+## Building and Running
 
-The library comes with 6 comprehensive test executables located in the `examples/` directory.
+### All examples (101 standalone + 7 aggregate + benchmarks)
 
-To build and run all examples:
 ```bash
-# Compile the examples
-make examples
-
-# Compile and execute
-make run-examples
+make examples          # Build all 108 example binaries
+make run-examples      # Build and run the 7 aggregate demos
 ```
+
+### Run a single example
+
+```bash
+make build/example_welzl_mec
+./build/example_welzl_mec
+```
+
+### Chapter verification drivers
+
+```bash
+make                   # Build all 14 chapter executables
+make run               # Run all chapters
+```
+
+### Unit tests (49 suites, 2687 assertions)
+
+```bash
+make test              # Build and run all test suites
+```
+
+### Code coverage
+
+```bash
+make coverage          # Build with gcov, run tests, generate lcov report
+                       # Report: coverage_report/html/index.html
+                       # Current: 90.6% line coverage, 93.8% function coverage
+```
+
+---
+
+## All 101 Standalone Examples
+
+| # | File | Algorithm |
+|---|------|-----------|
+| 1 | `example_modular_exponentiation.cpp` | Binary method for base^exp mod m |
+| 2 | `example_euclidean_gcd.cpp` | GCD via Euclid's algorithm |
+| 3 | `example_extended_gcd.cpp` | Extended GCD: find x,y such that ax+by=gcd |
+| 4 | `example_modular_inverse.cpp` | Modular inverse via extended GCD |
+| 5 | `example_primality_testing.cpp` | Trial division primality testing |
+| 6 | `example_chinese_remainder.cpp` | Chinese Remainder Theorem |
+| 7 | `example_euler_totient.cpp` | Euler's totient function |
+| 8 | `example_quadratic_residue.cpp` | Quadratic residuosity + Legendre symbol |
+| 9 | `example_rsa_encryption.cpp` | Full RSA encrypt/decrypt round-trip |
+| 10 | `example_miller_rabin.cpp` | Miller-Rabin probabilistic primality |
+| 11 | `example_solovay_strassen.cpp` | Solovay-Strassen primality test |
+| 12 | `example_fermat_primality.cpp` | Fermat test + Carmichael number failure |
+| 13 | `example_legendre_symbol.cpp` | Legendre symbol computation |
+| 14 | `example_jacobi_symbol.cpp` | Jacobi symbol for composite moduli |
+| 15 | `example_rsa_keygen.cpp` | RSA key generation |
+| 16 | `example_rsa_encrypt_decrypt.cpp` | RSA encrypt/decrypt with wrong-key test |
+| 17 | `example_karger_min_cut.cpp` | Karger's randomized min-cut |
+| 18 | `example_karger_stein.cpp` | Karger-Stein recursive improvement |
+| 19 | `example_exact_min_cut.cpp` | Exact min-cut via max-flow |
+| 20 | `example_kruskal_mst.cpp` | Kruskal's MST with Union-Find |
+| 21 | `example_kkt_mst.cpp` | KKT randomized MST |
+| 22 | `example_floyd_warshall.cpp` | Floyd-Warshall all-pairs shortest paths |
+| 23 | `example_seidel_apsp.cpp` | Seidel's randomized APSP |
+| 24 | `example_apsp_repeated_squaring.cpp` | APSP via min-plus repeated squaring |
+| 25 | `example_bool_matrix_multiply.cpp` | Boolean matrix multiplication |
+| 26 | `example_blossom_matching.cpp` | Maximum matching in general graphs |
+| 27 | `example_bipartite_matching.cpp` | Bipartite matching |
+| 28 | `example_packet_routing.cpp` | Randomized packet routing |
+| 29 | `example_random_cut.cpp` | Random cut technique |
+| 30 | `example_max_flow_bfs.cpp` | Edmonds-Karp max-flow |
+| 31 | `example_multigraph.cpp` | Multigraph operations |
+| 32 | `example_universal_hashing.cpp` | Universal hashing with chaining |
+| 33 | `example_fks_perfect_hashing.cpp` | FKS two-level perfect hashing |
+| 34 | `example_skip_list.cpp` | Skip list insert/search/remove |
+| 35 | `example_treap.cpp` | Treap BST+heap invariant demo |
+| 36 | `example_lru_paging.cpp` | LRU deterministic paging |
+| 37 | `example_marking_paging.cpp` | Randomized marking algorithm |
+| 38 | `example_lazy_select.cpp` | Lazy selection (order statistics) |
+| 39 | `example_seidel_lp.cpp` | Seidel's randomized LP solver |
+| 40 | `example_weighted_universal_hashing.cpp` | Weighted universal hashing |
+| 41 | `example_two_level_hashing.cpp` | Two-level hashing scheme |
+| 42 | `example_gift_wrap_hull.cpp` | Jarvis march convex hull |
+| 43 | `example_randomized_hull.cpp` | Randomized incremental convex hull |
+| 44 | `example_delaunay_triangulation.cpp` | Delaunay triangulation |
+| 45 | `example_welzl_mec.cpp` | Welzl's minimum enclosing circle |
+| 46 | `example_welzl_recursive_mec.cpp` | Welzl's recursive MEC variant |
+| 47 | `example_binary_planar_partition.cpp` | Randomized binary planar partition |
+| 48 | `example_sailor_problem.cpp` | Sailor problem (indicator variables) |
+| 49 | `example_two_point_method.cpp` | Two-point method for set balance |
+| 50 | `example_amplified_two_point.cpp` | Amplified two-point with repetition |
+| 51 | `example_point_in_polygon.cpp` | Geometric primitives (orientation, in-circle) |
+| 52 | `example_polynomial_multiplication.cpp` | Naive polynomial multiplication |
+| 53 | `example_polynomial_evaluation.cpp` | Horner's method |
+| 54 | `example_karatsuba.cpp` | Karatsuba fast multiplication |
+| 55 | `example_poly_identity_testing.cpp` | Schwartz-Zippel PIT |
+| 56 | `example_freivalds.cpp` | Freivalds' matrix product verification |
+| 57 | `example_rabin_karp.cpp` | Rabin-Karp string matching |
+| 58 | `example_string_fingerprint.cpp` | String fingerprinting for equality |
+| 59 | `example_randomized_svd.cpp` | Randomized SVD decomposition |
+| 60 | `example_jl_projection.cpp` | Johnson-Lindenstrauss reduction |
+| 61 | `example_random_projection.cpp` | Random projection distance preservation |
+| 62 | `example_matrix_concentration.cpp` | Matrix Chernoff/Bernstein bounds |
+| 63 | `example_matrix_multiplication.cpp` | Freivalds vs naive matrix multiply |
+| 64 | `example_chernoff_bound.cpp` | Chernoff bound formulas |
+| 65 | `example_chernoff_simulation.cpp` | Empirical Chernoff bound verification |
+| 66 | `example_coupon_collector.cpp` | Coupon collector simulation |
+| 67 | `example_azuma_inequality.cpp` | Azuma-Hoeffding inequality |
+| 68 | `example_potential_method.cpp` | Potential method analysis |
+| 69 | `example_k_smaller_recurrence.cpp` | Probabilistic recurrence relations |
+| 70 | `example_linear_expectation.cpp` | Linear of expectations |
+| 71 | `example_randomized_quicksort.cpp` | Las Vegas randomized quicksort |
+| 72 | `example_monte_carlo_min_cut.cpp` | Monte Carlo min-cut estimation |
+| 73 | `example_monte_carlo_pi.cpp` | Monte Carlo pi estimation |
+| 74 | `example_oblivious_adversary.cpp` | Oblivious adversary model |
+| 75 | `example_adaptive_adversary.cpp` | Adaptive online adversary |
+| 76 | `example_reservoir_sampling.cpp` | Basic reservoir sampling |
+| 77 | `example_weighted_reservoir.cpp` | Weighted reservoir sampling (A-Res) |
+| 78 | `example_generic_reservoir.cpp` | Generic template reservoir sampling |
+| 79 | `example_randomized_rounding_basic.cpp` | Basic randomized rounding |
+| 80 | `example_best_of_rounding.cpp` | Best-of-N rounding |
+| 81 | `example_chernoff_rounding.cpp` | Chernoff-concentration-aware rounding |
+| 82 | `example_pollard_rho_factor.cpp` | Pollard's rho single factor |
+| 83 | `example_pollard_rho_factorize.cpp` | Full factorization with Pollard's rho |
+| 84 | `example_prime_factorization.cpp` | Prime factorization with exponents |
+| 85 | `example_simhash.cpp` | SimHash for cosine similarity |
+| 86 | `example_hyperplane_lsh.cpp` | Hyperplane LSH |
+| 87 | `example_e2lsh.cpp` | E2LSH for Euclidean distance |
+| 88 | `example_lsh_index.cpp` | LSH index for nearest neighbor |
+| 89 | `example_count_min_sketch.cpp` | Count-Min Sketch frequency estimation |
+| 90 | `example_flajolet_martin.cpp` | Flajolet-Martin distinct counting |
+| 91 | `example_misra_gries.cpp` | Misra-Gries heavy hitter detection |
+| 92 | `example_sa_tsp.cpp` | Simulated annealing for TSP |
+| 93 | `example_sa_knapsack.cpp` | Simulated annealing for knapsack |
+| 94 | `example_sa_generic.cpp` | Generic SA framework |
+| 95 | `example_randomized_response.cpp` | Randomized response (privacy) |
+| 96 | `example_laplace_mechanism.cpp` | Laplace mechanism (differential privacy) |
+| 97 | `example_private_mean.cpp` | Private mean computation |
+| 98 | `example_private_histogram.cpp` | Private histogram |
+| 99 | `example_k_server.cpp` | K-server online algorithm |
+| 100 | `example_maximal_independent_set.cpp` | Luby's maximal independent set |
+| 101 | `example_pram_simulation.cpp` | PRAM parallel algorithm simulation |
 
 ---
 

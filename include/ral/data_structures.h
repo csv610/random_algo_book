@@ -13,14 +13,6 @@
 
 namespace ral {
 
-// Treap
-using Treap = chapter9::Treap;
-
-// SkipList
-using SkipList = chapter9::SkipList;
-
-// Hashing
-using ChainedHashTable = chapter9::UniversalHashTable;
-using PerfectHashTable = chapter9::PerfectHashTable;
+using ChainedHashTable = UniversalHashTable;
 
 } // namespace ral

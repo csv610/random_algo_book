@@ -18,7 +18,7 @@
 
 #include "random_utils.h"
 
-namespace randalgo {
+namespace ral {
 
 // ============================================================
 // ServerState: tracks server positions and accumulated cost
@@ -56,7 +56,7 @@ struct ServerState {
 // Greedy / Deterministic: move the closest server
 // ============================================================
 
-ServerState min_server_move(ServerState state, int request,
+inline ServerState min_server_move(ServerState state, int request,
                             const std::vector<std::vector<int>>& dist) {
     if (state.serves(request)) return state;
 
@@ -77,7 +77,7 @@ ServerState min_server_move(ServerState state, int request,
 // Randomized: select a server with probability inversely proportional to its distance
 // ============================================================
 
-ServerState random_server_move(ServerState state, int request,
+inline ServerState random_server_move(ServerState state, int request,
                                const std::vector<std::vector<int>>& dist) {
     if (state.serves(request)) return state;
 
@@ -110,7 +110,7 @@ ServerState random_server_move(ServerState state, int request,
 // ============================================================
 
 // Wrapper: uses memoization with composite key (req_idx, positions)
-long long optimal_offline_server_impl(
+inline long long optimal_offline_server_impl(
     int req_idx,
     std::vector<int> current_positions,
     const std::vector<int>& requests,
@@ -146,7 +146,7 @@ long long optimal_offline_server_impl(
     return best;
 }
 
-long long optimal_offline_server(
+inline long long optimal_offline_server(
     int /*k*/,
     const std::vector<int>& initial_positions,
     const std::vector<int>& requests,
@@ -161,7 +161,7 @@ long long optimal_offline_server(
 // Utility: build distance matrix for a line metric {0,1,...,n-1}
 // ============================================================
 
-std::vector<std::vector<int>> line_metric(int n) {
+inline std::vector<std::vector<int>> line_metric(int n) {
     std::vector<std::vector<int>> dist(n, std::vector<int>(n));
     for (int i = 0; i < n; ++i)
         for (int j = 0; j < n; ++j)
@@ -173,7 +173,7 @@ std::vector<std::vector<int>> line_metric(int n) {
 // Demonstration
 // ============================================================
 
-void demonstrate_k_server() {
+inline void demonstrate_k_server() {
     println("=== k-Server Problem (Chapter 13) ===\n");
 
     constexpr int n = 6;  // metric space: line {0,1,2,3,4,5}

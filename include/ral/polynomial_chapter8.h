@@ -4,7 +4,7 @@
 #include <iostream>
 #include <cassert>
 
-namespace chapter8 {
+namespace ral {
 
 // Evaluate polynomial with coefficients coeffs at point x modulo mod
 // coeffs[i] is the coefficient of x^i: p(x) = coeffs[0] + coeffs[1]*x + ...
@@ -47,7 +47,7 @@ inline int poly_degree(const std::vector<int>& coeffs) {
     return -1;
 }
 
-inline void demonstrate_polynomial() {
+inline void demonstrate_poly_identity_testing() {
     std::cout << "=== Polynomial Identity Testing (Schwartz-Zippel) ===\n\n";
 
     std::mt19937 rng(42);
@@ -91,4 +91,4 @@ inline void demonstrate_polynomial() {
     std::cout << "  deg(constant 5) = " << poly_degree({5}) << " (expected: 0)\n";
 }
 
-} // namespace chapter8
+} // namespace ral

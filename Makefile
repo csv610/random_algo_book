@@ -6,7 +6,11 @@ BUILDDIR = build
 # Chapter 2 is omitted as it only contains inline code listings in the book
 CHAPTERS = 1 3 4 5 6 7 8 9 10 11 12 13 14 15
 
-.PHONY: all clean run examples run-examples
+# Auto-discover all example_*.cpp files
+EXAMPLE_SRCS = $(wildcard examples/example_*.cpp)
+EXAMPLE_BINS = $(patsubst examples/%.cpp,$(BUILDDIR)/%,$(EXAMPLE_SRCS))
+
+.PHONY: all clean run examples run-examples test coverage
 
 all: build/chapter1 build/chapter3 build/chapter4 build/chapter5 build/chapter6 build/chapter7 build/chapter8 build/chapter9 build/chapter10 build/chapter11 build/chapter12 build/chapter13 build/chapter14 build/chapter15
 
@@ -56,8 +60,7 @@ $(BUILDDIR)/chapter14: src/chapter14/main.cpp src/chapter14/*.h | $(BUILDDIR)
 $(BUILDDIR)/chapter15: src/chapter15/main.cpp src/chapter15/*.h | $(BUILDDIR)
 	$(CXX) $(CXXFLAGS) -Isrc/chapter15 -o $@ $<
 
-examples: build/graph_example build/data_structures_example build/algebraic_example build/geometry_example build/probability_example build/modern_algorithms_example build/benchmarks
-
+# --- Individual example builds (legacy) ---
 build/graph_example: examples/graph_example.cpp include/ral/graph.h include/ral.h | $(BUILDDIR)
 	$(CXX) $(CXXFLAGS) -Iinclude -o $@ $<
 
@@ -79,6 +82,52 @@ build/modern_algorithms_example: examples/modern_algorithms_example.cpp include/
 build/benchmarks: examples/benchmarks.cpp include/ral.h | $(BUILDDIR)
 	$(CXX) $(CXXFLAGS) -Iinclude -o $@ $<
 
+# --- Auto-generated example builds (one per algorithm) ---
+$(BUILDDIR)/example_%: examples/example_%.cpp include/ral.h | $(BUILDDIR)
+	$(CXX) $(CXXFLAGS) -Iinclude -o $@ $<
+
+# --- All examples ---
+examples: $(EXAMPLE_BINS) build/graph_example build/data_structures_example build/algebraic_example build/geometry_example build/probability_example build/modern_algorithms_example build/benchmarks
+
+# --- Tests ---
+build/test_core: tests/test_core_algorithms.cpp tests/test_framework.h include/ral.h | $(BUILDDIR)
+	$(CXX) $(CXXFLAGS) -Iinclude -Itests -o $@ $<
+
+build/test_new: tests/test_new_algorithms.cpp tests/test_framework.h include/ral.h | $(BUILDDIR)
+	$(CXX) $(CXXFLAGS) -Iinclude -Itests -o $@ $<
+
+build/test_industrial: tests/test_industrial_apps.cpp tests/test_framework.h include/ral.h | $(BUILDDIR)
+	$(CXX) $(CXXFLAGS) -Iinclude -Itests -o $@ $<
+
+test: build/test_core build/test_new build/test_industrial
+	@echo "Running core algorithm tests..."
+	./build/test_core
+	@echo "Running new algorithm tests..."
+	./build/test_new
+	@echo "Running industrial app tests..."
+	./build/test_industrial
+
+# --- Coverage ---
+COVERAGE_DIR = coverage_report
+GCOV_TOOL = /usr/bin/gcov
+
+coverage:
+	mkdir -p $(COVERAGE_DIR)
+	$(CXX) -std=c++23 -O0 --coverage -fprofile-arcs -ftest-coverage -Iinclude -Itests -o build/test_core_gcov tests/test_core_algorithms.cpp
+	$(CXX) -std=c++23 -O0 --coverage -fprofile-arcs -ftest-coverage -Iinclude -Itests -o build/test_new_gcov tests/test_new_algorithms.cpp
+	$(CXX) -std=c++23 -O0 --coverage -fprofile-arcs -ftest-coverage -Iinclude -Itests -o build/test_industrial_gcov tests/test_industrial_apps.cpp
+	./build/test_core_gcov
+	./build/test_new_gcov
+	./build/test_industrial_gcov
+	lcov --capture --directory build --output-file $(COVERAGE_DIR)/coverage.info --gcov-tool $(GCOV_TOOL) --ignore-errors inconsistent,unsupported 2>/dev/null || true
+	lcov --remove $(COVERAGE_DIR)/coverage.info '/usr/*' '*/tests/*' --output-file $(COVERAGE_DIR)/coverage_filtered.info --gcov-tool $(GCOV_TOOL) --ignore-errors inconsistent,unsupported 2>/dev/null || true
+	genhtml $(COVERAGE_DIR)/coverage_filtered.info --output-directory $(COVERAGE_DIR)/html --ignore-errors inconsistent,unsupported,corrupt 2>/dev/null || true
+	@echo ""
+	@echo "=== Coverage Summary ==="
+	@lcov --summary $(COVERAGE_DIR)/coverage_filtered.info --gcov-tool $(GCOV_TOOL) 2>/dev/null || true
+	@echo ""
+	@echo "Full report: $(COVERAGE_DIR)/html/index.html"
+
 run-examples: examples
 	./build/graph_example
 	./build/data_structures_example
@@ -89,7 +138,7 @@ run-examples: examples
 	./build/benchmarks
 
 clean:
-	rm -rf $(BUILDDIR)
+	rm -rf $(BUILDDIR) coverage_report
 
 run: all
 	@for ch in $(CHAPTERS); do echo "--- Chapter $$ch ---"; ./$(BUILDDIR)/chapter$$ch > /dev/null 2>&1 && echo "  OK" || echo "  FAILED"; done

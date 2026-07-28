@@ -7,7 +7,7 @@
 #include <cmath>
 #include <limits>
 
-namespace chapter9 {
+namespace ral {
 
 class SkipList {
 private:

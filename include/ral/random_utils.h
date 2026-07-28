@@ -8,12 +8,12 @@
 #include <span>
 #include "compat_print.h"
 
-namespace randalgo {
+namespace ral {
 
 class RandomEngine {
 public:
     static RandomEngine& instance() {
-        static RandomEngine eng;
+        static thread_local RandomEngine eng;
         return eng;
     }
 
@@ -36,7 +36,7 @@ public:
         std::ranges::shuffle(vec, engine_);
     }
 
-    template<std::floating_point T>
+    template<typename T>
     std::vector<T> sample(std::span<const T> items, double p) {
         std::vector<T> result;
         for (const auto& item : items) {

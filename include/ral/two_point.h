@@ -7,17 +7,17 @@
 #include <iostream>
 #include <iomanip>
 
-namespace chapter4 {
+namespace ral {
 
 // Simulated RP algorithm: for x in L, A(x,r)=1 for half the r's
 // For x not in L, A(x,r)=0 for all r
-bool RP_algorithm([[maybe_unused]] int x, int r, bool x_in_L, int n_half = 500) {
+inline bool RP_algorithm([[maybe_unused]] int x, int r, bool x_in_L, int n_half = 500) {
     if (!x_in_L) return false;
     return r < n_half;
 }
 
 // Naive: use a and b directly as witnesses. Error <= 1/4.
-bool naive_two_point(int x, int n, bool x_in_L, std::mt19937& rng) {
+inline bool naive_two_point(int x, int n, bool x_in_L, std::mt19937& rng) {
     std::uniform_int_distribution<int> dist(0, n - 1);
     int a = dist(rng), b = dist(rng);
     if (RP_algorithm(x, a, x_in_L)) return true;
@@ -27,7 +27,7 @@ bool naive_two_point(int x, int n, bool x_in_L, std::mt19937& rng) {
 
 // Amplified: use r_i = a*i + b mod n for t samples
 // Error <= 1/t by pairwise independence
-bool amplified_two_point(int x, int n, int t, bool x_in_L,
+inline bool amplified_two_point(int x, int n, int t, bool x_in_L,
                          std::mt19937& rng) {
     std::uniform_int_distribution<int> dist(0, n - 1);
     int a = dist(rng), b = dist(rng);
@@ -39,7 +39,7 @@ bool amplified_two_point(int x, int n, int t, bool x_in_L,
 }
 
 // Demonstrate pairwise independence construction
-void demonstrate_pairwise_independence(int n = 7, unsigned seed = 42) {
+inline void demonstrate_pairwise_independence(int n = 7, unsigned seed = 42) {
     std::mt19937 rng(seed);
     std::uniform_int_distribution<int> dist(0, n - 1);
 
@@ -75,7 +75,7 @@ void demonstrate_pairwise_independence(int n = 7, unsigned seed = 42) {
     std::cout << "\n";
 }
 
-void demonstrate_two_point() {
+inline void demonstrate_two_point() {
     std::cout << "Two-Point Sampling (Section 3.4)\n";
     std::cout << "Probability amplification using pairwise independence\n\n";
 

@@ -5,6 +5,7 @@
 #include <iostream>
 #include <vector>
 #include <functional>
+#include <unordered_set>
 #include <random>
 #include <algorithm>
 #include <numeric>
@@ -15,7 +16,7 @@
 
 #include "random_utils.h"
 
-namespace randalgo {
+namespace ral {
 
 // ============================================================
 // ObliviousAdversary
@@ -182,7 +183,7 @@ struct AdversaryTestResult {
 };
 
 // For paging
-AdversaryTestResult adversarial_test(
+inline AdversaryTestResult adversarial_test(
     std::function<int(int, const std::vector<int>&, bool)> algorithm,
     std::function<int(int, const std::vector<int>&, bool)> optimal,
     int cache_size,
@@ -200,7 +201,7 @@ AdversaryTestResult adversarial_test(
 // Demonstration
 // ============================================================
 
-void demonstrate_adversary() {
+inline void demonstrate_adversary() {
     println("=== Adversary Models (Chapter 13) ===\n");
 
     // ---- Oblivious Adversary ----

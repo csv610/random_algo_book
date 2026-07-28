@@ -6,8 +6,9 @@
 #include <random>
 #include <vector>
 #include <numeric>
+#include <numbers>
 
-namespace chapter5 {
+namespace ral {
 
 struct ChernoffResult {
     double upper_bound;
@@ -17,7 +18,7 @@ struct ChernoffResult {
 // Compute the Chernoff upper-tail bound: Pr[X >= (1+delta)*mu]
 // using the exact form (e^delta / (1+delta)^(1+delta))^mu
 // If upper=false, computes the lower-tail bound Pr[X <= (1-delta)*mu]
-double chernoff_upper(double mu, double delta, bool upper = true) {
+inline double chernoff_upper(double mu, double delta, bool upper = true) {
     if (mu <= 0) return 1.0;
     if (upper) {
         if (delta <= 0) return 1.0;
@@ -32,7 +33,7 @@ double chernoff_upper(double mu, double delta, bool upper = true) {
 
 // Simplified Chernoff bound: Pr[X >= (1+delta)*mu] <= exp(-mu*delta^2/3)
 // for 0 < delta <= 1, or exp(-mu*delta^2/2) for the lower tail
-double chernoff_simplified(double mu, double delta, bool upper = true) {
+inline double chernoff_simplified(double mu, double delta, bool upper = true) {
     if (mu <= 0) return 1.0;
     if (delta <= 0 || delta > 1) {
         return chernoff_upper(mu, delta, upper);
@@ -46,13 +47,13 @@ double chernoff_simplified(double mu, double delta, bool upper = true) {
 
 // Compute the moment generating function bound: E[e^{lambda X}] <= e^{mu(e^lambda - 1)}
 // for X = sum of independent Bernoulli(p_i) with sum(p_i) = mu
-double mgf_bound(double mu, double lambda) {
+inline double mgf_bound(double mu, double lambda) {
     return std::exp(mu * (std::exp(lambda) - 1.0));
 }
 
 // Simulate sum of n independent Bernoulli trials, each with probability p
 // Return the observed sum
-int simulate_bernoulli_sum(int n, double p, std::mt19937& rng) {
+inline int simulate_bernoulli_sum(int n, double p, std::mt19937& rng) {
     std::uniform_real_distribution<double> dist(0.0, 1.0);
     int count = 0;
     for (int i = 0; i < n; i++) {
@@ -62,7 +63,7 @@ int simulate_bernoulli_sum(int n, double p, std::mt19937& rng) {
 }
 
 // Estimate Pr[X >= (1+delta)*mu] by simulation
-double simulate_upper_tail(int n, double p, double delta, int trials,
+inline double simulate_upper_tail(int n, double p, double delta, int trials,
                            std::mt19937& rng) {
     double mu = n * p;
     int exceed = 0;
@@ -74,7 +75,7 @@ double simulate_upper_tail(int n, double p, double delta, int trials,
 }
 
 // Estimate Pr[X <= (1-delta)*mu] by simulation
-double simulate_lower_tail(int n, double p, double delta, int trials,
+inline double simulate_lower_tail(int n, double p, double delta, int trials,
                            std::mt19937& rng) {
     double mu = n * p;
     int below = 0;
@@ -86,7 +87,7 @@ double simulate_lower_tail(int n, double p, double delta, int trials,
 }
 
 // Demonstration: compare Chernoff bounds with simulated probabilities
-void demonstrate_chernoff() {
+inline void demonstrate_chernoff() {
     std::mt19937 rng(42);
     const int trials = 200000;
 

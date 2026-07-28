@@ -40,6 +40,11 @@ endforeach()
 # 2. Examples & Benchmarks
 # -------------------------------------------------------------
 set(EXAMPLES
+    karger_min_cut
+    karger_stein_min_cut
+    las_vegas_monte_carlo
+    binary_planar_partition
+    randomized_find
     graph_example
     data_structures_example
     algebraic_example
@@ -47,6 +52,33 @@ set(EXAMPLES
     probability_example
     modern_algorithms_example
     benchmarks
+    example_karger_min_cut
+    example_karger_stein
+    example_exact_min_cut
+    example_kruskal_mst
+    example_kkt_mst
+    example_floyd_warshall
+    example_seidel_apsp
+    example_apsp_repeated_squaring
+    example_bool_matrix_multiply
+    example_blossom_matching
+    example_bipartite_matching
+    example_packet_routing
+    example_random_cut
+    example_max_flow_bfs
+    example_multigraph
+    example_chernoff_bound
+    example_chernoff_simulation
+    example_coupon_collector
+    example_azuma_inequality
+    example_potential_method
+    example_k_smaller_recurrence
+    example_linear_expectation
+    example_randomized_quicksort
+    example_monte_carlo_min_cut
+    example_monte_carlo_pi
+    example_oblivious_adversary
+    example_adaptive_adversary
 )
 
 foreach(EX ${EXAMPLES})
