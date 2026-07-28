@@ -3647,6 +3647,77 @@ Show that this is tight.
 {\bf (Amnesiac Algorithm)} Consider the Amnesiac Algorithm for the Stable Marriage Problem, where each man proposes to a uniformly random woman (ignoring past rejections). Prove formally that $T_A$ stochastically dominates $T_P$ (the number of proposals in the original Proposal Algorithm), i.e., $\Pr[T_A > m] \geq \Pr[T_P > m]$ for all $m$.
 \end{problem}
 
+%% ============================================================
+\section{Reservoir Sampling}
+\label{sec:reservoir-sampling}
+%% ============================================================
+
+Many data sources are too large to fit in memory: network packet streams, log files, sensor readings, and database query results are examples of \emph{streams} that can only be read once and in order. We often need a uniform random sample of $k$ elements from such a stream without knowing its length $n$ in advance. \emph{Reservoir sampling} solves this problem elegantly.
+
+\subsection{Algorithm~A: Uniform Reservoir Sampling}
+
+The algorithm, attributed to Vitter (1985), maintains a reservoir of $k$ elements. When the $i$th element arrives (for $i \leq k$), it is placed directly into the reservoir. For $i > k$, it replaces an element in the reservoir with probability $k/i$.
+
+\begin{algorithm}[htbp]
+\caption{Reservoir Sampling (Algorithm~A)}
+\label{alg:reservoir}
+\begin{algorithmic}[1]
+\State Initialize reservoir $R$ with the first $k$ elements of the stream
+\For{$i = k+1, k+2, \ldots, n$}
+  \State $j \gets \text{random integer in } \{1, 2, \ldots, i\}$
+  \If{$j \leq k$}
+    \State Replace $R[j]$ with the $i$th element
+  \EndIf
+\EndFor
+\State \Return $R$
+\end{algorithmic}
+\end{algorithm}
+
+\begin{theorem}\label{thm:reservoir-uniform}
+After processing $n$ elements, Algorithm~A produces a reservoir in which every subset of $k$ elements from the stream is equally likely to be the sample. Specifically, each element is included with probability exactly $k/n$.
+\end{theorem}
+
+\begin{proof}
+We prove by induction on $i$ that after processing $i$ elements, every $k$-subset of the first $i$ elements is equally likely to be the reservoir. The base case $i = k$ is trivial (the reservoir is the first $k$ elements). For the inductive step, consider the $(i{+}1)$th element. With probability $k/(i{+}1)$, it replaces a uniformly random element of the reservoir. A direct calculation shows that each $k$-subset of the first $i{+}1$ elements has probability $\binom{i}{k}^{-1}$ of being the reservoir after the $(i{+}1)$th step. The inclusion probability of any fixed element is therefore $k/n$.
+\end{proof}
+
+The beauty of reservoir sampling is that it requires only $O(k)$ memory regardless of $n$, and each element is processed in $O(1)$ time. The total running time is $O(n)$.
+
+\subsection{Algorithm~A-Res: Weighted Reservoir Sampling}
+
+In many applications, elements have non-uniform importance. \emph{Weighted reservoir sampling} ensures that element $i$ is included with probability proportional to its weight $w_i$. Efraimidis and Spirakis (2006) proposed an elegant algorithm based on key values.
+
+\begin{algorithm}[htbp]
+\caption{Weighted Reservoir Sampling (Algorithm~A-Res)}
+\label{alg:weighted-reservoir}
+\begin{algorithmic}[1]
+\State Initialize reservoir $R$ with the first $k$ elements, each with key $u_i^{1/w_i}$ where $u_i \sim \text{Uniform}(0,1)$
+\For{$i = k+1, k+2, \ldots, n$}
+  \State Compute key $k_i = u_i^{1/w_i}$ where $u_i \sim \text{Uniform}(0,1)$
+  \State Let $j$ be the index of the element in $R$ with the smallest key
+  \If{$k_i > k_j$}
+    \State Replace $R[j]$ with the $i$th element (with key $k_i$)
+  \EndIf
+\EndFor
+\State \Return $R$
+\end{algorithmic}
+\end{algorithm}
+
+\begin{theorem}\label{thm:weighted-reservoir}
+After processing $n$ elements, the probability that element $i$ is in the reservoir is exactly $k \cdot w_i / \sum_{j=1}^n w_j$.
+\end{theorem}
+
+\begin{proof}
+The key $k_i = u_i^{1/w_i}$ where $u_i \sim \text{Uniform}(0,1)$. Element $i$ is included iff its key is among the $k$ largest keys. The CDF of $k_i$ is $\Pr[k_i \leq t] = t^{w_i}$ for $t \in [0,1]$. The probability that $k_i$ is among the top $k$ keys out of $n$ is exactly $k \cdot w_i / \sum_j w_j$, which follows from the symmetry of the key distribution.
+\end{proof}
+
+\begin{cpplisting}
+\textbf{C++ implementation:} The files \texttt{examples/example\_generic\_reservoir.cpp} and \texttt{examples/example\_weighted\_reservoir.cpp} demonstrate both uniform and weighted reservoir sampling on streams of strings and integers, respectively.
+\end{cpplisting}
+
+\begin{remark}
+Reservoir sampling is a fundamental tool in data mining, machine learning (stochastic gradient descent on large datasets), and database query processing. The weighted variant is particularly useful for importance sampling and stratified sampling from streams.
+\end{remark}
 
 \chapter{Tail Inequalities}
 \label{ch:tail-inequalities}
@@ -6070,7 +6141,85 @@ Explain why the PCP theorem implies that it is NP-hard to distinguish between 3-
 \textbf{(Research)} The Valiant--Vazirani theorem states that if $\mathrm{P} \neq \mathrm{NP}$, then NP cannot be solved in randomized polynomial time even with one-sided error. Explain the relationship between this result and the fact that graph isomorphism is in $\mathrm{IP}$ but not known to be in $\mathrm{NP}$ or $\mathrm{coNP}$.
 \end{problem}
 
+%% ============================================================
+\section{Randomized Linear Algebra}
+\label{sec:randomized-la}
+%% ============================================================
 
+Classical linear algebra operations---matrix multiplication, singular value decomposition, and low-rank approximation---are expensive for large matrices. Randomized algorithms exploit the structure of the data to produce approximate answers dramatically faster than deterministic methods, with controlled and quantifiable error.
+
+\subsection{Randomized SVD}
+
+The singular value decomposition (SVD) of an $m \times n$ matrix $A$ factors it as $A = U \Sigma V^T$, where $U$ and $V$ are orthogonal and $\Sigma$ is diagonal with singular values $\sigma_1 \geq \sigma_2 \geq \cdots \geq 0$. Computing the full SVD takes $O(m n \min(m,n))$ time, which is prohibitive for large matrices.
+
+The randomized SVD algorithm computes a rank-$k$ approximation $A \approx U_k \Sigma_k V_k^T$ in $O(m n k)$ time, which is much faster when $k \ll \min(m,n)$.
+
+\begin{algorithm}[htbp]
+\caption{Randomized SVD}
+\label{alg:rand-svd}
+\begin{algorithmic}[1]
+\Function{RandomizedSVD}{$A \in \mathbb{R}^{m \times n}$, target rank $k$, oversampling $p$}
+  \State Draw random Gaussian matrix $\Omega \in \mathbb{R}^{n \times (k+p)}$
+  \State $Y \gets A \Omega$ \Comment{$m \times (k{+}p)$ matrix}
+  \State Compute QR factorization: $Y = Q R$
+  \State $B \gets Q^T A$ \Comment{small matrix $(k{+}p) \times n$}
+  \State Compute classical SVD: $B = \hat{U} \Sigma V^T$
+  \State $U \gets Q \hat{U}$
+  \State \Return $(U, \Sigma, V)$
+\EndFunction
+\end{algorithmic}
+\end{algorithm}
+
+\begin{theorem}\label{thm:rand-svd}
+Let $A$ be an $m \times n$ matrix and let $k$ be the target rank. The randomized SVD algorithm (with oversampling $p \geq 5$) produces a rank-$k$ approximation satisfying
+\[
+\|A - U_k \Sigma_k V_k^T\|_2 \leq \sigma_{k+1}(A)
+\]
+with probability at least $1 - 3 n^{-p}$. The running time is $O(m n k)$.
+\end{theorem}
+
+The key insight is that the random projection $Y = A\Omega$ captures the range of $A$ with high probability. The QR factorization of $Y$ produces an approximate orthonormal basis $Q$ for this range, and the subsequent SVD of the small matrix $B = Q^T A$ identifies the dominant singular directions. The oversampling parameter $p$ provides a safety margin: larger $p$ increases the probability that $Q$ captures the relevant subspace.
+
+\subsection{The Johnson--Lemma and Random Projections}
+
+The \emph{Johnson--Lindenstrauss (JL) lemma} is one of the most surprising results in randomized algorithms: a small random linear map can approximately preserve all pairwise distances in a dataset.
+
+\begin{theorem}[Johnson--Lindenstrauss]\label{thm:jl}
+For any set $S$ of $n$ points in $\mathbb{R}^d$ and any $\varepsilon \in (0,1)$, there exists a linear map $f : \mathbb{R}^d \to \mathbb{R}^k$ with $k = O(\varepsilon^{-2} \log n)$ such that for all $u, v \in S$,
+\[
+(1 - \varepsilon) \|u - v\|^2 \leq \|f(u) - f(v)\|^2 \leq (1 + \varepsilon) \|u - v\|^2.
+\]
+The map is realized by a random Gaussian matrix $R \in \mathbb{R}^{k \times d}$ with entries drawn independently from $\mathcal{N}(0, 1/k)$.
+\end{theorem}
+
+\begin{proof}
+For a fixed pair $(u,v)$, let $z = (u - v)/\|u - v\|$. The projected squared distance is $\|Rz\|^2 \cdot \|u-v\|^2$, where $Rz$ is a sum of $k$ independent random variables. Each component $(Rz)_i = \sum_j R_{ij} z_j$ is Gaussian with mean 0 and variance $1/k$. Thus $\|Rz\|^2 = \sum_{i=1}^k (Rz)_i^2$ is the sum of $k$ independent $\chi^2_1 / k$ random variables. By standard concentration bounds for $\chi^2$ random variables, $\Pr[|\|Rz\|^2 - 1| \geq \varepsilon] \leq 2 \exp(-k \varepsilon^2 / 4)$. Applying the union bound over all $\binom{n}{2}$ pairs and choosing $k \geq (4/\varepsilon^2) \ln \binom{n}{2}$ gives the result.
+\end{proof}
+
+The JL lemma has profound practical implications. A dataset of $n$ points in $\mathbb{R}^{1000}$ can be projected to $\mathbb{R}^{10}$ (a 99\% dimension reduction) while preserving all pairwise distances within 25\%, provided $n$ is not too large. This is the foundation of dimensionality reduction techniques used in machine learning, information retrieval, and data mining.
+
+\subsection{SimHash}
+
+\emph{SimHash} is a locality-sensitive hash for cosine similarity. It projects a vector onto $k$ random hyperplanes, producing a $k$-bit signature. Two vectors with cosine similarity $\cos \theta$ produce signatures that agree on each bit with probability $(1 - \theta/\pi)$.
+
+\begin{algorithm}[htbp]
+\caption{SimHash}
+\label{alg:simhash}
+\begin{algorithmic}[1]
+\Function{SimHash}{$x \in \mathbb{R}^d$, random hyperplanes $h_1, \ldots, h_k$}
+  \For{$i = 1$ to $k$}
+    \State $s_i \gets \text{sign}(h_i \cdot x)$ \Comment{$+1$ or $-1$}
+  \EndFor
+  \State \Return $(s_1, \ldots, s_k)$
+\EndFunction
+\end{algorithmic}
+\end{algorithm}
+
+The Hamming distance between two SimHash signatures is a good estimator of the angular distance between the original vectors. This makes SimHash ideal for near-duplicate detection, document similarity, and large-scale nearest neighbor search.
+
+\begin{cpplisting}
+\textbf{C++ implementation:} The files \texttt{examples/example\_randomized\_svd.cpp}, \texttt{examples/example\_jl\_projection.cpp}, \texttt{examples/example\_random\_projection.cpp}, and \texttt{examples/example\_simhash.cpp} demonstrate randomized SVD, JL dimension reduction, distance-preserving random projections, and SimHash, respectively.
+\end{cpplisting}
 
 \chapter{Data Structures}
 \label{ch:data-structures}
@@ -6558,6 +6707,85 @@ Implement a skip list and compare its performance (in terms of actual wall-clock
 \textbf{(Research)} A \emph{Cuckoo hash table} uses two hash functions $h_1$ and $h_2$ and stores each element $x$ in one of two positions: $h_1(x)$ or $h_2(x)$. When both positions are occupied, the existing element is ``kicked out'' to its alternate position. Prove that with $m = O(n)$ slots, the expected insertion time is $O(1)$, but that there is a constant probability of insertion failure when $m < n(1 + \epsilon)$ for some $\epsilon > 0$. How can multiple hash functions resolve this?
 \end{problem}
 
+%% ============================================================
+\section{Locality-Sensitive Hashing}
+\label{sec:lsh}
+%% ============================================================
+
+The nearest neighbor problem---given a query point, find the closest point in a dataset---is fundamental to information retrieval, machine learning, and computational geometry. Brute-force search takes $O(n d)$ time per query, which is prohibitive for large datasets. \emph{Locality-sensitive hashing} (LSH) provides sublinear-time approximate nearest neighbor search by hashing similar points to the same bucket with high probability.
+
+\subsection{LSH Families}
+
+\begin{definition}[Locality-sensitive family]
+A family $\mathcal{H}$ of hash functions is \emph{$(r, cr, p_1, p_2)$-sensitive} for a distance metric $d$ if for all $x, y$:
+\begin{itemize}[nosep]
+  \item If $d(x,y) \leq r$, then $\Pr_{h \in \mathcal{H}}[h(x) = h(y)] \geq p_1$.
+  \item If $d(x,y) > cr$, then $\Pr_{h \in \mathcal{H}}[h(x) = h(y)] \leq p_2$.
+\end{itemize}
+\end{definition}
+
+By combining $k$ independent hash functions from the family and using $L$ independent hash tables, LSH achieves sublinear query time with provable recall guarantees.
+
+\subsection{Hyperplane LSH for Cosine Similarity}
+
+For cosine distance, the natural LSH family uses random hyperplanes. A random hyperplane through the origin partitions $\mathbb{R}^d$ into two half-spaces. Two vectors on the same side of all $k$ hyperplanes receive the same hash. The collision probability is $(1 - \theta/\pi)$ where $\theta$ is the angle between the vectors.
+
+\begin{algorithm}[htbp]
+\caption{Hyperplane LSH for Cosine Similarity}
+\label{alg:hyperplane-lsh}
+\begin{algorithmic}[1]
+\Function{HyperplaneLSH}{point $x \in \mathbb{R}^d$, hyperplanes $h_1, \ldots, h_k$}
+  \For{$i = 1$ to $k$}
+    \State $b_i \gets \text{sign}(r_i \cdot x)$ where $r_i \sim \mathcal{N}(0, I_d)$
+  \EndFor
+  \State \Return bucket $(b_1, \ldots, b_k)$
+\EndFunction
+\end{algorithmic}
+\end{algorithm}
+
+\subsection{E2LSH for Euclidean Distance}
+
+For $\ell_2$ distance, the \emph{E2LSH} family (Datar et al., 2004) uses $p$-stable distributions. Each hash function is
+\[
+h_{a,b}(x) = \left\lfloor \frac{a \cdot x + b}{w} \right\rfloor
+\]
+where $a$ is drawn from a standard normal (a 2-stable distribution) and $b \sim \text{Uniform}(0, w)$. The bucket width $w$ controls the trade-off between precision and recall: smaller $w$ gives finer granularity but more hash tables.
+
+Points close in Euclidean distance hash to the same bucket with probability that decreases smoothly with distance. Specifically, for two points at distance $d$, the collision probability is
+\[
+\Pr[h(x) = h(y)] = \int_0^w \frac{1}{a} f\!\left(\frac{t}{a}\right) \left(1 - \frac{t}{w}\right) dt
+\]
+where $a = \|x - y\|$ and $f$ is the standard normal density. This function is monotonically decreasing in $d$, ensuring that closer points collide more often.
+
+\subsection{LSH Index Construction}
+
+An LSH index builds $L$ independent hash tables, each using $k$ hash functions from the family. Insertion hashes each point and stores it in the corresponding bucket of each table. A query hashes the query point and examines all candidates in the same bucket across all tables, ranking them by distance.
+
+\begin{algorithm}[htbp]
+\caption{LSH Index: Query}
+\label{alg:lsh-query}
+\begin{algorithmic}[1]
+\Function{LSHQuery}{query $q$, tables $T_1, \ldots, T_L$, top-$k$}
+  \State $C \gets \emptyset$ \Comment{candidate set}
+  \For{$\ell = 1$ to $L$}
+    \State $b \gets h_\ell(q)$ \Comment{hash using table $\ell$'s functions}
+    \State $C \gets C \cup T_\ell[b]$ \Comment{add all points in bucket}
+  \EndFor
+  \State Sort $C$ by distance to $q$
+  \State \Return top-$k$ closest points from $C$
+\EndFunction
+\end{algorithmic}
+\end{algorithm}
+
+The number of tables $L$ controls the recall: more tables means more candidates are examined, increasing the probability of finding the true nearest neighbor. The query time is $O(L \cdot k + |C|)$ where $|C|$ is the total candidate set size.
+
+\begin{theorem}\label{thm:lsh-recall}
+For $(r, cr, p_1, p_2)$-sensitive LSH with $k$ hash functions and $L$ tables, the recall@1 is at least $1 - (1 - p_1^k)^L$.
+\end{theorem}
+
+\begin{cpplisting}
+\textbf{C++ implementation:} The files \texttt{examples/example\_hyperplane\_lsh.cpp}, \texttt{examples/example\_e2lsh.cpp}, and \texttt{examples/example\_lsh\_index.cpp} demonstrate hyperplane LSH for cosine similarity, E2LSH for Euclidean distance, and a complete LSH index for approximate nearest neighbor search.
+\end{cpplisting}
 
 
 \chapter{Geometric Algorithms and Linear Programming}
@@ -7151,6 +7379,51 @@ Show that the diameter of a point set $P$ in $\mathbb{R}^2$ can be computed in $
 \textbf{(Research)} Design a randomized incremental algorithm for computing the Voronoi diagram of $n$ points in the plane. Analyze the expected running time using backward analysis and show that it is $O(n \log n)$.
 \end{problem}
 
+%% ============================================================
+\section{Minimum Enclosing Circle}
+\label{sec:welzl-mec}
+%% ============================================================
+
+Given a set $P$ of $n$ points in the plane, the \emph{minimum enclosing circle} (MEC) problem asks for the smallest circle that contains all points. This problem arises in facility location, collision detection, and clustering.
+
+The minimum enclosing circle is unique and is determined by at most three points on its boundary (called \emph{support points}). If two points define the circle, they are diametrically opposite; if three points define it, they form an acute triangle and the circle is its circumcircle.
+
+\subsection{Welzl's Algorithm}
+
+Welzl (1991) gave a beautifully simple randomized incremental algorithm. The idea is to process points in random order, maintaining the current MEC. When a new point falls outside the current MEC, we must rebuild the circle with the new point on the boundary, requiring us to check all previously processed points.
+
+\begin{algorithm}[htbp]
+\caption{Welzl's Minimum Enclosing Circle}
+\label{alg:welzl}
+\begin{algorithmic}[1]
+\Function{WelzlMEC}{$P$} \Comment{points in random order}
+  \State Shuffle $P$ randomly
+  \State $C \gets$ circle through $P[0], P[1]$ \Comment{diameter circle}
+  \For{$i = 2$ to $|P|-1$}
+    \If{$P[i]$ is outside $C$}
+      \State $C \gets$ MEC of $\{P[0], \ldots, P[i]\}$ with $P[i]$ on boundary
+    \EndIf
+  \EndFor
+  \State \Return $C$
+\EndFunction
+\end{algorithmic}
+\end{algorithm}
+
+The key subroutine determines the MEC given that one boundary point is fixed. It processes the remaining points in random order, maintaining the current circle with the fixed point on the boundary. If a point falls outside, the circle is rebuilt with the new point also on the boundary.
+
+\begin{theorem}\label{thm:welzl-mec}
+Welzl's algorithm computes the minimum enclosing circle of $n$ points in the plane in $O(n)$ expected time.
+\end{theorem}
+
+\begin{proof}
+The analysis uses backward analysis. Consider the moment when the $i$th point is processed and causes a rebuild. The new circle must have this point on its boundary. Among the $i$ processed points, the probability that the specific point that triggered the rebuild was the last to arrive is exactly $1/i$. Therefore, the expected number of rebuilds triggered by the $i$th point is at most $O(1/i)$, and the total expected number of rebuilds is $\sum_{i=1}^n O(1/i) = O(\log n)$. Each rebuild takes $O(i)$ time, giving a total expected time of $\sum_{i=1}^n O(1/i) \cdot O(i) = O(n)$.
+\end{proof}
+
+The algorithm's simplicity and linear expected time make it the method of choice for MEC computation. Its randomized nature eliminates the worst-case $O(n^2)$ behavior of deterministic incremental algorithms.
+
+\begin{cpplisting}
+\textbf{C++ implementation:} The file \texttt{examples/example\_welzl\_mec.cpp} implements Welzl's algorithm with the iterative variant and verifies correctness against an $O(n^4)$ brute-force approach.
+\end{cpplisting}
 
 
 \chapter{Graph Algorithms}
@@ -8334,6 +8607,75 @@ The relative error of the product $\prod \hat{\alpha}_i$ is controlled by summin
 \begin{remark}
 Subsequent work has improved the running time. Lov\'{a}sz and Vempala (2003) achieved $O^*(n^8)$, and Lov\'{a}sz (2010) achieved $O^*(n^3)$ for well-rounded bodies. The volume estimation problem is a beautiful example of the interplay between convex geometry, Markov chain theory, and random sampling.
 \end{remark}
+
+%% ============================================================
+\section{Streaming Algorithms: Flajolet--Martin and Misra--Greis}
+\label{sec:streaming}
+%% ============================================================
+
+In many applications, data arrives as a stream and we can only afford to use memory proportional to a small function of the input parameters, not the stream length. Two fundamental streaming problems are \emph{distinct element counting} and \emph{heavy hitter detection}.
+
+\subsection{Flajolet--Martin Distinct Element Counting}
+
+The \emph{distinct elements problem} asks: given a stream of elements from a universe $U$, estimate the number of distinct elements seen so far. The trivial solution requires $\Omega(n)$ space to store all seen elements. The Flajolet--Martin algorithm (1984) uses only $O(\log m)$ bits of space, where $m = |U|$.
+
+The key idea is to hash each element to a binary string of length $\log m$ and examine the position of the least significant 1-bit. If we have seen $d$ distinct elements, the expected position of the leftmost 1-bit among all hashes is approximately $\log_2 d$.
+
+\begin{algorithm}[htbp]
+\caption{Flajolet--Martin Distinct Element Counting}
+\label{alg:flajolet-martin}
+\begin{algorithmic}[1]
+\State Initialize bitmap $B[0..\log m]$ to all zeros
+\For{each element $x$ in the stream}
+  \State $h \gets \text{hash}(x)$ \Comment{hash to $\{0,1\}^{64}$}
+  \State $p \gets \text{position of least significant 1-bit in } h$
+  \State $B[p] \gets 1$
+\EndFor
+\State $\phi \gets \text{index of least zero bit in } B$
+\State \Return $2^\phi / \psi$ \Comment{$\psi \approx 0.7735$ is a correction factor}
+\end{algorithmic}
+\end{algorithm}
+
+\begin{theorem}\label{thm:fm}
+The Flajolet--Martin estimator has expected relative error $O(1/\sqrt{p})$ where $p$ is the number of independent hash functions (registers) used. Using group-wise averaging with $p = 64$ registers gives relative error approximately $12.5\%$.
+\end{theorem}
+
+The algorithm uses $O(p \log m)$ bits of space and processes each element in $O(1)$ time, making it suitable for high-speed network monitoring and database query processing.
+
+\subsection{Misra--Greis Heavy Hitter Detection}
+
+The \emph{heavy hitter problem} asks: given a stream of items, find all items that appear more than $n/k$ times, using only $O(k)$ space. The Misra--Greis algorithm (1982) maintains $k$ counters and achieves this with strong guarantees.
+
+\begin{algorithm}[htbp]
+\caption{Misra--Greis Heavy Hitter Detection}
+\label{alg:misra-gries}
+\begin{algorithmic}[1]
+\Function{MisraGreis}{stream, parameter $k$}
+  \State Initialize $k$ counters, all zero
+  \For{each element $x$ in the stream}
+    \If{$x$ has a counter}
+      \State Increment its counter
+    \ElsIf{fewer than $k$ counters are active}
+      \State Create a new counter for $x$ with value 1
+    \Else
+      \State Decrement all counters by 1
+      \State Remove any counters that reach zero
+    \EndIf
+  \EndFor
+  \State \Return all counters with their estimated frequencies
+\EndFunction
+\end{algorithmic}
+\end{algorithm}
+
+\begin{theorem}\label{thm:misra-gries}
+The Misra--Greis algorithm finds all items with frequency $> n/k$ (no false negatives), and no item with frequency $< n/k - n/k^2$ is reported. The estimated counts are within $n/k$ of the true counts.
+\end{theorem}
+
+The algorithm processes each element in $O(1)$ time and uses $O(k)$ space, making it suitable for real-time network traffic analysis, log processing, and database query optimization.
+
+\begin{cpplisting}
+\textbf{C++ implementation:} The files \texttt{examples/example\_flajolet\_martin.cpp} and \texttt{examples/example\_misra\_gries.cpp} demonstrate distinct element counting on simulated network traffic and heavy hitter detection on packet streams.
+\end{cpplisting}
 
 %% ============================================================
 %% C++ Implementation
@@ -10901,6 +11243,49 @@ The AKS test is based on the following characterization of primes: $n$ is prime 
 \end{remark}
 
 %% ============================================================
+\section{Fast Polynomial Arithmetic}
+\label{sec:fast-poly}
+%% ============================================================
+
+Polynomial multiplication is a fundamental operation in coding theory, signal processing, and number theory. Given two degree-$n$ polynomials, naive multiplication takes $O(n^2)$ time. Two randomized (and deterministic) approaches achieve faster multiplication: the Karatsuba algorithm and the Fast Fourier Transform.
+
+\subsection{Karatsuba Multiplication}
+
+The Karatsuba algorithm (1960) is a divide-and-conquer approach that reduces polynomial multiplication to three half-size multiplications instead of four, achieving $O(n^{\log_2 3}) \approx O(n^{1.585})$ time.
+
+Given polynomials $A(x) = A_1(x) \cdot B^{n/2} + A_0(x)$ and $B(x) = B_1(x) \cdot B^{n/2} + B_0(x)$, we compute:
+\[
+A(x) \cdot B(x) = z_2 \cdot B^n + z_1 \cdot B^{n/2} + z_0
+\]
+where $z_2 = A_1 \cdot B_1$, $z_0 = A_0 \cdot B_0$, and $z_1 = (A_1 + A_0)(B_1 + B_0) - z_2 - z_0$. The three multiplications $z_0$, $z_1$, $z_2$ are computed recursively, giving the recurrence $T(n) = 3T(n/2) + O(n)$, which solves to $O(n^{\log_2 3})$.
+
+\begin{cpplisting}
+\textbf{C++ implementation:} The file \texttt{examples/example\_karatsuba.cpp} implements Karatsuba multiplication for polynomials over $\mathbb{Z}_p$ and verifies correctness against naive multiplication.
+\end{cpplisting}
+
+\subsection{The Fast Fourier Transform}
+
+The Fast Fourier Transform (FFT) computes the discrete Fourier transform of a length-$n$ vector in $O(n \log n)$ time, compared to $O(n^2)$ for the naive algorithm. The FFT enables polynomial multiplication in $O(n \log n)$ time by converting coefficient representations to point-value representations, multiplying pointwise, and converting back.
+
+The key insight is the \emph{divide-and-conquer} decomposition of the DFT. Let $\omega_n = e^{2\pi i/n}$ be a primitive $n$th root of unity. For an even-length DFT, we split the input into even and odd indexed elements:
+\[
+\hat{x}_k = \sum_{j=0}^{n-1} x_j \omega_n^{jk} = \sum_{j=0}^{n/2-1} x_{2j} \omega_{n/2}^{jk} + \omega_n^k \sum_{j=0}^{n/2-1} x_{2j+1} \omega_{n/2}^{jk}.
+\]
+This reduces one DFT of size $n$ to two DFTs of size $n/2$, giving the recurrence $T(n) = 2T(n/2) + O(n) = O(n \log n)$.
+
+For polynomial multiplication, we evaluate both polynomials at $2n$ roots of unity using the FFT, multiply the values pointwise, and interpolate back using the inverse FFT. The total time is $O(n \log n)$.
+
+\begin{theorem}\label{thm:fft-mul}
+Two polynomials of degree $n$ can be multiplied in $O(n \log n)$ time using the Fast Fourier Transform.
+\end{theorem}
+
+The FFT is one of the most important algorithms in computer science, with applications in signal processing, image compression (JPEG), error-correcting codes, and large integer arithmetic. The \emph{number-theoretic transform} (NTT) is a variant that works over finite fields $\mathbb{Z}_p$, avoiding floating-point arithmetic.
+
+\begin{cpplisting}
+\textbf{C++ implementation:} The file \texttt{examples/example\_fft.cpp} demonstrates FFT-based polynomial multiplication and its inverse.
+\end{cpplisting}
+
+%% ============================================================
 %% C++ Implementation
 %% ============================================================
 
@@ -11396,6 +11781,209 @@ J.~Wyllie,
 PhD thesis, Cornell University, 1979.
 
 \end{thebibliography}
+
+%==========================================================================
+\chapter{Simulated Annealing}
+\label{ch:simulated-annealing}
+%==========================================================================
+
+Many optimization problems in computer science require finding the minimum or maximum of a cost function over a large combinatorial space. For NP-hard problems such as the traveling salesman problem (TSP) and the knapsack problem, no polynomial-time algorithm is known that finds the optimal solution. \emph{Simulated annealing} (SA) is a randomized metaheuristic that explores the solution space by accepting worse solutions early (to escape local optima) and gradually narrowing to improvements as the system ``cools.''
+
+The name comes from an analogy with metallurgical annealing: a heated metal is slowly cooled, allowing atoms to settle into a low-energy crystalline structure. In SA, the ``temperature'' parameter controls the probability of accepting worse solutions, and this temperature is decreased over time according to a cooling schedule.
+
+%% ============================================================
+\section{The Simulated Annealing Framework}
+\label{sec:sa-framework}
+%% ============================================================
+
+Let $S$ be a finite set of candidate solutions, and let $f : S \to \mathbb{R}$ be a cost function to minimize. SA maintains a current solution $s \in S$ and iteratively improves it.
+
+\begin{algorithm}[htbp]
+\caption{Simulated Annealing}
+\label{alg:simulated-annealing}
+\begin{algorithmic}[1]
+\Function{SimulatedAnnealing}{$s_0$, $f$, $\text{neighbor}$, $T_0$, $\alpha$, $T_{\min}$, $\text{iter}$}
+  \State $s \gets s_0$, $s^* \gets s_0$ \Comment{current and best solutions}
+  \State $T \gets T_0$ \Comment{initial temperature}
+  \While{$T > T_{\min}$}
+    \For{$j = 1$ to $\text{iter}$}
+      \State $s' \gets \text{neighbor}(s)$
+      \State $\Delta f \gets f(s') - f(s)$
+      \If{$\Delta f < 0$}
+        \State $s \gets s'$ \Comment{always accept improvements}
+      \ElsIf{$\text{random}(0,1) < e^{-\Delta f / T}$}
+        \State $s \gets s'$ \Comment{accept worse with probability $e^{-\Delta f/T}$}
+      \EndIf
+      \If{$f(s) < f(s^*)$}
+        \State $s^* \gets s$ \Comment{update best}
+      \EndIf
+    \EndFor
+    \State $T \gets \alpha \cdot T$ \Comment{geometric cooling}
+  \EndWhile
+  \State \Return $s^*$
+\EndFunction
+\end{algorithmic}
+\end{algorithm}
+
+The critical parameters are:
+\begin{itemize}[nosep]
+  \item \textbf{Initial temperature $T_0$:} Should be large enough that most proposed moves are accepted, allowing broad exploration.
+  \item \textbf{Cooling rate $\alpha$:} Typically $\alpha \in [0.99, 0.9999]$. Slower cooling (larger $\alpha$) gives better solutions but requires more time.
+  \item \textbf{Neighbor function:} Defines the local structure of the search space. The quality of the neighbor function often determines SA's practical performance.
+\end{itemize}
+
+\begin{theorem}[Convergence of SA]\label{thm:sa-convergence}
+If the cooling schedule satisfies $T(t) \geq c / \log(1 + t)$ for a suitable constant $c$ depending on the problem, then SA converges to the global optimum with probability 1 as $t \to \infty$.
+\end{theorem}
+
+\begin{proof}
+At temperature $T$, the stationary distribution of the SA Markov chain assigns to each state $s$ a probability proportional to $e^{-f(s)/T}$. As $T \to 0$, this distribution concentrates on the global minimum: the probability of being in a state with cost $f(s) = f^* + \delta$ is at most $e^{-\delta/T}$, which vanishes as $T \to 0$. The logarithmic cooling schedule ensures that the chain mixes at each temperature before cooling further, guaranteeing convergence.
+\end{proof}
+
+In practice, the theoretical cooling schedule $O(1/\log t)$ is too slow. The geometric schedule $T_{k+1} = \alpha T_k$ with $\alpha = 0.99$ to $0.9999$ works well for most problems, providing a good balance between solution quality and running time.
+
+%% ============================================================
+\section{Application: The Traveling Salesman Problem}
+\label{sec:sa-tsp}
+%% ============================================================
+
+The TSP asks for the shortest tour that visits each of $n$ cities exactly once and returns to the starting city. It is one of the most studied NP-hard optimization problems.
+
+For SA applied to TSP, the natural neighbor function is the \emph{2-opt move}: reverse a segment of the tour. This operation uncrosses edges and typically reduces the tour length. A 2-opt move can be implemented in $O(n)$ time by reversing the segment between two randomly chosen positions.
+
+\begin{cpplisting}
+\textbf{C++ implementation:} The file \texttt{examples/example\_sa\_tsp.cpp} implements SA with 2-opt for TSP on 50 random cities, comparing against nearest-neighbor and random baseline tours.
+\end{cpplisting}
+
+%% ============================================================
+\section{Application: The Knapsack Problem}
+\label{sec:sa-knapsack}
+%% ============================================================
+
+The 0/1 knapsack problem: given $n$ items with weights $w_i$ and values $v_i$, select a subset that maximizes total value without exceeding capacity $C$. For SA, the neighbor function flips a single item in or out of the knapsack, and the cost function is the negated total value with a penalty for exceeding the capacity.
+
+\begin{cpplisting}
+\textbf{C++ implementation:} The file \texttt{examples/example\_sa\_knapsack.cpp} implements SA for a 100-item knapsack instance, demonstrating the improvement over a greedy baseline.
+\end{cpplisting}
+
+%% ============================================================
+\addcontentsline{toc}{section}{Notes}
+\section*{Notes}
+%% ============================================================
+
+Simulated annealing was independently proposed by Kirkpatrick, Gelatt, and Vecchi (1983) and by \v{C}ern\'{y} (1985). The theoretical foundation connecting SA to Markov chain convergence was developed by Hajek (1988), who proved the logarithmic cooling schedule result. The metaphor of annealing in metallurgy was central to the original paper by Kirkpatrick et al., who noted that slow cooling of metals produces defect-free crystals---analogous to finding global optima.
+
+The 2-opt neighborhood for TSP was introduced by Lin (1965) in the context of local search. The combination of 2-opt with simulated annealing was among the earliest applications of SA and remains competitive with more sophisticated metaheuristics for TSP.
+
+\begin{itemize}[nosep]
+  \item S.~Kirkpatrick, C.~D.~Gelatt, and M.~P.~Vecchi, ``Optimization by Simulated Annealing,'' \textit{Science}, 220(4598):671--680, 1983.
+  \item V.~\v{C}ern\'{y}, ``Thermodynamical Approach to the Traveling Salesman Problem,'' \textit{J.~Optimization Theory and Applications}, 45(1):41--51, 1985.
+  \item B.~Hajek, ``Cooling Schedules for Optimal Annealing,'' \textit{Mathematics of Operations Research}, 13(2):311--329, 1988.
+  \item S.~Lin, ``Computer Solutions of the Traveling Salesman Problem,'' \textit{Bell System Technical Journal}, 44(10):2245--2269, 1965.
+\end{itemize}
+
+%==========================================================================
+\chapter{Differential Privacy}
+\label{ch:differential-privacy}
+%==========================================================================
+
+As organizations collect ever-larger datasets containing personal information---medical records, location traces, search histories---the question of how to extract useful statistics while protecting individual privacy has become urgent. \emph{Differential privacy} (DP), formalized by Dwork, McSherry, Nissim, and Smith (2006), provides a rigorous mathematical framework for privacy-preserving data analysis. The central idea is to add calibrated random noise to query results so that the presence or absence of any single individual has a negligible effect on the output.
+
+%% ============================================================
+\section{The Differential Privacy Framework}
+\label{sec:dp-framework}
+%% ============================================================
+
+\begin{definition}[Neighboring databases]
+Two databases $D$ and $D'$ are \emph{neighboring} if they differ in exactly one record (i.e., one record is added or removed).
+\end{definition}
+
+\begin{definition}[$\varepsilon$-Differential Privacy]
+A randomized mechanism $\mathcal{M} : \mathcal{D} \to \mathcal{R}$ satisfies \emph{$\varepsilon$-differential privacy} if for all neighboring databases $D, D'$ and all subsets $S \subseteq \mathcal{R}$,
+\[
+\Pr[\mathcal{M}(D) \in S] \leq e^{\varepsilon} \cdot \Pr[\mathcal{M}(D') \in S].
+\]
+\end{definition}
+
+The privacy parameter $\varepsilon$ controls the privacy-utility trade-off: smaller $\varepsilon$ means stronger privacy (the output distribution changes less when one individual is added or removed) but more noise and less utility. Typical values of $\varepsilon$ range from 0.1 (strong privacy) to 10 (weak privacy).
+
+\subsection{Composition and Basic Properties}
+
+Differential privacy has several elegant properties:
+
+\begin{itemize}[nosep]
+  \item \textbf{Sequential composition:} If $\mathcal{M}_1$ satisfies $\varepsilon_1$-DP and $\mathcal{M}_2$ satisfies $\varepsilon_2$-DP, then running both on the same database satisfies $(\varepsilon_1 + \varepsilon_2)$-DP.
+  \item \textbf{Parallel composition:} If $\mathcal{M}_1$ and $\mathcal{M}_2$ run on disjoint subsets of the database, the combined mechanism satisfies $\max(\varepsilon_1, \varepsilon_2)$-DP.
+  \item \textbf{Post-processing immunity:} Any function applied to the output of an $\varepsilon$-DP mechanism is also $\varepsilon$-DP.
+\end{itemize}
+
+%% ============================================================
+\section{The Laplace Mechanism}
+\label{sec:laplace-mechanism}
+%% ============================================================
+
+The most fundamental DP mechanism adds Laplace noise to a numeric query.
+
+\begin{definition}[Global sensitivity]
+The \emph{global sensitivity} of a query $f : \mathcal{D} \to \mathbb{R}$ is $\Delta_f = \max_{D, D' \text{ neighboring}} |f(D) - f(D')|$.
+\end{definition}
+
+\begin{theorem}[Laplace Mechanism]\label{thm:laplace}
+For a numeric query $f$ with global sensitivity $\Delta_f$, the mechanism
+\[
+\mathcal{M}(D) = f(D) + \text{Lap}(\Delta_f / \varepsilon)
+\]
+satisfies $\varepsilon$-differential privacy.
+\end{theorem}
+
+\begin{proof}
+For neighboring databases $D$ and $D'$, the outputs $\mathcal{M}(D)$ and $\mathcal{M}(D')$ differ only in the location parameter of the Laplace distribution. The ratio of their probability density functions at any point $y$ is:
+\[
+\frac{p_{\mathcal{M}(D)}(y)}{p_{\mathcal{M}(D')}(y)} = \frac{(\varepsilon/\Delta_f) \exp(-\varepsilon |y - f(D)| / \Delta_f)}{(\varepsilon/\Delta_f) \exp(-\varepsilon |y - f(D')| / \Delta_f)} = \exp\!\left(\frac{\varepsilon}{\Delta_f} \bigl(|y - f(D')| - |y - f(D)|\bigr)\right).
+\]
+By the triangle inequality, $|y - f(D')| - |y - f(D)| \leq |f(D) - f(D')| \leq \Delta_f$, so the ratio is at most $e^{\varepsilon}$.
+\end{proof}
+
+The Laplace mechanism is the workhorse of differential privacy. It applies to any query whose sensitivity is bounded: sums, counts, means (with bounded inputs), histograms, and linear functions.
+
+%% ============================================================
+\section{Applications}
+\label{sec:dp-applications}
+%% ============================================================
+
+\subsection{Private Mean Computation}
+
+To release the mean of a bounded dataset $\{x_1, \ldots, x_n\}$ with values in $[0, B]$, compute the sum $S = \sum x_i$, add Laplace noise $\text{Lap}(2B/\varepsilon)$ (since the sensitivity of the sum is $2B$: one value can change from $0$ to $B$), and divide by $n$. The resulting noisy mean satisfies $\varepsilon$-DP, and its expected error is $O(B / (\varepsilon n))$---the error decreases with dataset size, a phenomenon known as \emph{privacy amplification by aggregation}.
+
+\subsection{Private Histograms}
+
+To release a histogram (frequency counts per bucket), split the privacy budget: allocate $\varepsilon/k$ to each of $k$ buckets, and add independent $\text{Lap}(k/\varepsilon)$ noise to each count. This satisfies $\varepsilon$-DP by sequential composition. The trade-off is clear: more buckets or smaller $\varepsilon$ means noisier per-bucket estimates.
+
+\subsection{Private Count Queries}
+
+A count query ``how many records satisfy property $P$?'' has sensitivity 1 (adding or removing one record changes the count by at most 1). The Laplace mechanism adds $\text{Lap}(1/\varepsilon)$ noise to the exact count, giving $\varepsilon$-DP with expected absolute error $1/\varepsilon$.
+
+\begin{cpplisting}
+\textbf{C++ implementation:} The files \texttt{examples/example\_laplace\_mechanism.cpp}, \texttt{examples/example\_private\_mean.cpp}, and \texttt{examples/example\_private\_histogram.cpp} demonstrate the Laplace mechanism, private mean computation, and private histograms with varying privacy budgets.
+\end{cpplisting}
+
+%% ============================================================
+\addcontentsline{toc}{section}{Notes}
+\section*{Notes}
+%% ============================================================
+
+Differential privacy was formalized by Dwork, McSherry, Nissim, and Smith (2006), building on earlier work by Dwork et al. on random noise addition for privacy. The Laplace mechanism was part of the original framework. The conceptual breakthrough was defining privacy as a property of the \emph{randomized mechanism}, not of the data or the adversary.
+
+The tension between privacy and utility is fundamental: perfectly private mechanisms (pure randomization) provide no utility, while perfectly useful mechanisms (no noise) provide no privacy. Differential privacy quantifies this trade-off through the parameter $\varepsilon$.
+
+The choice of $\varepsilon$ is both technical and ethical. Technically, smaller $\varepsilon$ gives stronger privacy guarantees. Ethically, the appropriate value depends on the sensitivity of the data and the harms from privacy violations. The U.S. Census Bureau used $\varepsilon \approx 19.61$ for the 2020 Census, while Apple uses $\varepsilon \leq 8$ for some iOS features.
+
+\begin{itemize}[nosep]
+  \item C.~Dwork, F.~McSherry, K.~Nissim, and A.~Smith, ``Calibrating Noise to Sensitivity in Private Data Analysis,'' \textit{Proc.~TCC}, 265--284, 2006.
+  \item C.~Dwork, ``Differential Privacy,'' \textit{Proc.~ICALP}, 1--12, 2006.
+  \item C.~Dwork and A.~Roth, ``The Algorithmic Foundations of Differential Privacy,'' \textit{Foundations and Trends in Theoretical Computer Science}, 9(3-4):211--407, 2014.
+  \item G.~Cormode, M.~Procopiuc, D.~Srivastava, and T.~X.~Tran, ``Differentially Private Spatial Decompositions,'' \textit{Proc.~ICDE}, 20--31, 2012.
+\end{itemize}
 
 %==========================================================================
 \appendix
