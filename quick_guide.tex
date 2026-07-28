@@ -1,0 +1,653 @@
+\documentclass[11pt,a4paper]{article}
+
+\usepackage[margin=1in]{geometry}
+\usepackage{enumitem}
+\usepackage{booktabs}
+\usepackage{hyperref}
+\usepackage{xcolor}
+\usepackage{parskip}
+\usepackage{titlesec}
+\usepackage{fancyhdr}
+\usepackage{multicol}
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{graphicx}
+
+\hypersetup{
+    colorlinks=true,
+    linkcolor=blue!70!black,
+    urlcolor=blue!60!black,
+    citecolor=green!50!black,
+}
+
+\pagestyle{fancy}
+\fancyhf{}
+\fancyhead[L]{\small Randomized Algorithms -- Quick Study Guide}
+\fancyhead[R]{\small\thepage}
+\renewcommand{\headrulewidth}{0.4pt}
+
+\titleformat{\section}{\Large\bfseries\color{blue!70!black}}{}{0em}{}[\titlerule]
+\titleformat{\subsection}{\large\bfseries\color{blue!50!black}}{}{0em}{}
+\titleformat{\subsubsection}{\normalsize\bfseries\color{blue!40!black}}{}{0em}{}
+
+\newcommand{\algo}[2]{\textbf{#1}.\ #2}
+\newcommand{\insight}{\textit{Key Insight: }}
+\newcommand{\creative}{\textcolor{orange!80!black}{\textbf{Creativity:}}}
+\newcommand{\applies}{\textcolor{green!50!black}{\textbf{Applies to:}}}
+
+\setlength{\parindent}{0pt}
+\setlength{\parskip}{6pt}
+
+\begin{document}
+
+\begin{center}
+{\LARGE\bfseries\color{blue!70!black} Randomized Algorithms}\\[6pt]
+{\Large A Guided Study Plan}\\[4pt]
+{\large 112 Algorithms \(\cdot\) 25 Categories \(\cdot\) One Creative Leap at a Time}\\[8pt]
+\rule{0.6\textwidth}{0.5pt}
+\end{center}
+
+\section*{How to Use This Guide}
+
+This guide presents 112 randomized algorithms in a carefully sequenced order. Each algorithm is organized as:
+
+\begin{itemize}[nosep]
+    \item \textbf{What it does} -- the problem it solves in one sentence
+    \item \textbf{How it does it} -- the core creative idea in 2--3 sentences
+    \item \textbf{Why it matters} -- the insight that should spark your curiosity
+\end{itemize}
+
+\noindent The sequence is designed so that each algorithm builds on ideas from earlier ones. Start at Module 1 and progress forward. Skip ahead if you already know the prerequisites, but resist the urge to cherry-pick -- the beauty of randomized algorithms is how the same probabilistic thinking reappears in unexpected places.
+
+\vspace{1em}
+\noindent\textbf{Estimated time:} 12--16 weeks at 2--3 algorithms per day, with time for exercises.
+
+%% ============================================================
+\section{Module 1: Foundations -- The Power of Randomness}
+\label{sec:foundations}
+
+\textit{Before algorithms, we need the mathematical toolkit. These first algorithms are deterministic but appear here because they are building blocks for everything that follows.}
+
+%% ------------------------------------------------------------
+\subsection{Number Theory: The Arithmetic of Cryptography}
+
+\subsubsection{Modular Exponentiation}
+\algo{number\_theory.h}{Computing \(a^b \bmod m\) in \(O(\log b)\) time.}
+\insight Repeated squaring turns a linear chain of multiplications into a logarithmic one. Instead of multiplying \(b\) times, you multiply only \(\log_2 b\) times by squaring the base and selectively multiplying when the corresponding bit of \(b\) is 1.
+\creative This is the foundation of RSA encryption. Without fast modular exponentiation, public-key cryptography would be too slow to use.
+\applies RSA, Diffie-Hellman, elliptic curve crypto, primality testing.
+
+\subsubsection{Euclidean GCD}
+\algo{number\_theory.h}{Finding \(\gcd(a,b)\) via the ancient Euclidean algorithm.}
+\insight The remainder shrinks exponentially: \(\gcd(a,b) = \gcd(b, a \bmod b)\). After just a few steps, the numbers become tiny.
+\creative Two thousand years old, yet still the fastest known general-purpose GCD algorithm for small numbers. Its expected running time is \(O(\log \min(a,b))\).
+
+\subsubsection{Extended GCD}
+\algo{number\_theory.h}{Finding integers \(x,y\) such that \(ax + by = \gcd(a,b)\).}
+\insight GCD tells you \textit{whether} a solution exists; extended GCD finds the actual coefficients. This is the bridge from number theory to solving equations.
+
+\subsubsection{Modular Inverse}
+\algo{number\_theory.h}{Computing \(a^{-1} \bmod m\) when it exists.}
+\insight Division modulo \(m\) is just multiplication by the modular inverse. Extended GCD gives you the inverse in \(O(\log m)\) time.
+
+\subsubsection{Chinese Remainder Theorem}
+\algo{number\_theory.h}{Reconstructing a number from its residues modulo coprime moduli.}
+\insight If you know \(x \bmod m_1, x \bmod m_2, \ldots, x \bmod m_k\) where the \(m_i\) are pairwise coprime, you can uniquely recover \(x\) modulo \(m_1 m_2 \cdots m_k\). It is like reading a number from multiple ``clocks'' with different cycle lengths.
+\creative This enables parallel computation across different moduli and is the basis for fast polynomial multiplication.
+
+\subsubsection{Euler's Totient Function}
+\algo{number\_theory.h}{Counting integers up to \(n\) that are coprime to \(n\).}
+\insight \(\phi(n)\) measures the ``density'' of invertible elements modulo \(n\). For primes, \(\phi(p) = p-1\). The formula \(\phi(n) = n \prod_{p|n}(1 - 1/p)\) reveals how composite numbers have fewer invertibles.
+
+%% ------------------------------------------------------------
+\subsection{Cryptography: Randomness Meets Security}
+
+\subsubsection{Primality Testing: Trial Division}
+\algo{number\_theory.h}{Checking if \(n\) is prime by testing divisors up to \(\sqrt{n}\).}
+\insight Deterministic but slow: \(O(\sqrt{n})\). This motivates the randomized primality tests that follow.
+
+\subsubsection{Miller-Rabin Primality Test}
+\algo{crypto.h}{Probabilistic primality testing in \(O(k \log^2 n)\) time.}
+\insight If \(n\) is composite, a random witness \(a\) catches it with probability \(\ge 3/4\). Repeat \(k\) times and the error drops to \(\le 4^{-k}\). For 20 rounds, you are more likely to be struck by lightning than to get a wrong answer.
+\creative This is the primality test used in practice (OpenSSL, GMP). It replaced deterministic tests that were too slow for large numbers.
+
+\subsubsection{Solovay-Strassen Primality Test}
+\algo{crypto.h}{Another randomized primality test using the Jacobi symbol.}
+\insight Uses a different mathematical invariant (the Jacobi symbol vs.\ the Legendre symbol) to detect composites. Slightly weaker than Miller-Rabin historically but conceptually elegant.
+
+\subsubsection{Fermat Primality Test}
+\algo{crypto.h}{The simplest randomized primality test: check \(a^{n-1} \equiv 1 \pmod{n}\).}
+\insight Fermat's little theorem says primes satisfy this for all \(a\). Composites that fool all bases are called \textbf{Carmichael numbers} (like 561) -- the test's Achilles' heel.
+
+\subsubsection{RSA Encryption}
+\algo{crypto.h}{Public-key encryption: key generation, encryption, and decryption.}
+\insight The trapdoor: multiplying two large primes is easy, but factoring their product is hard. The public key encrypts; only the holder of the secret factorization can decrypt.
+\creative The most deployed asymmetric cryptosystem in history.
+
+\subsubsection{Quadratic Residues, Legendre \& Jacobi Symbols}
+\algo{crypto.h}{Determining whether \(x^2 \equiv a \pmod{p}\) has a solution.}
+\insight The Legendre symbol \(\left(\frac{a}{p}\right)\) answers this in \(O(\log p)\) via Euler's criterion. The Jacobi symbol generalizes it to composite moduli and is faster to compute than factoring.
+
+%% ============================================================
+\section{Module 2: Hashing and Probabilistic Data Structures}
+\label{sec:data}
+
+\textit{Randomness lets us build data structures that are simple, fast, and provably good on average -- no balancing, no rotation, no worst-case pathologies.}
+
+\subsubsection{Universal Hashing}
+\algo{hash\_table.h}{Hash functions chosen randomly from a family that guarantees low collision probability.}
+\insight Any fixed hash function has a worst-case input. A randomly chosen hash function from a universal family makes the worst case go away: the expected length of any chain is \(O(\alpha)\) where \(\alpha = n/m\) is the load factor.
+
+\subsubsection{FKS Perfect Hashing}
+\algo{hash\_table.h}{Two-level hashing with \(O(1)\) worst-case lookup and \(O(n)\) expected space.}
+\insight Level 1 uses chaining; level 2 uses a perfectly-sized hash table for each chain. The key insight: if you allocate \(O(n_i^2)\) space for a chain of length \(n_i\), the birthday paradox ensures no collisions in the second level.
+
+\subsubsection{Weighted Universal Hashing}
+\algo{hash\_table.h}{Distributing load across heterogeneous servers with provably balanced expected loads.}
+\insight Extend universality to handle different server capacities. Each server gets load proportional to its weight, with small variance.
+
+\subsubsection{Two-Level Hashing}
+\algo{hash\_table.h}{Achieving \(O(1)\) worst-case search with \(O(n)\) space via a secondary structure.}
+\insight If the primary table has collisions, build small backup tables for colliding items. Amortized over all insertions, the total space remains linear.
+
+%% ------------------------------------------------------------
+\subsection{Skip Lists and Treaps}
+
+\subsubsection{Skip List}
+\algo{skip\_list.h}{A probabilistic alternative to balanced BSTs using layered linked lists.}
+\insight Promotion to higher levels is decided by coin flips. Expected height is \(O(\log n)\) with high probability, and every search is \(O(\log n)\) expected -- without any rebalancing.
+\creative Invented by William Pugh in 1989, skip lists are used in Redis and LevelDB. They are simpler than red-black trees and just as fast in practice.
+
+\subsubsection{Treap}
+\algo{treap.h}{A BST ordered by keys AND a heap ordered by random priorities.}
+\insight Assign each node a random priority. The BST property on keys and the heap property on priorities together uniquely determine the tree shape. Insertion is just BST insert + rotations to fix the heap -- expected \(O(\log n)\) per operation.
+\creative The treap is the ``Swiss Army knife'' of randomized data structures: it supports search, insert, delete, split, and merge, all in expected \(O(\log n)\).
+
+%% ------------------------------------------------------------
+\subsection{Lazy Selection}
+
+\subsubsection{Lazy Select}
+\algo{lazy\_select.h}{Finding the \(k\)-th smallest element using \(2n + o(n)\) comparisons in expectation.}
+\insight Instead of sorting, sample a random subset and narrow down. The ``lazy'' part: keep sampling until you are confident the answer lies in your current range. Expected work is linear despite the adaptive sampling.
+
+%% ============================================================
+\section{Module 3: Graph Algorithms}
+\label{sec:graphs}
+
+\textit{Randomness transforms graph algorithms from slow and complicated to fast and elegant. The key trick: random contraction and random sampling expose structure that deterministic methods miss.}
+
+\subsubsection{Karger's Min-Cut}
+\algo{min\_cut.h}{Finding the minimum cut of a graph by random edge contraction.}
+\insight Repeatedly pick a random edge and merge its endpoints. After \(n-2\) contractions, the surviving edges form a cut. With probability \(\ge \binom{n}{2}^{-1}\), it is the minimum cut.
+\creative The algorithm is shockingly simple: 5 lines of code. Yet it succeeds with probability \(\Omega(1/n^2)\), making it practical after \(O(n^2 \log n)\) repetitions.
+
+\subsubsection{Karger-Stein Min-Cut}
+\algo{min\_cut.h}{The recursive improvement that finds min-cut in \(O(n^2 \log^3 n)\) time.}
+\insight Run Karger's algorithm twice on parallel copies of the graph, but stop the first copy when \(n/\sqrt{2}\) vertices remain (the point of maximum success probability). The expected number of recursive calls is \(O(\log n)\).
+
+\subsubsection{Exact Min-Cut via Max-Flow}
+\algo{min\_cut.h}{Using BFS-based max-flow (Edmonds-Karp) for deterministic min-cut verification.}
+\insight Max-flow = min-cut (Ford-Fulkerson theorem). BFS finds augmenting paths in \(O(VE)\) time. Useful as a verification tool against the randomized estimates.
+
+\subsubsection{Kruskal's MST}
+\algo{mst.h}{Minimum spanning tree via sorted edges and union-find.}
+\insight Greedily add the lightest edge that does not create a cycle. Union-find with path compression and union by rank gives near-\(O(1)\) amortized per operation.
+
+\subsubsection{KKT Randomized MST}
+\algo{mst.h}{Karger-Klein-Tarjan: finding MST in \(O(m)\) expected time using random sampling.}
+\insight Sample random edges, compute their MST, classify edges as ``light'' (below the sample's weight threshold), ``heavy'', or ``medium''. Recurse only on the medium edges -- there are \(O(n)\) of them with high probability.
+\creative The first truly linear-time MST algorithm, discovered in 1995.
+
+\subsubsection{Floyd-Warshall APSP}
+\algo{apsp.h}{All-pairs shortest paths in \(O(n^3)\) via dynamic programming.}
+\insight Consider paths that use only vertices \(1..k\) as intermediaries. The recurrence \(d_{ij}^{(k)} = \min(d_{ij}^{(k-1)}, d_{ik}^{(k-1)} + d_{kj}^{(k-1)})\) is simple but powerful.
+
+\subsubsection{Seidel's APSP}
+\algo{apsp.h}{Randomized APSP for unweighted graphs in \(O(n^3 / \log n)\) expected time.}
+\insight If you know the adjacency matrix \(A\) and \(A^2\) (Boolean), you can compute all-pairs distances via a clever recursive doubling. The speedup comes from fast Boolean matrix multiplication.
+
+\subsubsection{APSP via Repeated Squaring}
+\algo{apsp.h}{Computing shortest paths by repeated min-plus matrix squaring.}
+\insight Just as repeated squaring computes matrix powers, min-plus repeated squaring computes ``shortest path powers'' \(D^1, D^2, D^4, \ldots\) in \(O(n^3 \log n)\) total time.
+
+\subsubsection{Boolean Matrix Multiplication}
+\algo{apsp.h}{Multiplying Boolean matrices to compute reachability.}
+\insight \( (AB)_{ij} = \bigvee_k (A_{ik} \wedge B_{kj}) \). The number of walks of length exactly \(k\) from \(i\) to \(j\) is encoded in \(A^k\).
+
+\subsubsection{Maximum Bipartite Matching}
+\algo{matchings.h}{Finding maximum matching in bipartite graphs via augmenting paths.}
+\insight A matching is maximum iff no augmenting path exists. BFS finds augmenting paths; each one increases the matching size by 1. With \(n\) vertices, at most \(n\) augmentations are needed.
+
+\subsubsection{Blossom Matching}
+\algo{matchings.h}{Maximum matching in general (non-bipartite) graphs.}
+\insight Edmonds' blossom algorithm contracts odd cycles (``blossoms'') to find augmenting paths in non-bipartite graphs. Randomization helps with efficient implementation.
+
+\subsubsection{Randomized Packet Routing}
+\algo{routing.h}{Routing packets on a network with minimal congestion.}
+\insight Each packet chooses a random intermediate destination, then routes to the final destination. This ``random permutation routing'' guarantees \(O(1)\) queue size with high probability on expanders.
+
+\subsubsection{Random Cut}
+\algo{min\_cut.h}{Estimating min-cut by taking random cuts and tracking edge crossings.}
+\insight A single random cut (keep each vertex independently with probability \(1/2\)) gives a cut of expected size \(|E|/2\). The minimum over many random cuts is a good estimate of the min-cut.
+
+%% ============================================================
+\section{Module 4: Computational Geometry}
+\label{sec:geometry}
+
+\textit{Randomness makes geometric algorithms robust. Instead of maintaining complex balance invariants, random permutation of the input gives expected linear or \(O(n \log n)\) time.}
+
+\subsubsection{Gift-Wrap Hull (Jarvis March)}
+\algo{convex\_hull.h}{Computing the convex hull by repeatedly finding the next extreme point.}
+\insight Start at the leftmost point. Find the point that makes the smallest angle -- this is the next hull vertex. Repeat until you return to the start. Time: \(O(nh)\) where \(h\) is the hull size.
+
+\subsubsection{Randomized Incremental Convex Hull}
+\algo{convex\_hull.h}{Building the convex hull by inserting random points one at a time.}
+\insight Shuffle the points. Insert each point: if it is inside the current hull, do nothing. If outside, find the two ``tangent'' edges and expand the hull. Expected time: \(O(n \log n)\).
+
+\subsubsection{Delaunay Triangulation}
+\algo{delaunay.h}{Triangulating points so that no point lies inside any triangle's circumcircle.}
+\insight Bowyer-Watson insertion: when adding a point, find and delete all triangles whose circumcircle contains the new point. Fill the resulting ``hole'' with new triangles. Random insertion order gives expected \(O(n \log n)\).
+
+\subsubsection{Welzl's Minimum Enclosing Circle (Iterative)}
+\algo{welzl.h}{Finding the smallest enclosing circle in expected \(O(n)\) time.}
+\insight Shuffle the points. Maintain a circle; if a new point is outside, recompute the circle with that point on the boundary. Checking all triples gives the final circle. The random order guarantees expected linear time.
+
+\subsubsection{Welzl's MEC (Recursive)}
+\algo{welzl.h}{The recursive variant with an explicit boundary set.}
+\insight Maintain a set of up to 3 ``boundary'' points that must lie on the circle. Recurse: each new point is either inside the current circle (skip) or added to the boundary. Worst case \(O(n)\) when the boundary set is small.
+
+\subsubsection{Binary Planar Partition}
+\algo{binary\_planar\_partition.h}{Recursively partitioning a set of line segments with random splitting lines.}
+\insight Pick a random segment, extend it to split the plane, recurse on each half. Expected total splits: \(O(n \log n)\). This is the geometric analogue of quicksort.
+
+\subsubsection{The Sailor Problem}
+\algo{binary\_planar\_partition.h}{Using indicator random variables to analyze geometric queries.}
+\insight Each query ``hits'' a random region with known probability. Summing indicator expectations gives the expected number of regions visited -- a beautiful application of linearity of expectation.
+
+\subsubsection{Two-Point Method}
+\algo{two\_point.h}{Testing set balance using pairwise independence.}
+\insight Instead of full randomness (expensive), use only pairwise independent hash functions. The variance of the estimator is \(O(1/t)\) where \(t\) is the number of pairs -- matching full independence for this application.
+
+\subsubsection{Amplified Two-Point}
+\algo{two\_point.h}{Boosting the two-point method by repeating and averaging.}
+\insight Take \(k\) independent pairs, average their estimates. The error drops as \(O(1/\sqrt{k})\) -- the same rate as fully independent samples, but with far less randomness.
+
+%% ============================================================
+\section{Module 5: Algebraic and String Algorithms}
+\label{sec:algebraic}
+
+\textit{Randomness turns algebraic verification from cubic to quadratic, and string matching from fragile to robust. The theme: check with random samples, not exhaustive computation.}
+
+\subsubsection{Polynomial Multiplication}
+\algo{polynomial.h}{Naive \(O(n^2)\) polynomial multiplication.}
+\insight Expand \((a_0 + a_1 x + \cdots)(b_0 + b_1 x + \cdots)\) term by term. Simple but slow -- motivates Karatsuba.
+
+\subsubsection{Horner's Method}
+\algo{polynomial.h}{Evaluating a degree-\(n\) polynomial in \(O(n)\) multiplications.}
+\insight Rewrite \(p(x) = a_n x^n + \cdots + a_0\) as \(p(x) = (\cdots((a_n x + a_{n-1})x + a_{n-2})x + \cdots)x + a_0\). Nested multiplication uses only \(n\) multiplications and \(n\) additions.
+
+\subsubsection{Karatsuba Multiplication}
+\algo{polynomial.h}{Multiplying two degree-\(n\) polynomials in \(O(n^{1.585})\) time.}
+\insight Split each polynomial in half: \(p(x) = p_1(x) \cdot x^{n/2} + p_0(x)\). Compute three sub-products instead of four by reusing \((p_1 + p_0)(q_1 + q_0)\). The recurrence \(T(n) = 3T(n/2) + O(n)\) solves to \(O(n^{\log_2 3})\).
+
+\subsubsection{Schwartz-Zippel Polynomial Identity Testing}
+\algo{polynomial\_chapter8.h}{Testing whether two polynomials are equal by evaluating at a random point.}
+\insight If two degree-\(d\) polynomials in \(n\) variables differ, a random point from a large enough field catches the difference with probability \(\ge 1 - nd/|S|\). One evaluation suffices.
+\creative This is the most famous randomized algorithm in algebra. It proves that many hard problems (graph isomorphism, circuit equivalence) have efficient randomized tests.
+
+\subsubsection{Freivalds' Matrix Product Verification}
+\algo{freivalds.h}{Checking whether \(AB = C\) in \(O(n^2)\) time (vs.\ \(O(n^3)\) to multiply).}
+\insight Pick a random vector \(r \in \{0,1\}^n\). Compute \(A(Br)\) and \(Cr\). If \(AB \ne C\), the test fails with probability \(\ge 1/2\). Repeat \(k\) times for error \(\le 2^{-k}\).
+\creative Same philosophy as PIT: random sampling catches errors that exhaustive checking would miss, but exponentially faster.
+
+\subsubsection{Rabin-Karp String Matching}
+\algo{rabin\_karp.h}{Finding a pattern in a text using rolling hashes in \(O(n + m)\) expected time.}
+\insight Compute a fingerprint (hash) of the pattern and slide it across the text. When fingerprints match, verify character-by-character. The hash makes sliding \(O(1)\) per position.
+
+\subsubsection{String Fingerprinting}
+\algo{rabin\_karp.h}{Karp-Rabin fingerprints for testing string equality.}
+\insight The fingerprint \(h(s) = \sum s_i \cdot b^i \bmod p\) lets you compute the hash of any substring in \(O(1)\) from precomputed prefix hashes. Collision probability: \(\le 1/p\).
+
+\subsubsection{Randomized SVD}
+\algo{randomized\_linear\_algebra.h}{Approximating the SVD of an \(m \times n\) matrix in \(O(mn \log k + mk^2)\) time.}
+\insight Project the matrix onto a random subspace of dimension \(k \ll n\). The range of \(A\) is well-approximated by the range of \(AQ\) where \(Q\) is a random matrix. Then compute the SVD of the small \(m \times k\) matrix.
+\creative This is the workhorse of modern data science: PCA of billion-dimensional datasets in seconds.
+
+\subsubsection{Johnson-Lindenstrauss Projection}
+\algo{random\_projection.h}{Reducing \(n\) points from \(d\) to \(k = O(\log n / \epsilon^2)\) dimensions while preserving all pairwise distances within \((1 \pm \epsilon)\).}
+\insight A random \(k \times d\) Gaussian matrix \(R\) maps each point \(x\) to \(Rx/\sqrt{k}\). The Johnson-Lindenstrauss lemma guarantees that with high probability, all distances are preserved.
+\creative This is counterintuitive: you can crush data to \(\log n\) dimensions and lose almost nothing geometrically.
+
+\subsubsection{Random Projection}
+\algo{random\_projection.h}{Practical dimensionality reduction using random matrices.}
+\insight Same as JL but with practical implementation: generate the random matrix, multiply, and verify distance preservation empirically.
+
+\subsubsection{Matrix Concentration Bounds}
+\algo{randomized\_linear\_algebra.h}{Chernoff/Bernstein bounds for matrix-valued random variables.}
+\insight When you sum independent random matrices, the result concentrates around its expectation -- just like scalar Chernoff bounds, but for the spectral norm. This justifies why random projections work.
+
+%% ============================================================
+\section{Module 6: Probabilistic Analysis}
+\label{sec:prob}
+
+\textit{These algorithms are ``Las Vegas'' (always correct, random running time) or ``Monte Carlo'' (fixed running time, small error probability). Understanding the analysis is as important as the algorithm.}
+
+\subsubsection{Coupon Collector Problem}
+\algo{coupon\_collector.h}{Simulating how long it takes to collect all \(n\) coupons.}
+\insight The \(k\)-th new coupon arrives after \(\sim n/k\) trials (geometric distribution). Total: \(n \cdot H_n \approx n \ln n\) trials. The last few coupons are the hardest -- a vivid illustration of diminishing returns.
+\creative This pattern appears everywhere: hash table probing, rainbow tables, species discovery in ecology.
+
+\subsubsection{Chernoff Bounds}
+\algo{chernoff.h}{Exponential tail bounds for sums of independent Bernoulli random variables.}
+\insight If \(X = \sum X_i\) with \(\mathbb{E}[X] = \mu\), then \(\Pr[X > (1+\delta)\mu] \le e^{-\delta^2 \mu / 3}\). The sum concentrates exponentially fast around its mean.
+\creative Chernoff bounds are the ``secret weapon'' of randomized algorithm analysis. They turn ``probably good'' into ``almost certainly good.''
+
+\subsubsection{Chernoff Simulation}
+\algo{chernoff.h}{Empirically verifying that Chernoff bounds match observed tail probabilities.}
+\insight Run thousands of trials, count how often the sum exceeds the bound. The empirical rate should be well below the theoretical guarantee.
+
+\subsubsection{Azuma-Hoeffding Inequality}
+\algo{martingales.h}{Tail bounds for martingale difference sequences.}
+\insight If \(X_0, X_1, \ldots\) is a martingale with bounded differences \(|X_i - X_{i-1}| \le c_i\), then \(\Pr[|X_n - X_0| \ge t] \le 2\exp(-t^2 / 2\sum c_i^2)\). This generalizes Chernoff bounds to dependent random variables.
+
+\subsubsection{Potential Method}
+\algo{martingales.h}{Analyzing data structure operations via potential functions.}
+\insight Define a ``potential'' \(\Phi\) that measures the ``debt'' of a data structure. If each operation costs at most \(c\) plus the potential drop, the amortized cost is bounded. Randomized analysis via martingales gives expected bounds.
+
+\subsubsection{Probabilistic Recurrences}
+\algo{probabilistic\_recurrence.h}{Solving recurrences like \(T(n) = T(X) + T(n - 1 - X) + O(1)\) where \(X\) is random.}
+\insight For randomized QuickSort, \(X\) is the pivot rank. The recurrence \(T(n) = \mathbb{E}[T(X)] + \mathbb{E}[T(n-1-X)] + O(n)\) solves to \(O(n \log n)\) by linearity of expectation.
+
+\subsubsection{Linear Expectation}
+\algo{probabilistic\_recurrence.h}{Using linearity of expectation to count without enumerating.}
+\insight Instead of counting complex events directly, define indicator variables for simple sub-events and sum their expectations. The linearity of expectation works even when the indicators are dependent.
+
+%% ============================================================
+\section{Module 7: Las Vegas and Monte Carlo Paradigms}
+\label{sec:lvmc}
+
+\textit{Las Vegas algorithms always give the right answer but take random time. Monte Carlo algorithms run in fixed time but may err. The art is knowing which trade-off to make.}
+
+\subsubsection{Randomized QuickSort}
+\algo{las\_vegas\_monte\_carlo.h}{Sorting in \(O(n \log n)\) expected time by choosing random pivots.}
+\insight A random pivot is a ``good'' pivot (within the middle half) with probability \(\ge 1/2\). Each good pivot splits the problem in half. Expected depth: \(O(\log n)\). The algorithm is Las Vegas: always correct, random time.
+
+\subsubsection{Monte Carlo Min-Cut Estimation}
+\algo{las\_vegas\_monte\_carlo.h}{Estimating min-cut by running Karger's algorithm once.}
+\insight A single run of Karger's gives a cut of size \(\ge \text{min-cut}\) with probability \(\ge 1/\binom{n}{2}\). Run it \(n^2 \ln n\) times for high success probability. This is Monte Carlo: fast, approximate.
+
+\subsubsection{Monte Carlo Pi Estimation}
+\algo{las\_vegas\_monte\_carlo.h}{Estimating \(\pi\) by throwing random darts at a square.}
+\insight Fraction of darts landing inside the unit circle \(\approx \pi/4\). Error: \(O(1/\sqrt{n})\). The simplest Monte Carlo algorithm -- and a powerful illustration of the law of large numbers.
+
+%% ============================================================
+\section{Module 8: Online Algorithms and Adversaries}
+\label{sec:online}
+
+\textit{Online algorithms must make irrevocable decisions without knowing the future. Randomization provides ``plausible deniability'' against adversarial inputs.}
+
+\subsubsection{LRU Paging}
+\algo{paging.h}{Evicting the least recently used page -- the deterministic baseline.}
+\insight LRU is \(k\)-competitive for cache size \(k\): at most \(k\) times worse than the optimal offline algorithm. But an adversary can construct inputs that achieve this worst case.
+
+\subsubsection{Marking Paging (Randomized)}
+\algo{paging.h}{Randomized \(k\)-competitive paging via the marking algorithm.}
+\insight Each page gets a random ``mark'' on first access. Evict a random unmarked page. The randomization eliminates the adversary's ability to construct worst-case inputs.
+
+\subsubsection{Oblivious Adversary}
+\algo{adversary.h}{An adversary that must fix its input distribution before seeing the algorithm's random choices.}
+\insight The adversary is powerful but ``blind'': it cannot adapt to the algorithm's coin flips. This model gives randomized algorithms a provable advantage: they can beat any deterministic algorithm against oblivious adversaries.
+
+\subsubsection{Adaptive Adversary}
+\algo{adversary.h}{An adversary that observes the algorithm's past choices and adaptively chooses the next input.}
+\insight Even against adaptive adversaries, randomized algorithms maintain a competitive ratio. The adversary cannot predict future random coins, so it cannot force the worst case every time.
+
+\subsubsection{Lazy Select}
+\algo{lazy\_select.h}{Online order statistics with \(2n + o(n)\) expected comparisons.}
+\insight The algorithm ``lazily'' samples elements, keeping only those in a narrowing interval. The key analysis tool: the expected number of wasted comparisons is \(O(n)\).
+
+%% ============================================================
+\section{Module 9: Reservoir Sampling and Selection}
+\label{sec:sampling}
+
+\textit{When data arrives in a stream of unknown length, you need algorithms that maintain a representative sample in fixed space.}
+
+\subsubsection{Reservoir Sampling (Vitter's Algorithm R)}
+\algo{reservoir\_sampling.h}{Maintaining a uniformly random sample of size \(k\) from a stream of length \(n\).}
+\insight The first \(k\) elements fill the reservoir. For the \(i\)-th element (\(i > k\)), replace a random reservoir element with probability \(k/i\). Every element has equal probability \(k/n\) of being in the final sample.
+
+\subsubsection{Weighted Reservoir Sampling (A-Res)}
+\algo{reservoir\_sampling.h}{Sampling with probability proportional to weights.}
+\insight Assign each element a key \(u^{1/w_i}\) where \(u \sim \text{Uniform}(0,1)\). Keep the \(k\) elements with largest keys in a min-heap. Higher weight = larger key = higher chance of survival.
+
+\subsubsection{Generic Reservoir Sampling}
+\algo{reservoir\_sampling.h}{Template version that works with any copyable type via \texttt{std::span}.}
+\insight Same algorithm, different type. The template version lets you sample strings, objects, or any type -- not just integers.
+
+%% ============================================================
+\section{Module 10: Randomized Rounding}
+\label{sec:rounding}
+
+\textit{Linear programs give fractional solutions. Randomized rounding converts them to integers while preserving constraints with high probability.}
+
+\subsubsection{Basic Randomized Rounding}
+\algo{randomized\_rounding.h}{Rounding each LP variable independently: \(x_i = 1\) with probability \(x_i^*\).}
+\insight If the LP constraint is \(\sum a_j x_j \le b\) with \(a_j \ge 0\), then \(\mathbb{E}[\sum a_j x_j] = \sum a_j x_j^* \le b\). By Markov's inequality, the probability of violating the constraint is \(\le 1/t\) for any threshold \(t\).
+
+\subsubsection{Best-of-N Rounding}
+\algo{randomized\_rounding.h}{Taking the best among \(N\) independent roundings.}
+\insight Repeat basic rounding \(N\) times, keep the feasible solution with the best objective. Probability of all \(N\) failing: \(\le (1/t)^N\). Exponentially better, at the cost of \(N\) times the work.
+
+\subsubsection{Chernoff-Concentration-Aware Rounding}
+\algo{randomized\_rounding.h}{Using the Chernoff bound to choose how many trials to run.}
+\insight For constraints with \(\mu = \mathbb{E}[\text{sum}] \ge \text{poly}(n)\), the Chernoff bound gives \(\Pr[\text{violation}] \le e^{-\mu \delta^2 / 3}\). One trial often suffices when \(\mu\) is large.
+
+%% ============================================================
+\section{Module 11: Integer Factorization}
+\label{sec:factor}
+
+\textit{Factoring large integers is believed to be hard. Pollard's rho algorithm is the fastest known method for numbers up to about 20 digits.}
+
+\subsubsection{Pollard's Rho Factor}
+\algo{pollard\_rho.h}{Finding a non-trivial factor of \(n\) in \(O(n^{1/4})\) expected time.}
+\insight Define a random function \(f(x) = x^2 + c \bmod n\). The sequence \(x_0, f(x_0), f(f(x_0)), \ldots\) eventually cycles (``rho'' shape). Before cycling, \(\gcd(|x - y|, n)\) may reveal a factor. Floyd's cycle detection finds the collision.
+
+\subsubsection{Pollard's Rho Factorize}
+\algo{pollard\_rho.h}{Complete factorization using Pollard's rho + trial division.}
+\insight First remove small factors by trial division (up to 10000). For the remaining composite, recursively split using Pollard's rho. Use a stack to avoid deep recursion.
+
+\subsubsection{Prime Factorization with Exponents}
+\algo{pollard\_rho.h}{Grouping factors by prime with multiplicity: \(n = p_1^{e_1} \cdots p_k^{e_k}\).}
+\insight Sort the factor list, then scan for runs. The \(\texttt{PrimePower}\) struct captures both the prime and its exponent -- essential for computing Euler's totient, divisors, etc.
+
+%% ============================================================
+\section{Module 12: Locality-Sensitive Hashing}
+\label{sec:lsh}
+
+\textit{When exact nearest-neighbor search is too slow, LSH gives approximate answers in sublinear time by hashing similar items to the same bucket.}
+
+\subsubsection{SimHash}
+\algo{lsh.h}{Cosine-similarity LSH using random hyperplanes.}
+\insight Project each vector onto a random direction. Two vectors with high cosine similarity land on the same side of the hyperplane with probability proportional to their similarity. Multiple projections give a binary signature.
+
+\subsubsection{Hyperplane LSH}
+\algo{lsh.h}{ANN search using multiple random hyperplane hash functions.}
+\insight Same idea as SimHash but used for index construction: hash each point using \(L\) random hyperplanes, store in \(L\) hash tables. Query by checking all \(L\) tables and returning the closest match.
+
+\subsubsection{E2LSH}
+\algo{lsh.h}{LSH for Euclidean distance using random projections + quantization.}
+\insight Project onto random vectors and quantize: \(h(x) = \lfloor (a \cdot x + b) / w \rfloor\). Two points with small Euclidean distance hash to the same bucket with probability depending on their distance and the bucket width \(w\).
+
+\subsubsection{LSH Index}
+\algo{lsh.h}{Full nearest-neighbor index with insertion, querying, and recall measurement.}
+\insight Combine multiple LSH tables into an index. Insert: hash and store in all tables. Query: hash the query, check all candidates in the same buckets, return the top-\(k\) closest. Recall = fraction of true nearest neighbors found.
+
+%% ============================================================
+\section{Module 13: Streaming and Sketching}
+\label{sec:streaming}
+
+\textit{When data is too large to store (network traffic, sensor readings, database queries), sketching algorithms answer aggregate queries in \(O(\text{polylog } n)\) space.}
+
+\subsubsection{Count-Min Sketch}
+\algo{streaming.h}{Frequency estimation in a stream using a 2D array of counters.}
+\insight Hash each item independently into \(d\) rows of width \(w\). Increment the counter at each hash. Estimate: take the minimum across rows. Overestimation only, error \(\le \epsilon N\) with probability \(\ge 1 - \delta\).
+
+\subsubsection{Flajolet-Martin Algorithm}
+\algo{streaming.h}{Estimating the number of distinct elements in a stream.}
+\insight Hash each element to 64 bits. Track the position of the least significant 1-bit across many hash functions. The maximum position seen gives an estimate of \(\log_2(\text{distinct count})\). Group-wise averaging reduces variance.
+
+\subsubsection{Misra-Gries Heavy Hitters}
+\algo{streaming.h}{Finding all items with frequency \(> n/k\) in \(O(k)\) space.}
+\insight Maintain \(k-1\) counters. When a new item arrives and is not tracked, decrement all counters and remove zeros. Items with frequency \(> n/k\) survive. Items with frequency \(< n/(k+1)\) are never falsely reported.
+
+%% ============================================================
+\section{Module 14: Simulated Annealing}
+\label{sec:sa}
+
+\textit{Simulated annealing escapes local optima by accepting worse solutions with decreasing probability -- inspired by metallurgical annealing.}
+
+\subsubsection{Generic Simulated Annealing}
+\algo{simulated\_annealing.h}{A temperature-based metaheuristic for combinatorial optimization.}
+\insight Start at temperature \(T = \infty\) (accept everything). Cool gradually: \(T \leftarrow \alpha T\). At temperature \(T\), accept a worse solution with probability \(e^{-\Delta/T}\). As \(T \to 0\), the algorithm settles into a (hopefully global) optimum.
+\creative Convergence to the global optimum is guaranteed if \(T\) decreases as \(O(1/\ln k)\) where \(k\) is the iteration count.
+
+\subsubsection{SA for TSP}
+\algo{simulated\_annealing.h}{Solving the Traveling Salesman Problem with 2-opt neighborhoods.}
+\insight The neighbor function reverses a random sub-tour (2-opt move). SA explores the space of permutations, accepting occasional uphill moves to escape local optima. Typically finds tours within 5--15\% of optimal.
+
+\subsubsection{SA for Knapsack}
+\algo{simulated\_annealing.h}{Solving 0/1 knapsack by flipping random items.}
+\insight The neighbor function flips a random item (in or out). Excess weight is penalized heavily. SA finds near-optimal solutions for instances with hundreds of items.
+
+%% ============================================================
+\section{Module 15: Differential Privacy}
+\label{sec:dp}
+
+\textit{Differential privacy formalizes ``what can you learn about me from aggregate data?'' Randomness is the mechanism that provides provable privacy guarantees.}
+
+\subsubsection{Randomized Response}
+\algo{differential\_privacy.h}{Collecting sensitive boolean answers with plausible deniability.}
+\insight Each respondent answers truthfully with probability \(p > 0.5\), flips a coin otherwise. The server sees a noisy mix. By inverting the formula, the true population proportion can be estimated -- but no individual's answer is recoverable.
+
+\subsubsection{Laplace Mechanism}
+\algo{differential\_privacy.h}{Adding calibrated noise to a numeric query for \(\epsilon\)-differential privacy.}
+\insight For a query with sensitivity \(\Delta\) (maximum change from one record), add noise \(\text{Lap}(\Delta/\epsilon)\). The parameter \(\epsilon\) controls the privacy-utility tradeoff: smaller \(\epsilon\) = more noise = more privacy.
+
+\subsubsection{Private Mean}
+\algo{differential\_privacy.h}{Computing the mean of a dataset with differential privacy.}
+\insight The sum has sensitivity \(2 \cdot \text{bound}\) (one value can change by at most the range). Add Laplace noise to the sum, divide by \(n\). The result is a noisy mean that reveals nothing about any individual.
+
+\subsubsection{Private Histogram}
+\algo{differential\_privacy.h}{Publishing a histogram with per-bucket Laplace noise.}
+\insight Each bucket count has sensitivity 1 (one record changes one bucket by 1). Split the privacy budget \(\epsilon\) equally across buckets (basic composition). Each bucket gets noise \(\text{Lap}(1 / (\epsilon/k))\).
+
+%% ============================================================
+\section{Module 16: Advanced Topics}
+\label{sec:advanced}
+
+\subsubsection{K-Server Problem}
+\algo{k\_server.h}{An online problem where \(k\) servers must move to serve requests on a metric space.}
+\insight The deterministic \(k\)-competitive algorithm is known, but randomization gives \((2k-1)\)-competitiveness against adaptive adversaries. The key idea: randomly choose which server to move, breaking ties by potential.
+
+\subsubsection{Maximal Independent Set (Luby's Algorithm)}
+\algo{mis.h}{Finding a maximal independent set in a graph in \(O(\log n)\) expected rounds.}
+\insight Each vertex independently ``calls'' itself with probability \(1/(2d+1)\) where \(d\) is its current degree. Callers join the MIS, and their neighbors are removed. Repeat on the residual graph. Each round removes a constant fraction of vertices in expectation.
+
+\subsubsection{PRAM Simulation}
+\algo{pram\_simulation.h}{Simulating a parallel random-access machine on a sequential computer.}
+\insight Simulate \(p\) processors by batching memory accesses into rounds. Random hashing resolves access conflicts. The simulation runs in \(O(n/p + p)\) time, optimally balancing work and parallelism.
+
+%% ============================================================
+\section{Module 17: MIT 6.856J -- Advanced Randomized Algorithms}
+\label{sec:mit6856}
+
+\textit{These algorithms come from the MIT course 6.856J (Randomized Algorithms). They cover matching, game theory, counting, expanders, Markov chains, derandomization, shortest paths, satisfiability, and geometric decomposition.}
+
+\subsubsection{Stable Marriage (Gale-Shapley)}
+\algo{stable\_marriage.h}{Finding a stable matching between two sets of preferences in \(O(n^2)\) time.}
+\insight Men propose to their most preferred woman who has not yet rejected them; women tentatively hold the best proposal. The algorithm terminates in at most \(n^2\) rounds and produces a man-optimal, woman-pessimal stable matching.
+\creative The deferred acceptance algorithm is the foundation of the National Resident Matching Program (medical residency assignments) and kidney exchange programs.
+
+\subsubsection{Randomized Gale-Shapley}
+\algo{stable\_marriage.h}{Randomizing proposal order to produce uniformly random stable matchings.}
+\insight By randomizing the order in which men propose, each run produces a different stable matching from the lattice of stable matchings. This gives access to the full range of stable outcomes, not just the man-optimal one.
+
+\subsubsection{Game Tree Evaluation}
+\algo{game\_tree.h}{Deterministic and randomized minimax evaluation of two-player game trees.}
+\insight MAX nodes maximize, MIN nodes minimize, LEAF nodes return values. Randomized evaluation samples children in random order and returns the correct minimax value in expectation. Monte Carlo evaluation uses random rollouts for large trees where exhaustive search is infeasible.
+
+\subsubsection{DNF Counting (Karp-Luby)}
+\algo{dnf\_counting.h}{Approximating the number of satisfying assignments of a DNF formula in \(O(n \cdot k / \epsilon^2)\) time.}
+\insight Sample a random assignment from each clause's satisfying set. Estimate the count by Monte Carlo sampling of clause satisfactions. The Karp-Luby FPRAS achieves a \((1 \pm \epsilon)\)-approximation using \(O(k/\epsilon^2)\) samples, where \(k\) is the number of clauses.
+
+\subsubsection{Expander Graphs}
+\algo{expander.h}{Random regular graphs with strong connectivity properties.}
+\insight A \(d\)-regular graph on \(n\) vertices is an expander if every small subset \(S\) has many neighbors: \(|\Gamma(S)| \ge (1+\delta)|S|\). The spectral gap \(\lambda_1 - \lambda_2\) measures expansion quality. Random regular graphs are expanders with high probability.
+
+\subsubsection{Expander-based PRG}
+\algo{expander.h}{Nisan-Wigderson pseudorandom generator from expanders.}
+\insight Expander walks mix rapidly: after \(O(\log n)\) steps, the walk is nearly uniformly distributed. This gives a PRG that fools any function with bounded dependence on \(O(\log n)\) bits. The zig-zag product of expanders preserves expansion while reducing vertex count.
+
+\subsubsection{Markov Chains and Stationary Distribution}
+\algo{markov\_chain.h}{Power iteration to find the stationary distribution of a Markov chain.}
+\insight The stationary distribution \(\pi\) satisfies \(\pi P = \pi\). Power iteration converges geometrically at rate \(\lambda_2\) (the second-largest eigenvalue). The mixing time is \(O(1/(1-\lambda_2))\), quantifying how fast the chain forgets its initial state.
+
+\subsubsection{Coupling for Mixing Time}
+\algo{markov\_chain.h}{Bounding mixing time via probabilistic coupling of two copies.}
+\insight Run two copies of the chain from different starting states. If they meet (``couple'') by time \(T\), the total variation distance is \(\le \Pr[\text{not coupled by } T]\). The coupling time provides an upper bound on mixing time that is often tight.
+
+\subsubsection{Metropolis-Hastings MCMC}
+\algo{markov\_chain.h}{Sampling from any target distribution via a proposal mechanism.}
+\insight Define a proposal distribution \(q(x'|x)\) and accept/reject with probability \(\min(1, \pi(x')q(x|x') / (\pi(x)q(x'|x)))\). The chain's stationary distribution is exactly \(\pi\), enabling sampling from complex distributions (Bayesian posteriors, Ising models).
+
+\subsubsection{Kirchhoff's Spanning Tree Count}
+\algo{markov\_chain.h}{Counting spanning trees via the Laplacian cofactor theorem.}
+\insight The number of spanning trees of a graph equals any cofactor of its Laplacian matrix \(L = D - A\). This connects algebraic graph theory to combinatorial counting, and is the basis for random spanning tree algorithms.
+
+\subsubsection{Method of Conditional Expectations}
+\algo{conditional\_expectation.h}{Derandomizing MAX-SAT by fixing variables one at a time.}
+\insight For each variable, compute the expected number of satisfied clauses conditioned on each assignment. Fix the variable to the value that maximizes this conditional expectation. This eliminates randomness while guaranteeing at least the expected value.
+
+\subsubsection{Derandomized Discrepancy Minimization}
+\algo{conditional\_expectation.h}{Coloring sets with \(\pm 1\) to minimize maximum discrepancy.}
+\insight Color elements one at a time: for each element, compute the discrepancy of each coloring choice conditioned on previous choices. Choose the color that minimizes the conditional expectation. The result achieves discrepancy \(O(\sqrt{n \log(2m/n)})\) deterministically.
+
+\subsubsection{Randomized Shortest Paths}
+\algo{randomized\_shortest\_paths.h}{Bellman-Ford with randomized edge ordering for improved bounds.}
+\insight Process edges in random order instead of the standard fixed order. The random reweighting (Johnson's technique) uses random potentials to eliminate negative edges, enabling Dijkstra's algorithm. The random pivot APSP finds all-pairs shortest paths by sampling pivot vertices.
+
+\subsubsection{MAX-SAT Algorithms}
+\algo{max\_sat.h}{Random assignment, greedy local search, and randomized rounding for MAX-SAT.}
+\insight A random assignment satisfies each clause with probability \(1 - 2^{-k}\) (for \(k\)-literal clauses). Greedy local search flips variables that improve satisfaction. Randomized rounding uses LP relaxation + probabilistic rounding. Together, these give \(O(\log n)\)-approximation guarantees.
+
+\subsubsection{Trapezoidal Decomposition}
+\algo{trapezoidal.h}{Decomposing the plane into trapezoids for point location in \(O(n \log n)\) preprocessing.}
+\insight Sort segment endpoints by \(x\)-coordinate. Sweep left to right, maintaining the set of active segments. At each event, create trapezoids between adjacent active segments. Point location uses the trapezoidal map with randomized incremental construction for expected \(O(\log n)\) query time.
+
+%% ============================================================
+\section{Where to Go From Here}
+
+\begin{enumerate}
+    \item \textbf{Implement.} Type out each algorithm from memory. If you cannot, you do not understand it.
+
+    \item \textbf{Analyze.} Prove the expected running time and success probability for each algorithm. The Chernoff bound and linearity of expectation are your two most powerful tools.
+
+    \item \textbf{Experiment.} Run the examples with varying input sizes. Plot running times. Verify that the empirical behavior matches the theoretical predictions.
+
+    \item \textbf{Combine.} The best randomized algorithms combine ideas from multiple modules:
+    \begin{itemize}[nosep]
+        \item Karger-Stein = random contraction (Module 3) + recursion analysis (Module 6)
+        \item Randomized SVD = random projection (Module 5) + matrix concentration (Module 5)
+        \item Streaming + LSH = sketching (Module 13) + hashing (Module 2)
+    \end{itemize}
+
+    \item \textbf{Read the book.} This library accompanies \textit{Randomized Algorithms with C++} by Chaman Singh Verma. The textbook provides the full proofs, historical context, and deeper intuition that this guide can only sketch.
+\end{enumerate}
+
+\vspace{2em}
+\begin{center}
+\rule{0.4\textwidth}{0.5pt}\\[6pt]
+{\small\textit{``Randomness is not chaos. It is the deepest form of order -- one that no adversary can predict.''}}
+\end{center}
+
+\end{document}

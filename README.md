@@ -1,6 +1,6 @@
 # Randomized Algorithms Library (RAL)
 
-A self-contained, header-only C++23 library of **102 randomized algorithms**, based on the textbook **"Randomized Algorithms with C++"** by **Chaman Singh Verma**.
+A self-contained, header-only C++23 library of **112 randomized algorithms**, based on the textbook **"Randomized Algorithms with C++"** by **Chaman Singh Verma**.
 
 RAL is designed to be highly reusable, modular, and performant, mirroring the structure and ergonomics of the Standard Template Library (STL).
 
@@ -8,7 +8,7 @@ RAL is designed to be highly reusable, modular, and performant, mirroring the st
 
 ## Features
 
-102 distinct algorithms across 24 categories in 49 headers:
+112 distinct algorithms across 25 categories in 58 headers:
 
 | Category | Examples | Algorithms Covered |
 |----------|----------|-------------------|
@@ -16,12 +16,13 @@ RAL is designed to be highly reusable, modular, and performant, mirroring the st
 | Cryptography | 9 | QR, RSA, Miller-Rabin, Solovay-Strassen, Fermat, Legendre, Jacobi |
 | Graph Algorithms | 15 | Karger, Karger-Stein, exact min-cut, Kruskal, KKT MST, Floyd-Warshall, Seidel APSP, repeated squaring, bool matrix multiply, blossom matching, bipartite matching, packet routing, random cut, max-flow, multigraph |
 | Data Structures | 10 | Universal hashing, FKS perfect hashing, skip list, treap, LRU paging, marking paging, lazy select, Seidel LP, weighted universal hashing, two-level hashing |
-| Geometry | 10 | Gift-wrap hull, randomized hull, Delaunay, Welzl MEC (iter+recursive), binary planar partition, sailor problem, two-point, amplified two-point, point-in-polygon |
+| Geometry | 10 | Gift-wrap hull, randomized hull, Delaunay, Welzl MEC (iter+recursive), binary planar partition, sailor problem, two-point, amplified two-point, point-in-polygon, trapezoidal decomposition |
 | Algebraic/Strings | 12 | Polynomial multiply, Horner's, Karatsuba, PIT, Freivalds, Rabin-Karp, string fingerprint, randomized SVD, JL projection, random projection, matrix concentration, matrix multiply |
 | Probabilistic | 12 | Chernoff (formula+simulation), coupon collector, Azuma, potential method, K-smaller, linear expectation, randomized quicksort, Monte Carlo min-cut, Monte Carlo pi, oblivious adversary, adaptive adversary |
 | New Algorithms | 13 | Reservoir sampling (basic+weighted+generic), randomized rounding (basic+best-of+Chernoff), Pollard's rho (factor+factorize+prime), SimHash, hyperplane LSH, E2LSH, LSH index |
 | Industrial Apps | 10 | Count-Min Sketch, Flajolet-Martin, Misra-Gries, SA-TSP, SA-knapsack, SA-generic, randomized response, Laplace mechanism, private mean, private histogram |
 | Online/Parallel | 3 | K-server, maximal independent set, PRAM simulation |
+| MIT 6.856J | 10 | Stable marriage, game tree eval, DNF counting, expander graphs, expander PRG, Markov chains, coupling, Metropolis-Hastings, Kirchhoff spanning trees, conditional expectations, derandomized discrepancy, randomized shortest paths, MAX-SAT, trapezoidal decomposition |
 
 ---
 
@@ -30,21 +31,27 @@ RAL is designed to be highly reusable, modular, and performant, mirroring the st
 ```
 RandomAlgo/
   ├── include/              <-- Header-Only Library (copy to your project)
-  │    ├── ral.h            <-- Umbrella header (includes all 49 modules)
-  │    └── ral/             <-- 49 module headers
+  │    ├── ral.h            <-- Umbrella header (includes all 58 modules)
+  │    └── ral/             <-- 58 module headers
   │
-  ├── examples/             <-- 101 standalone examples + 7 aggregate demos + benchmarks
+  ├── examples/             <-- 110 standalone examples + 7 aggregate demos + benchmarks
   │    ├── example_modular_exponentiation.cpp
   │    ├── example_karger_min_cut.cpp
   │    ├── example_treap.cpp
   │    ├── ...
   │    └── benchmarks.cpp
   │
-  ├── tests/                <-- Unit test suite
+  ├── tests/                <-- Unit test suite + stress tests
   │    ├── test_framework.h
-  │    ├── test_core_algorithms.cpp     (41 suites, 2563 assertions)
-  │    ├── test_new_algorithms.cpp      (5 suites, 86 assertions)
-  │    └── test_industrial_apps.cpp     (3 suites, 38 assertions)
+  │    ├── test_core_algorithms.cpp     (41 suites)
+  │    ├── test_new_algorithms.cpp      (5 suites)
+  │    ├── test_industrial_apps.cpp     (3 suites)
+  │    ├── test_mit_6856.cpp            (9 suites, 131 assertions)
+  │    ├── test_stress_number_theory.cpp (14 suites)
+  │    ├── test_stress_graph.cpp        (4 suites)
+  │    ├── test_stress_data_structures.cpp (5 suites)
+  │    ├── test_stress_geometry.cpp     (4 suites)
+  │    └── test_stress_probabilistic.cpp (11 suites)
   │
   ├── src/                  <-- Chapter verification drivers
   │    ├── chapter1/ ... chapter15/
@@ -110,10 +117,10 @@ g++ -std=c++23 -Ipath/to/include -o main main.cpp
 
 ## Building and Running
 
-### All examples (101 standalone + 7 aggregate + benchmarks)
+### All examples (110 standalone + 7 aggregate + benchmarks)
 
 ```bash
-make examples          # Build all 108 example binaries
+make examples          # Build all 117 example binaries
 make run-examples      # Build and run the 7 aggregate demos
 ```
 
@@ -131,10 +138,10 @@ make                   # Build all 14 chapter executables
 make run               # Run all chapters
 ```
 
-### Unit tests (49 suites, 2687 assertions)
+### Unit tests (49 suites, 2687 assertions) + Stress tests (38 suites) + MIT 6.856J tests (9 suites, 131 assertions)
 
 ```bash
-make test              # Build and run all test suites
+make test              # Build and run all test suites (83 suites total)
 ```
 
 ### Code coverage
@@ -147,7 +154,7 @@ make coverage          # Build with gcov, run tests, generate lcov report
 
 ---
 
-## All 101 Standalone Examples
+## All 110 Standalone Examples
 
 | # | File | Algorithm |
 |---|------|-----------|
@@ -252,6 +259,15 @@ make coverage          # Build with gcov, run tests, generate lcov report
 | 99 | `example_k_server.cpp` | K-server online algorithm |
 | 100 | `example_maximal_independent_set.cpp` | Luby's maximal independent set |
 | 101 | `example_pram_simulation.cpp` | PRAM parallel algorithm simulation |
+| 102 | `example_stable_marriage.cpp` | Gale-Shapley stable matching |
+| 103 | `example_game_tree.cpp` | Game tree evaluation (minimax/Monte Carlo) |
+| 104 | `example_dnf_counting.cpp` | Karp-Luby approximate DNF counting |
+| 105 | `example_expander.cpp` | Expander graph construction and analysis |
+| 106 | `example_markov_chain.cpp` | Markov chains, coupling, MCMC |
+| 107 | `example_conditional_expectation.cpp` | Method of conditional expectations |
+| 108 | `example_randomized_shortest_paths.cpp` | Randomized Bellman-Ford/Dijkstra |
+| 109 | `example_max_sat.cpp` | MAX-SAT algorithms |
+| 110 | `example_trapezoidal.cpp` | Trapezoidal decomposition and point location |
 
 ---
 
