@@ -25,7 +25,8 @@ inline SelectResult lazy_select(std::vector<int>& S, int k, std::mt19937& rng) {
     std::uniform_int_distribution<int> dist(0, n - 1);
 
     int pass = 0;
-    while (true) {
+    const int max_passes = 200;
+    while (pass < max_passes) {
         ++pass;
 
         // Step 1: sample n^{3/4} elements with replacement
@@ -38,9 +39,11 @@ inline SelectResult lazy_select(std::vector<int>& S, int k, std::mt19937& rng) {
 
         // Step 3: compute indices t, h
         double x = static_cast<double>(k) * std::pow(n, -0.25);
-        int t = std::clamp(static_cast<int>(std::floor(x - std::sqrt(n))), 1, sample_size - 1);
+        int t = std::clamp(static_cast<int>(std::floor(x - std::sqrt(n))), 1, std::max(1, sample_size - 1));
         int h = std::clamp(static_cast<int>(std::ceil(x + std::sqrt(n))),
-                         1, sample_size - 1);
+                         1, std::max(1, sample_size - 1));
+        if (t >= static_cast<int>(R.size())) t = static_cast<int>(R.size()) - 1;
+        if (h >= static_cast<int>(R.size())) h = static_cast<int>(R.size()) - 1;
         int a_val = R[t];
         int b_val = R[h];
 
@@ -54,9 +57,9 @@ inline SelectResult lazy_select(std::vector<int>& S, int k, std::mt19937& rng) {
         // Build candidate set P
         std::vector<int> P;
         int n_quarter = static_cast<int>(std::pow(n, 0.25));
-        if (k < n_quarter) {
+        if (k <= n_quarter) {
             for (int v : S) if (v <= b_val) P.push_back(v);
-        } else if (k > n - n_quarter) {
+        } else if (k >= n - n_quarter) {
             for (int v : S) if (v >= a_val) P.push_back(v);
         } else {
             for (int v : S)
@@ -66,6 +69,7 @@ inline SelectResult lazy_select(std::vector<int>& S, int k, std::mt19937& rng) {
         // Check S<k> is in P and |P| is small enough
         int target_in_P = k - rank_a + 1;
         if (rank_a <= k && k <= rank_b
+            && target_in_P >= 1
             && target_in_P <= static_cast<int>(P.size())
             && static_cast<int>(P.size()) <= 4 * sample_size + 2) {
             // Step 7: sort P and pick the element
@@ -74,6 +78,10 @@ inline SelectResult lazy_select(std::vector<int>& S, int k, std::mt19937& rng) {
         }
         // Otherwise retry
     }
+    // Fallback: use deterministic selection
+    std::vector<int> copy = S;
+    std::nth_element(copy.begin(), copy.begin() + k - 1, copy.end());
+    return {copy[k - 1], 3 * n, pass};
 }
 
 // Deterministic median selection (for comparison)

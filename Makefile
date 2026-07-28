@@ -99,13 +99,43 @@ build/test_new: tests/test_new_algorithms.cpp tests/test_framework.h include/ral
 build/test_industrial: tests/test_industrial_apps.cpp tests/test_framework.h include/ral.h | $(BUILDDIR)
 	$(CXX) $(CXXFLAGS) -Iinclude -Itests -o $@ $<
 
-test: build/test_core build/test_new build/test_industrial
+build/test_stress_number_theory: tests/test_stress_number_theory.cpp tests/test_framework.h include/ral.h | $(BUILDDIR)
+	$(CXX) $(CXXFLAGS) -Iinclude -Itests -o $@ $<
+
+build/test_stress_graph: tests/test_stress_graph.cpp tests/test_framework.h include/ral.h | $(BUILDDIR)
+	$(CXX) $(CXXFLAGS) -Iinclude -Itests -o $@ $<
+
+build/test_stress_data_structures: tests/test_stress_data_structures.cpp tests/test_framework.h include/ral.h | $(BUILDDIR)
+	$(CXX) $(CXXFLAGS) -Iinclude -Itests -o $@ $<
+
+build/test_stress_geometry: tests/test_stress_geometry.cpp tests/test_framework.h include/ral.h | $(BUILDDIR)
+	$(CXX) $(CXXFLAGS) -Iinclude -Itests -o $@ $<
+
+build/test_stress_probabilistic: tests/test_stress_probabilistic.cpp tests/test_framework.h include/ral.h | $(BUILDDIR)
+	$(CXX) $(CXXFLAGS) -Iinclude -Itests -o $@ $<
+
+build/test_mit_6856: tests/test_mit_6856.cpp tests/test_framework.h include/ral.h | $(BUILDDIR)
+	$(CXX) $(CXXFLAGS) -Iinclude -Itests -o $@ $<
+
+test: build/test_core build/test_new build/test_industrial build/test_stress_number_theory build/test_stress_graph build/test_stress_data_structures build/test_stress_geometry build/test_stress_probabilistic build/test_mit_6856
 	@echo "Running core algorithm tests..."
 	./build/test_core
 	@echo "Running new algorithm tests..."
 	./build/test_new
 	@echo "Running industrial app tests..."
 	./build/test_industrial
+	@echo "Running stress tests (number theory)..."
+	./build/test_stress_number_theory
+	@echo "Running stress tests (graph)..."
+	./build/test_stress_graph
+	@echo "Running stress tests (data structures)..."
+	./build/test_stress_data_structures
+	@echo "Running stress tests (geometry)..."
+	./build/test_stress_geometry
+	@echo "Running stress tests (probabilistic)..."
+	./build/test_stress_probabilistic
+	@echo "Running MIT 6.856J tests..."
+	./build/test_mit_6856
 
 # --- Coverage ---
 COVERAGE_DIR = coverage_report

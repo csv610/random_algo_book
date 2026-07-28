@@ -88,9 +88,8 @@ inline Matching blossom_matching(const Graph& g) {
     int n = g.n;
     std::vector<int> match(n, -1);  // match[v] = partner, -1 if free
 
-    // Find augmenting path using BFS from each free vertex
     auto try_augment = [&](int start) -> bool {
-        std::vector<int> parent(n, -1);
+        std::vector<int> prev_vertex(n, -1);
         std::vector<bool> visited(n, false);
         std::queue<int> q;
         q.push(start);
@@ -101,24 +100,22 @@ inline Matching blossom_matching(const Graph& g) {
             for (int v : g.adj[u]) {
                 if (visited[v]) continue;
                 visited[v] = true;
+                prev_vertex[v] = u;
                 if (match[v] == -1) {
-                    // Found augmenting path: trace back
-                    int cur = u;
-                    int w = v;
-                    while (w != -1) {
-                        int prev = parent[cur];
-                        match[w] = cur;
-                        match[cur] = w;
-                        cur = prev;
-                        w = (prev != -1) ? parent[prev] : -1;
+                    int cur = v;
+                    while (cur != start && cur != -1) {
+                        int p = prev_vertex[cur];
+                        int old_match = match[p];
+                        match[cur] = p;
+                        match[p] = cur;
+                        cur = old_match;
                     }
                     return true;
                 }
-                // v is matched; follow matched edge
                 int w = match[v];
                 if (!visited[w]) {
-                    parent[w] = u;
                     visited[w] = true;
+                    prev_vertex[w] = v;
                     q.push(w);
                 }
             }

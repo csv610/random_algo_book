@@ -79,3 +79,14 @@
 #include "ral/pram_simulation.h"
 #include "ral/apsp.h"
 #include "ral/binary_planar_partition.h"
+
+// MIT 6.856J course topics
+#include "ral/stable_marriage.h"
+#include "ral/game_tree.h"
+#include "ral/dnf_counting.h"
+#include "ral/expander.h"
+#include "ral/markov_chain.h"
+#include "ral/conditional_expectation.h"
+#include "ral/randomized_shortest_paths.h"
+#include "ral/max_sat.h"
+#include "ral/trapezoidal.h"
