@@ -1,0 +1,182 @@
+\chapter{Random Graphs, Derandomization, and Symmetry Breaking}
+\label{ch:stage5-random-graphs}
+
+This supplement develops the random-structure and derandomization ideas that
+connect the probabilistic method to algorithms.  Existing chapters retain
+their treatments of the Local Lemma, expanders, conditional expectations, and
+parallel MIS; this chapter supplies the missing bridges and student-level
+threshold calculations.
+
+\section{The Erd\H{o}s--R\'enyi models}
+
+In $G(n,p)$, every one of the $\binom n2$ possible edges is present
+independently with probability $p$.  In $G(n,m)$, a uniformly random set of
+$m$ edges is chosen.  Many monotone properties have comparable thresholds in
+the two models, but a proof must identify the coupling or concentration step
+that transfers a result.
+
+\begin{proposition}[Connectivity threshold]
+If $p=(\log n+c)/n$ for fixed $c$, then
+\[
+ \Pr[G(n,p)\text{ is connected}]\longrightarrow e^{-e^{-c}}.
+\]
+In particular, the threshold for connectivity is asymptotically
+$(\log n)/n$.
+\end{proposition}
+
+The main obstruction near this threshold is an isolated vertex.  The expected
+number of isolated vertices is
+$n(1-p)^{n-1}\sim e^{-c}$, and a second-moment argument controls the
+probability that several such obstructions occur.
+
+\section{Hamilton cycles}
+
+A Hamilton cycle is a cycle visiting every vertex exactly once.  The sharp
+threshold in $G(n,p)$ is
+\[
+ p=\frac{\log n+\log\log n+\omega(1)}{n},
+\]
+where $\omega(1)\to\infty$: above this threshold the graph is Hamiltonian
+with high probability, while below the corresponding threshold it usually
+has a vertex of degree at most one and cannot be Hamiltonian.
+
+This example teaches a general threshold workflow: identify a local
+obstruction for the lower bound, count candidate structures for the upper
+bound, and then use a sprinkling or rotation-extension argument to connect
+the surviving structure globally.
+
+\section{Second-moment method for random structures}
+
+Let $X$ count copies of a target structure, such as triangles or Hamilton
+cycles.  The first moment proves nonexistence when $\mathbb{E}X=o(1)$.  The
+second moment can prove existence:
+\[
+ \Pr[X>0]\geq\frac{(\mathbb{E}X)^2}{\mathbb{E}[X^2]}.
+\]
+Expanding $\mathbb{E}[X^2]$ by overlap type is often the main technical step.
+If $\operatorname{Var}(X)=o((\mathbb{E}X)^2)$, then $X>0$ with probability
+$1-o(1)$ and $X/\mathbb{E}X\to1$ in probability.
+
+\section{Ramsey bounds}
+
+Color each edge of $K_n$ red or blue independently.  For a fixed $k$-set,
+the probability that it is monochromatic is
+$2^{1-\binom{k}{2}}$.  Hence the expected number of monochromatic $K_k$s is
+\[
+ \binom nk 2^{1-\binom{k}{2}}.
+\]
+If this quantity is less than one, some coloring has no monochromatic
+$K_k$, proving a lower bound on the diagonal Ramsey number.  The argument is
+an existence proof; it does not by itself provide an efficient coloring
+algorithm.
+
+\section{Expander codes}
+
+Let $G=(L,R,E)$ be a left-regular bipartite graph.  Associate one message
+bit to each left vertex and one parity constraint to each right vertex.  A
+good expansion property lets local parity checks detect and correct sparse
+errors.
+
+\begin{theorem}[Expander-code decoding, qualitative form]
+Suppose every set $S\subseteq L$ of size at most $s$ has at least
+$(1-\varepsilon)d|S|$ distinct neighbors, where $d$ is the left degree and
+$\varepsilon$ is a sufficiently small constant.  Then the associated
+expander code has linear minimum distance for an appropriate constraint
+construction, and a bit-flipping decoder corrects a constant fraction of
+errors in linear time.
+\end{theorem}
+
+The constants depend on the precise code and decoder.  The proof counts
+unique neighboring checks: if a small error set had too many unsatisfied
+checks hidden by cancellations, it would contradict expansion.  Random
+regular bipartite graphs supply suitable expanders with high probability, but
+the construction and decoding theorem must specify the degree and expansion
+parameters.
+
+\section{Constructive Local Lemma}
+
+In the variable model, each bad event depends on a subset of independent
+variables.  Moser--Tardos repeatedly resamples the variables of a currently
+true bad event.  The witness-tree proof associates each resampling with a
+tree whose labels record dependency edges.  Under the asymmetric LLL
+condition
+\[
+ \Pr[A_i]\leq x_i\prod_{j\in\Gamma(i)}(1-x_j),
+\]
+the expected number of resamplings of $A_i$ is at most $x_i/(1-x_i)$.
+
+The entropic viewpoint reaches the same conclusion by showing that a long
+resampling log would encode too much information relative to the entropy of
+the fresh random variables.  It is useful pedagogically, but neither proof
+implies an efficient implementation unless bad events can be detected and
+resampled efficiently.
+
+\section{Bit fixing and conditional expectations}
+
+Suppose random bits $X_1,\ldots,X_n$ define a nonnegative objective $Z$ and
+$\mathbb{E}Z\leq B$.  At step $i$, choose the value of $X_i$ that keeps
+$\mathbb{E}[Z\mid X_1,\ldots,X_i]\leq B$.  The tower property guarantees that
+at least one of the two choices has this property.  After all bits are fixed,
+the resulting deterministic outcome satisfies $Z\leq B$.
+
+The method is algorithmic only when conditional expectations can be computed
+or bounded efficiently.  This distinction separates a mathematical
+derandomization proof from an implementable deterministic algorithm.
+
+\section{Limited-independence derandomization}
+
+Pairwise-independent variables preserve expectations and variances of sums,
+but generally do not preserve Chernoff tails.  $k$-wise independence can
+preserve moment bounds up to order $k$, and small-bias spaces can replace
+uniform bits for some linear tests.  A derandomization argument must match
+the pseudorandomness property to the analysis being used.
+
+\section{Symmetry breaking}
+
+When processors begin in identical states, deterministic protocols may be
+unable to select different actions.  Random priorities break symmetry.  A
+typical round gives each active processor an independent priority, selects
+local winners, and removes winners and their conflicts.  The analysis counts
+the expected surviving conflicts and proves geometric progress.
+
+Ethernet-style randomized backoff uses the same principle: after a collision,
+each participant chooses a random delay.  Correct performance statements
+must specify the collision model, feedback assumptions, and whether the
+adversary is adaptive.
+
+\section{Student checklist}
+
+For a random-graph or derandomization proof, students should identify:
+
+\begin{enumerate}
+\item the random model and its independent choices;
+\item the obstruction or witness being counted;
+\item whether a first moment, second moment, martingale, or LLL argument is
+      appropriate;
+\item the exact threshold and asymptotic regime;
+\item whether the result is existential, randomized algorithmic, or
+      deterministic and efficiently constructible;
+\item the implementation assumptions for resampling or symmetry breaking.
+\end{enumerate}
+
+\begin{problem}[Connectivity threshold]
+Compute the expected number of isolated vertices in $G(n,p)$ and use the
+first moment to prove that $p=(\log n-\omega(1))/n$ is below the connectivity
+threshold.
+\end{problem}
+
+\begin{problem}[Second moment]
+For a selected random subgraph count copies of a fixed small graph $H$.
+Expand the second moment by overlap size and identify when the variance is
+lower order than the squared expectation.
+\end{problem}
+
+\begin{problem}[Conditional expectations]
+Derandomize a randomized MAX-SAT assignment by explicitly computing the
+conditional expected number of satisfied clauses after each variable choice.
+\end{problem}
+
+\begin{problem}[Symmetry breaking]
+Analyze one round of random-priority MIS and show why the expected number of
+remaining edges decreases under a suitable priority rule.
+\end{problem}
