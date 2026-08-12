@@ -1,0 +1,194 @@
+% Stage 7 supplement: graph, geometric, and counting completion.
+% Existing chapters remain authoritative; this module supplies bridges and
+% student-facing algorithms that connect their techniques.
+\chapter{Graph, Geometry, and Counting Completion}
+\label{ch:stage7-graph-geometry-counting}
+
+This chapter completes a practical bridge between randomized graph algorithms,
+computational geometry, and approximate counting.  The recurring student
+contract is explicit: identify the random experiment, state what it estimates
+or preserves, quantify failure, and account for the cost of repetition.  The
+earlier chapters on min-cut, geometry, Markov chains, and approximate counting
+remain in place; the present chapter connects them and adds several standard
+techniques that are easy to use incorrectly in isolation.
+
+\section{Recursive min-cut and network reliability}
+
+Karger's contraction algorithm preserves a fixed minimum cut with probability
+roughly $\Theta(n^{-2})$.  Repetition therefore gives a simple high-probability
+algorithm, but recursive contraction gives a better way to spend trials.  Keep
+contracting a random edge until $r=\lceil n/\sqrt{2}\rceil+1$ supervertices
+remain, recursively solve two independent copies, and return the better cut.
+Conditioned on a fixed minimum cut surviving, each recursive child has a
+constant chance of finding it.  The resulting recurrence is
+\[
+ T(n) \leq 2T(\lceil n/\sqrt{2}\rceil+1)+O(n^2),
+\]
+which yields $T(n)=O(n^2\log n)$ for a straightforward implementation (and
+the usual $O(n^2\log^3 n)$ high-probability bound after amplification).
+
+The analysis teaches an important distinction: the algorithm may return a cut
+that is valid but not minimum.  Its one-sided failure event is ``the target
+cut was destroyed or never recovered.''  A student implementation should
+test the returned cut's value, use multigraph edges with multiplicity, and
+never sample uniformly from distinct endpoint pairs.
+
+For a graph with independent edge-failure probabilities, network reliability
+is the probability that the surviving graph connects the designated terminals.
+Exact evaluation is generally difficult, but Monte Carlo is immediate:
+sample a failed/surviving edge set, run connectivity, and average the indicator.
+If the reliability is $p$, then $N$ samples have variance $p(1-p)/N$ and
+Hoeffding gives
+\[
+ \Pr[|\widehat p-p|>\varepsilon]\leq 2e^{-2N\varepsilon^2}.
+\]
+This is an additive guarantee.  When $p$ is very small, it may require far
+too many samples; importance sampling or splitting is needed for relative
+error.  This is the first rare-event warning in the chapter.
+
+\section{Random spanning trees and Kirchhoff's theorem}
+
+The uniform spanning tree (UST) of a connected graph is a tree selected
+uniformly from all spanning trees.  Kirchhoff's matrix-tree theorem provides
+the count:
+\[
+ \tau(G)=\det L^{(v)},
+\]
+where $L$ is the graph Laplacian and $L^{(v)}$ deletes row and column $v$.
+The formula is useful even when it is not an algorithm: it connects counting,
+determinants, electrical networks, and sampling.
+
+Wilson's algorithm samples a UST exactly.  Start with a root in the tree;
+from each unvisited vertex, run a simple random walk until it hits the tree,
+erase loops chronologically from the walk, and add the resulting loop-erased
+path.  The output is independent of the order in which vertices are started.
+The walk can be long, so the expected running time is naturally expressed in
+terms of hitting times; it is not automatically linear in the number of edges.
+
+For an edge $e$, the UST inclusion probability satisfies
+\[
+ \Pr[e\in T]=w_e R_{\mathrm{eff}}(e),
+\]
+where $w_e$ is its conductance and $R_{\mathrm{eff}}(e)$ is effective
+resistance between its endpoints.  Thus sampling USTs gives unbiased
+estimators for network quantities, while Kirchhoff's theorem gives exact
+answers on graphs small enough for determinant computation.
+
+\section{Metric embeddings}
+
+An embedding maps a finite metric $(X,d)$ into a simpler metric space while
+controlling distortion.  A randomized embedding into a tree metric is useful
+because many optimization problems are easier on trees.  Bourgain's embedding
+uses, for each scale, random subsets $S$ and the coordinates
+\[
+ x_{S}(u)=d(u,S)=\min_{s\in S}d(u,s).
+\]
+After $O(\log |X|)$ independent scales and suitable normalization, the map
+into $O(\log^2 |X|)$ dimensions has distortion $O(\log |X|)$.  The proof has
+two parts: distance-to-a-set is 1-Lipschitz, giving non-contraction, and a
+random subset separates any pair at an appropriate scale with enough
+probability, giving the expansion bound.
+
+The practical lesson is to state the direction of each inequality.  A map may
+be non-contracting but have large expansion, or it may preserve distances in
+expectation without preserving every pair simultaneously.  For an algorithm,
+the embedding dimension, distortion, construction time, and probability that
+all pairwise bounds hold are separate parameters.
+
+\section{Randomized point location}
+
+In a planar subdivision, point location asks which face contains a query point.
+A randomized incremental trapezoidal map inserts segments in random order and
+maintains the vertical decomposition.  The query structure is a directed
+acyclic graph; a query follows the comparisons made during construction.
+Backward analysis shows that the expected search depth is $O(\log n)$ when
+the conflict history is handled correctly.  The same pattern appears in
+randomized incremental convex hulls and Delaunay triangulations:
+\begin{enumerate}
+\item define the conflict set of a feature;
+\item expose the last inserted object affecting the query;
+\item bound the probability that this object is among the few relevant ones;
+\item sum the expected update cost.
+\end{enumerate}
+Degeneracies are not a cosmetic detail.  A robust implementation needs a
+consistent tie-breaking rule (often symbolic perturbation) for collinear
+points, endpoint queries, and overlapping boundaries.  Without it, the
+mathematical probability analysis may describe an algorithm whose comparison
+tree is not even well-defined.
+
+\section{Rare-event estimation}
+
+Suppose an event $A$ has probability $p\ll1$.  The indicator estimator is
+unbiased but has relative standard deviation
+\[
+ \frac{\sqrt{\operatorname{Var}(1_A)}}{\mathbb E[1_A]}
+ =\sqrt{\frac{1-p}{p}},
+\]
+so estimating $p$ to fixed relative precision needs $\Theta(1/p)$ samples.
+Importance sampling changes the sampling distribution from $P$ to $Q$ and
+uses the unbiased weight
+\[
+ \widehat p=\frac1N\sum_{i=1}^N
+ 1_A(X_i)\frac{P(X_i)}{Q(X_i)},\qquad X_i\sim Q.
+\]
+The support condition $Q(x)>0$ whenever $P(x)1_A(x)>0$ is mandatory.  A poor
+choice of $Q$ can have infinite or enormous variance, so the student should
+report an empirical variance estimate and compare it with crude Monte Carlo.
+Splitting and conditional Monte Carlo are alternative ways to replace a rare
+indicator by a less variable conditional expectation.
+
+\section{Counting versus generation}
+
+Let $\Omega$ be a finite family and suppose a sampler produces an exact
+uniform element of $\Omega$.  Sampling alone does not reveal $|\Omega|$;
+generation and counting are different tasks.  The standard bridge is a chain
+of nested sets
+\[
+ \Omega_0\supseteq\Omega_1\supseteq\cdots\supseteq\Omega_k,
+ \qquad |\Omega_0|\text{ known},
+\]
+whose successive ratios are bounded away from zero.  If a sampler can estimate
+each ratio $|\Omega_{i+1}|/|\Omega_i|$ with relative error and confidence,
+then multiplying the estimates yields an FPRAS after allocating the error
+budget across levels.  The product structure explains why warm starts,
+overlap between adjacent distributions, and a polynomial number of levels are
+essential.
+
+Conversely, an approximate counter can often support generation by recursively
+choosing a branch with probability proportional to its estimated number of
+completions.  Approximation errors accumulate, so one must specify whether
+the output is exactly uniform, approximately uniform in total variation, or
+only correct in expectation.  These guarantees are not interchangeable.
+
+\section{Student checklist and exercises}
+
+For every graph, geometry, or counting algorithm, write down: the object being
+sampled; the target distribution or estimator; the invariant; the failure
+probability; the runtime and space; and the condition under which the claim is
+valid.  In particular, separate an additive error claim from a relative one.
+
+\begin{problem}[Reliability]
+For independent edge failures, derive the variance of the connectivity
+indicator and choose $N$ for additive error $\varepsilon$ and failure at most
+$\delta$.  Explain why the same $N$ is not a relative-error guarantee when
+the reliability is unknown and may be exponentially small.
+\end{problem}
+
+\begin{problem}[UST experiment]
+Implement Wilson's algorithm on a small connected graph.  Compare empirical
+edge inclusion frequencies with $w_eR_{\mathrm{eff}}(e)$ computed from a
+Laplacian solve.
+\end{problem}
+
+\begin{problem}[Embedding audit]
+For a metric on $n$ points, implement random distance-to-subset coordinates.
+Measure the largest contraction and expansion over all pairs, and explain
+which observed failures are due to finite sampling rather than the theorem's
+asymptotic constants.
+\end{problem}
+
+\begin{problem}[Counting bridge]
+Assume $k$ nested ratios each lie in $[1/4,1]$.  Allocate a total relative
+error $\varepsilon$ and failure probability $\delta$ across the ratios and
+derive a polynomial sample bound for their product.
+\end{problem}
