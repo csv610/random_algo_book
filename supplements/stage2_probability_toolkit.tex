@@ -1,0 +1,171 @@
+\chapter{Probability Toolkit: Missing Foundations}
+\label{ch:stage2-probability-toolkit}
+
+This chapter supplements the earlier probability chapters with techniques
+that students need repeatedly in randomized algorithms.  It is intentionally
+proof-oriented: every estimate states its assumptions, and every algorithmic
+application records its error and runtime consequences.
+
+\section{Poissonization}
+
+The Poisson distribution is useful because independent Poisson variables can
+replace dependent occupancy counts.  If $N\sim\operatorname{Poisson}(\lambda)$
+and each of the $N$ balls is sent independently to bin $i$ with probability
+$p_i$, then the bin loads $N_i$ are independent and
+$N_i\sim\operatorname{Poisson}(\lambda p_i)$.
+
+\begin{theorem}[Poisson splitting]
+Let $N\sim\operatorname{Poisson}(\lambda)$, and independently assign each
+arrival to bin $i$ with probability $p_i$, where $\sum_i p_i=1$.  Then the
+loads $N_1,\ldots,N_m$ are mutually independent Poisson random variables
+with means $\lambda p_1,\ldots,\lambda p_m$.
+\end{theorem}
+
+\begin{proof}
+For nonnegative integers $k_i$, condition on $N=\sum_i k_i$ and multiply the
+multinomial probability by
+$\Pr[N=\sum_i k_i]=e^{-\lambda}\lambda^{\sum_i k_i}/(\sum_i k_i)!$.
+The factorial and multinomial coefficient cancel, leaving
+\[
+ \Pr[N_1=k_1,\ldots,N_m=k_m]
+ =\prod_i e^{-\lambda p_i}\frac{(\lambda p_i)^{k_i}}{k_i!},
+\]
+which factors into the claimed marginal probabilities.
+\end{proof}
+
+Poissonization is an analysis device.  To return to exactly $n$ balls, one
+conditions on the total count or couples the Poisson process with its first
+$n$ arrivals.  Any de-Poissonization step must account for this conditioning.
+
+\section{The power of two choices}
+
+Suppose $n$ balls are placed into $n$ bins.  Under one-choice hashing, the
+maximum load is typically $\Theta(\log n/\log\log n)$.  Under two-choice
+hashing, each ball samples two bins independently and is placed in the less
+loaded one; the maximum load drops to $\log_2\log n+O(1)$ with high
+probability.
+
+\begin{theorem}[Two-choice maximum load, informal form]
+For $n$ balls and $n$ bins, the two-choice process has maximum load at most
+$\log_2\log n+O(1)$ with probability $1-o(1)$.
+\end{theorem}
+
+\begin{proof}[Proof idea]
+Let $x_j$ be the number of bins of load at least $j$.  A new ball reaches
+level $j+1$ only when both sampled bins have load at least $j$.  Conditional
+on the current state, the probability of this event is at most
+$(x_j/n)^2$.  A layered induction shows that the fractions $x_j/n$ fall
+approximately by repeated squaring, so after $O(\log\log n)$ levels the
+expected number of bins above the level is $o(1)$.  A union bound over the
+remaining levels completes the high-probability statement.  The exact
+constant depends on the initialization and on the tie-breaking rule.
+\end{proof}
+
+\section{Stochastic domination and negative dependence}
+
+For random variables $X$ and $Y$, write $X\preceq Y$ if
+$\Pr[X\geq t]\leq\Pr[Y\geq t]$ for every real $t$.  This relation lets us
+transfer tail bounds without pretending that dependent variables are
+independent.  A coupling with $X\leq Y$ almost surely proves
+$X\preceq Y$ immediately.
+
+For indicators $X_1,\ldots,X_n$, negative association means that increasing
+functions of disjoint subcollections have nonpositive covariance.  Sampling
+without replacement is a standard source of negative dependence.  In many
+Chernoff arguments, negative association is enough to retain the independent
+upper-tail bound, but this must be proved or cited; pairwise independence
+alone is not enough for Chernoff concentration.
+
+\begin{lemma}[Second-moment lower bound]
+If $X\geq0$, $\mu=\mathbb{E}X>0$, and $\sigma^2=\operatorname{Var}(X)$, then
+\[
+ \Pr[X>0]\geq\frac{\mu^2}{\mathbb{E}[X^2]}
+ =\frac{\mu^2}{\mu^2+\sigma^2}.
+\]
+\end{lemma}
+
+\begin{proof}
+Apply Cauchy--Schwarz to $X\mathbf{1}_{\{X>0\}}$:
+$\mathbb{E}X\leq\sqrt{\Pr[X>0]\mathbb{E}[X^2]}$.
+\end{proof}
+
+\section{Stopping times and optional stopping}
+
+Let $(\mathcal{F}_t)$ be a filtration.  A random variable $\tau$ with values
+in $\{0,1,\ldots\}$ is a stopping time if the event $\{\tau\leq t\}$ is in
+$\mathcal{F}_t$ for every $t$.  The decision to stop may use the past, but
+not future random choices.
+
+\begin{theorem}[Optional stopping, bounded form]
+If $(M_t)$ is a martingale and $\tau$ is a stopping time bounded by a
+deterministic integer $T$, then
+\[
+ \mathbb{E}[M_\tau]=\mathbb{E}[M_0].
+\]
+\end{theorem}
+
+\begin{proof}
+Write $M_\tau=M_0+\sum_{t=0}^{T-1}(M_{t+1}-M_t)\mathbf{1}_{\{\tau>t\}}$.
+The indicator is $\mathcal{F}_t$-measurable, so every summand has expectation
+zero by the martingale property.
+\end{proof}
+
+For unbounded stopping times, optional stopping requires additional
+conditions, such as uniform integrability, bounded increments together with
+an integrable stopping time, or a suitable truncation argument.  Applying the
+theorem without such a condition is a common source of incorrect proofs.
+
+\section{Doob martingales and bounded differences}
+
+Given independent inputs $Y_1,\ldots,Y_n$ and a function $f(Y_1,\ldots,Y_n)$,
+define
+\[
+ M_i=\mathbb{E}[f(Y_1,\ldots,Y_n)\mid Y_1,\ldots,Y_i].
+\]
+Then $(M_i)$ is a martingale.  If changing input $Y_i$ can change $f$ by at
+most $c_i$, the corresponding Doob difference is bounded by $c_i$, and
+Azuma--Hoeffding gives
+\[
+ \Pr[|f-\mathbb{E}f|\geq t]
+ \leq 2\exp\!\left(-\frac{t^2}{2\sum_i c_i^2}\right).
+\]
+This is the bounded-differences method.  It is often preferable to force a
+sum-of-independent-indicators representation that does not exist.
+
+\section{Student checklist}
+
+For every concentration proof, students should identify:
+
+\begin{enumerate}
+\item the random experiment and filtration;
+\item whether independence, pairwise independence, negative dependence, or
+      only a martingale structure is available;
+\item the exact random variable being bounded;
+\item the expectation and variance or conditional expectation;
+\item the theorem used and its assumptions;
+\item the resulting failure probability and runtime impact.
+\end{enumerate}
+
+\begin{problem}[Poissonized occupancy]
+Use Poisson splitting to compute the probability that every bin is empty or
+contains exactly one ball when $N\sim\operatorname{Poisson}(\lambda)$ balls
+are placed uniformly into $m$ bins.
+\end{problem}
+
+\begin{problem}[Two choices]
+Derive the recurrence for the expected number of bins of load at least $j$
+in the two-choice process.  Identify the step at which a high-probability
+bound, rather than only an expectation bound, is required.
+\end{problem}
+
+\begin{problem}[Optional stopping]
+For a simple symmetric random walk stopped on reaching either $-a$ or $b$,
+use optional stopping on the walk itself to compute the probability of
+reaching $b$ first.  State the truncation argument needed before taking the
+limit.
+\end{problem}
+
+\begin{problem}[Bounded differences]
+Apply the Doob-martingale method to prove concentration for the number of
+edges in a random graph exposed one vertex at a time.
+\end{problem}

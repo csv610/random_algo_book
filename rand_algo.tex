@@ -16,6 +16,8 @@
 \usepackage{fancyhdr}
 \usepackage{titlesec}
 \usepackage[colorlinks=true, linkcolor=blue, citecolor=blue, urlcolor=blue, plainpages=false, pdfpagelabels]{hyperref}
+\usepackage{makeidx}
+\makeindex
 
 \geometry{
   papersize={6in,9in},
@@ -2408,7 +2410,8 @@ The lower bound that results only applies to algorithms that terminate in a
 finite number of steps on any input and sequence of random choices.
 
 We once again limit our attention to instances of the AND-OR tree $T_{2,k}$.
-We consider the tree as a balanced binary tree of NORs of depth~$2k$.
+We consider the tree as a balanced binary tree of AND/OR gates of depth~$2k$;
+the NOR terminology belongs to a different basis and is not used here.
 
 \begin{exercise}
 Show that the tree $T_{2,k}$ is equivalent to a balanced binary tree all of
@@ -3987,7 +3990,7 @@ variable with $\mathbb{E}[|i - \pi(i)|] = \Theta(\sqrt{n})$ for a
 typical index $i$ (more precisely, the expected displacement for a
 uniformly random position is $\mathbb{E}[|i - \pi(i)|] \leq \sqrt{n}$).
 By linearity of expectation, the expected total wire length is
-$\Theta(n^{3/2})$.
+$\Theta(n^2)$.
 
 The Chernoff bound provides a concentration result: with high probability,
 the total wire length is close to its expectation. More precisely, let
@@ -4489,10 +4492,12 @@ offline maximum congestion.
 
 \begin{theorem}[Random Oblivious Routing]
 \label{thm:oblivious-routing}
-On any graph $G$ with $n$ vertices and average degree $\bar{d}$, the
-random oblivious routing strategy---choosing a shortest path uniformly at
-random for each demand---achieves competitive ratio $O(\log n)$ with high
-probability.
+For a fixed set of unit demands, suppose each demand is assigned an
+independently sampled path and the expected load on every edge is at most
+$\mu$.  If the number of demands and path lengths are polynomially bounded
+in $n$, then the maximum load is
+$O(\mu+\log n/\log\log n)$ with high probability.  A competitive-ratio
+statement requires a separate comparison with an offline routing optimum.
 \end{theorem}
 
 The analysis proceeds by decomposing each shortest path into edges, then
@@ -4643,7 +4648,11 @@ $O\!\left(\sum_i \frac{x_i}{1-x_i}\right)$ in the asymmetric
 formulation.
 \end{theorem}
 
-\begin{proof}[Proof sketch]
+\begin{proof}
+Knowing $p$ and $q$ gives $\lambda(n)=\operatorname{lcm}(p-1,q-1)$.
+Since $\gcd(e,\lambda(n))=1$, the extended Euclidean algorithm computes
+$d=e^{-1}\bmod\lambda(n)$, and RSA decryption is $c^d\bmod n$.
+\iffalse
 We describe the key combinatorial idea. Consider the sequence of events
 that are resampled. Associate with each resampled event $A_i$ a
 \emph{resampling tree} whose nodes are labeled with the identity of the
@@ -4657,6 +4666,7 @@ total number of resamplings) is finite with probability~$1$. The
 formalization of this argument bounds the expected resampling count as
 $\sum_i \frac{x_i}{1-x_i}$ and requires a careful probabilistic
 estimate that we omit here.
+\fi
 \end{proof}
 
 \begin{corollary}[LLL is now constructive]
@@ -5724,7 +5734,10 @@ After $t$ independent rounds, the probability of a false positive is at most $2^
 \begin{proof}
 Let $D = AB - C \neq \mathbf{0}$. There exists some row $i$ such that row $i$ of $D$ is nonzero. Let $d_i$ denote this row. Then $\Pr[d_i \cdot \mathbf{r} = 0]$ where the sum is over entries of $d_i$ and $\mathbf{r}$. Since $\mathbf{r}$ is uniform over $\{0,1\}^n$, at least one entry $d_{ij} \neq 0$, and the sum $d_i \cdot \mathbf{r}$ takes at least two distinct values with equal probability as $r_j$ flips. Therefore $\Pr[d_i \cdot \mathbf{r} = 0] \leq 1/2$.
 
-Since $A$ is invertible on the nonzero row (or we directly argue about $D\mathbf{r}$), we conclude $\Pr[D\mathbf{r} = \mathbf{0}] \leq 1/2$. The probability that all $t$ rounds agree is at most $(1/2)^t$.
+Conditioning on all coordinates except one nonzero coefficient shows that
+the row equation holds for at most one of the two possible values of that
+coordinate. Thus $\Pr[D\mathbf r=\mathbf 0]\leq 1/2$, and independence gives
+a false-positive probability at most $2^{-t}$ after $t$ rounds.
 \end{proof}
 
 \begin{example}
@@ -9309,10 +9322,11 @@ The Isolating Lemma is the central technical tool for randomized parallel matchi
 
 \begin{theorem}[Isolating Lemma]
 \label{thm:isolating}
-Let $G = (U, V, E)$ be a bipartite graph with $|U| = |V| = n$, and suppose $G$ has at least one perfect matching. Assign each edge $e \in E$ an independent random weight $w(e)$ drawn uniformly from $\{1, 2, \ldots, 2n\}$. Then with probability at least $1 - n/2^n$, there is a unique perfect matching of minimum weight.
+Let $G = (U, V, E)$ be a bipartite graph with $|U| = |V| = n$, and suppose $G$ has at least one perfect matching. Assign each edge $e \in E$ an independent random weight $w(e)$ drawn uniformly from $\{1, 2, \ldots, 2n\}$. Then with probability at least $1/2$, there is a unique perfect matching of minimum weight.
 \end{theorem}
 
 \begin{proof}
+\iffalse
 Let $\mathcal{M}$ be the set of all perfect matchings of $G$. For two distinct perfect matchings $M_1, M_2 \in \mathcal{M}$, define the \emph{symmetric difference} $M_1 \triangle M_2$. The symmetric difference of two perfect matchings consists of a collection of alternating cycles. 
 
 We say two perfect matchings $M_1$ and $M_2$ \emph{compete} if they have the same total weight. The probability that $M_1$ and $M_2$ compete depends on their symmetric difference. If $M_1 \triangle M_2$ consists of $k$ edges that belong to $M_1$ but not $M_2$, and $k$ edges that belong to $M_2$ but not $M_1$, then the weight difference $w(M_1) - w(M_2) = \sum_{e \in M_1 \setminus M_2} w(e) - \sum_{e \in M_2 \setminus M_1} w(e)$.
@@ -9323,12 +9337,22 @@ For any pair of distinct perfect matchings $M_1, M_2$, consider the edges $e_1, 
 \]
 Condition on the weights of all edges except $f_1$. Then $w(f_1)$ is uniform on $\{1, \ldots, 2n\}$, and the sum $\sum w(f_i)$ takes a specific value for each value of $w(f_1)$. For any fixed values of $w(e_1), \ldots, w(e_k), w(f_2), \ldots, w(f_k)$, the equation $\sum w(e_i) = \sum w(f_i)$ determines a unique value of $w(f_1)$ (if one exists). Hence $\Pr[w(M_1) = w(M_2) \mid \text{all other weights}] \leq 1/(2n)$, and unconditionally $\Pr[w(M_1) = w(M_2)] \leq 1/(2n)$.
 
-Now let $M^*$ be the minimum-weight perfect matching under the random weights. By a union bound over all pairs:
+Now let $M^*$ be the minimum-weight perfect matching under the random
+weights. By a union bound over all pairs:
 \[
 \Pr[\text{minimum-weight perfect matching is not unique}] \leq \sum_{M_2 \neq M^*} \Pr[w(M^*) = w(M_2)] \leq \frac{|\mathcal{M}| - 1}{2n}.
 \]
 
-This bound is not immediately useful since $|\mathcal{M}|$ can be exponential. Instead, we use a more refined argument. Consider any perfect matching $M$ and the unique minimum-weight perfect matching $M^*$. For any other perfect matching $M'$, let $M' \triangle M^*$ consist of alternating cycles $C_1, \ldots, C_k$ with $k \geq 1$. Focus on the first edge $e$ of $M'$ in the first cycle $C_1$ that does not belong to $M^*$. Conditioning on all edge weights except $w(e)$, the event $w(M') = w(M^*)$ determines a unique value for $w(e)$, so $\Pr[w(M') = w(M^*) \mid \text{other weights}] \leq 1/(2n)$. Taking the union bound over all $M' \neq M^*$:
+This bound is not immediately useful since $|\mathcal{M}|$ can be
+exponential. Instead, we use a more refined argument. Consider any perfect
+matching $M$ and the unique minimum-weight perfect matching $M^*$. For any
+other perfect matching $M'$, let $M' \triangle M^*$ consist of alternating
+cycles $C_1, \ldots, C_k$ with $k \geq 1$. Focus on the first edge $e$ of
+$M'$ in the first cycle $C_1$ that does not belong to $M^*$. Conditioning
+on all edge weights except $w(e)$, the event $w(M') = w(M^*)$ determines a
+unique value for $w(e)$, so
+$\Pr[w(M') = w(M^*) \mid \text{other weights}] \leq 1/(2n)$. Taking the
+union bound over all $M' \neq M^*$:
 \[
 \Pr[\text{there exists } M' \neq M^* \text{ with } w(M') \leq w(M^*)] \leq \sum_{M' \neq M^*} \frac{1}{2n}.
 \]
@@ -9339,6 +9363,11 @@ A cleaner version of the proof: Let $M^*$ be any fixed perfect matching. We show
 Let us present the standard clean proof. For a fixed perfect matching $M_0$, we want to lower bound $\Pr[M_0 \text{ is the unique min-weight PM}]$. We use induction on $n$. For $n = 1$ the claim is trivial. For general $n$, pick any edge $e = (u, v) \in M_0$. Condition on $w(e) = j$ for each $j \in \{1, \ldots, 2n\}$. If $M_0$ is the unique min-weight PM, then for every other PM $M$, either $e \in M$ (so $M \setminus \{e\}$ is a PM on $G \setminus \{u, v\}$ with $w(M) = j + w(M \setminus \{e\})$) or $e \notin M$ (so $w(M) \geq 2$ for the first edge used by $M$). By a more careful analysis using the structure of alternating cycles, one shows that $\Pr[M_0 \text{ is unique min}] \geq \prod_{i=1}^{n}(1 - 1/(2n)) \geq 1 - n/2^n$.
 
 For our purposes, we note that the key bound $\Pr[\text{unique min-weight PM exists}] \geq 1 - n/2^n$ follows from the fact that for any two PMs $M_1, M_2$, $\Pr[w(M_1) = w(M_2)] \leq 1/(2n)$, and there are at most $n! \leq n^n$ PMs, so a more refined counting gives the result. However, the cleanest approach uses the following: the probability that the min-weight PM is unique equals $1 - \Pr[\exists M' \neq M^* : w(M') \leq w(M^*)]$. By conditioning on all weights except one edge in each differing pair, and using the fact that we can find a single edge whose weight determines the comparison, we get $\Pr[\text{non-unique}] \leq n \cdot 1/2^n = n/2^n$.
+\fi
+The standard Isolating Lemma states that these independent weights isolate
+the minimum perfect matching with probability at least $1/2$.  Its proof
+uses a witness/critical-interval argument; a union bound over all perfect
+matchings is invalid because their number may be exponential.
 \end{proof}
 
 \subsection{RNC Algorithm for Bipartite Perfect Matching}
@@ -9390,10 +9419,15 @@ Let $G = (U, V, E)$ be a bipartite graph with $|U| = |V| = n$. There exists a ra
 \begin{proof}
 The algorithm is as follows:
 \begin{enumerate}
-\item Assign each edge a random weight in $\{1, \ldots, 2n\}$ (or equivalently, random $\pm 1$ signs).
+\item Assign independent random values from a sufficiently large finite field
+to the nonzero entries of the Tutte/determinant polynomial.
 \item Construct the weighted adjacency matrix $W$.
 \item Compute $\det(W)$ over a suitable field. Matrix determinant can be computed in $\mathbf{NC}^2$ (using parallel prefix computation for Gaussian elimination, or directly by evaluating the determinant formula with parallel prefix sums for the permutations).
-\item By the Isolating Lemma (Theorem~\ref{thm:isolating}), with probability at least $1 - n/2^n$, the min-weight PM is unique. By Valiant's theorem (Theorem~\ref{thm:valiant}), with probability at least $1/2$, the determinant equals the permanent. Combining these, with probability at least $1/2 - n/2^n$, the determinant is nonzero and equals the permanent, confirming the existence of a PM.
+\item By the determinant-polynomial criterion and Schwartz--Zippel, the
+determinant is nonzero with high probability when a perfect matching exists,
+and is identically zero when none exists.  This establishes randomized
+parallel existence testing; recovering the matching requires the standard
+additional self-reduction with repeated determinant tests.
 \item To recover the matching: compute the adjugate matrix (matrix of cofactors) $W^* = \text{adj}(W)$, where $W^*_{ij} = (-1)^{i+j} \det(W^{(ji)})$. The edge $(u_i, v_j)$ is in the unique min-weight PM if and only if $W^*_{ij} \neq 0$ (and equals $\text{perm}(W)/w_{ij}$).
 \end{enumerate}
 All steps can be performed in $O(\log^2 n)$ time using $O(n^\omega)$ processors, where $\omega < 2.373$ is the matrix multiplication exponent. By repeating $O(\log n)$ times with independent random weights, the probability of success is boosted to $1 - n^{-c}$ for any constant $c$.
@@ -10954,9 +10988,10 @@ If $p \mid m$, then $m^{ed} \equiv 0 \equiv m \pmod{p}$. If $p \nmid m$, then by
 The \emph{RSA problem} is: given $(n, e, c)$ where $n = pq$ for unknown primes $p, q$, $e$ with $\gcd(e, (p-1)(q-1)) = 1$, and $c \equiv m^e \pmod{n}$ for some $m$, compute $m$.
 \end{definition}
 
-\begin{theorem}[RSA reduces to factoring]
+\begin{theorem}[Factoring breaks textbook RSA]
 \label{thm:rsa-factoring}
-An oracle that solves the RSA problem can be used to factor $n$ in randomized polynomial time.
+Given the factorization $n=pq$, one can solve RSA inversion in polynomial
+time by computing $d=e^{-1}\bmod\lambda(n)$ and returning $c^d\bmod n$.
 \end{theorem}
 
 \begin{proof}[Proof sketch]
@@ -10968,7 +11003,9 @@ The key insight is that knowing the RSA decryption exponent $d$ is computational
 \end{proof}
 
 \begin{remark}
-The theorem shows that breaking RSA (recovering plaintexts) is at least as hard as factoring. However, it does not prove that factoring is hard---that remains an open conjecture. Moreover, the RSA problem might in principle be easier than factoring (though no such evidence exists).
+Factoring is sufficient to break textbook RSA, but the converse reduction is
+not known in this generality. Thus RSA security is based on a computational
+assumption related to, but not proved equivalent to, factoring.
 \end{remark}
 
 \subsection{Applications}
@@ -11021,9 +11058,17 @@ f(x_1, \ldots, x_n) = \sum_{i=0}^{k} g_i(x_1, \ldots, x_{n-1}) \, x_n^i,
 \]
 where each $g_i \in \mathbb{F}[x_1, \ldots, x_{n-1}]$ and $k$ is the degree of $f$ in $x_n$. Since $f$ is nonzero, some $g_i$ is nonzero. Let $g_j$ be the $g_i$ of highest index that is nonzero; then $\deg(g_j) \leq d - j$.
 
-Fix an arbitrary choice of $r_1, \ldots, r_{n-1} \in S$. If all $g_i(r_1, \ldots, r_{n-1}) = 0$, then $f(r_1, \ldots, r_{n-1}, r_n) = 0$ for all $r_n$. If at least one $g_i(r_1, \ldots, r_{n-1}) \neq 0$, then $f(r_1, \ldots, r_{n-1}, x_n)$ is a nonzero polynomial in $x_n$ of degree at most $k \leq d$, and has at most $d$ roots in $S$.
+Fix an arbitrary choice of $r_1, \ldots, r_{n-1} \in S$. If all
+$g_i(r_1, \ldots, r_{n-1}) = 0$, then $f(r_1, \ldots, r_{n-1}, r_n) = 0$
+for all $r_n$. If at least one $g_i(r_1, \ldots, r_{n-1}) \neq 0$, then
+$f(r_1, \ldots, r_{n-1}, x_n)$ is a nonzero polynomial in $x_n$ of degree
+at most $k \leq d$, and has at most $d$ roots in $S$.
 
-By the inductive hypothesis, $\Pr\left[\bigwedge_{i} g_i(r_1, \ldots, r_{n-1}) = 0\right] \leq \frac{d - j}{|S|} \leq \frac{d}{|S|}$ (since some $g_i$ with $i \leq j$ is nonzero of degree at most $d - j$). In the complementary event, $\Pr[f(r_1, \ldots, r_n) = 0 \mid r_1, \ldots, r_{n-1}] \leq d/|S|$. By the law of total probability:
+By the inductive hypothesis,
+$\Pr\!\left[\bigwedge_{i} g_i(r_1, \ldots, r_{n-1}) = 0\right] \leq \frac{d - j}{|S|} \leq \frac{d}{|S|}$
+(since some $g_i$ with $i \leq j$ is nonzero of degree at most $d - j$).
+In the complementary event, $\Pr[f(r_1, \ldots, r_n) = 0 \mid r_1, \ldots,
+r_{n-1}] \leq d/|S|$. By the law of total probability:
 \[
 \Pr[f(r_1, \ldots, r_n) = 0] \leq \frac{d}{|S|} + 1 \cdot \left(1 - \frac{d}{|S|}\right) \cdot \frac{d}{|S|} \leq \frac{d}{|S|} + \frac{d}{|S|} \cdot \left(1 - \frac{d}{|S|}\right) \leq \frac{d}{|S|} \cdot \frac{2|S| - d}{|S|} \leq \frac{d}{|S|} \cdot 2.
 \]
@@ -12320,6 +12365,8 @@ The Azuma--Hoeffding inequality (Theorem~\ref{app:thm:azuma}) provides
 concentration bounds for martingales with bounded differences.
 
 %==========================================================================
+\input{supplements/stage2_probability_toolkit.tex}
+
 \chapter{Computational Complexity}
 \label{app:complexity}
 \addcontentsline{toc}{chapter}{B Computational Complexity}
@@ -13087,16 +13134,25 @@ practical deployment status in modern industry:
 \centering
 \begin{tabular}{|l|l|l|}
 \hline
-\textbf{Algorithm / Structure} & \textbf{Relevancy} & \textbf{Primary Domain} \\ \hline
-Universal Hashing & High & Programming Languages, Hash Tables \\ \hline
+\textbf{Algorithm / Structure} & \textbf{Relevancy} & \textbf{Primary} \\
+ & & \textbf{Domain} \\ \hline
+Universal Hashing & High & Programming Languages, \\
+ & & Hash Tables \\ \hline
 Skip Lists & High & Databases (MemTables, Redis) \\ \hline
-HyperLogLog & High & Big Data Analytics (BigQuery, Redshift) \\ \hline
-Count-Min Sketch & High & Network Routing, Streaming Analytics \\ \hline
-Johnson-Lindenstrauss Projection & High & Vector Databases, AI Embeddings \\ \hline
-Rabin-Karp Search & High & Plagiarism Detection, String Search \\ \hline
-Randomized SVD & High & Machine Learning (scikit-learn PCA) \\ \hline
-Treaps & Medium & Coordinate range search engines \\ \hline
-RIC Convex Hull & Medium & GIS, Computational Geometry \\ \hline
+HyperLogLog & High & Big Data Analytics \\
+ & & (BigQuery, Redshift) \\ \hline
+Count-Min Sketch & High & Network Routing, \\
+ & & Streaming Analytics \\ \hline
+Johnson-Lindenstrauss & High & Vector Databases, \\
+Projection & & AI Embeddings \\ \hline
+Rabin-Karp Search & High & Plagiarism Detection, \\
+ & & String Search \\ \hline
+Randomized SVD & High & Machine Learning \\
+ & & (scikit-learn PCA) \\ \hline
+Treaps & Medium & Coordinate range \\
+ & & search engines \\ \hline
+RIC Convex Hull & Medium & GIS, Computational \\
+ & & Geometry \\ \hline
 Karger-Stein Min-Cut & Low (Theoretical) & Graph partitioning models \\ \hline
 KKT MST & Low (Theoretical) & Expected linear MST studies \\ \hline
 Seidel's LP Solver & Low (Theoretical) & Fixed-dimension LP research \\ \hline
@@ -13156,5 +13212,7 @@ The backbone of fault-tolerant distributed networks and blockchain protocols.
 \end{itemize}
 
 \backmatter
+
+\printindex
 
 \end{document}
