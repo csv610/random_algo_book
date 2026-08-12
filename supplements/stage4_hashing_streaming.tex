@@ -1,0 +1,173 @@
+\chapter{Randomized Hashing and Streaming}
+\label{ch:stage4-hashing-streaming}
+
+This supplement connects the book's universal hashing, perfect hashing,
+fingerprinting, and streaming sections to the data structures used in modern
+systems.  Each structure has a different contract: membership, frequency,
+heavy hitters, or distinct counting.  Students should not treat these
+contracts as interchangeable.
+
+\section{Cuckoo hashing}
+
+Choose two hash functions $h_1,h_2$ and store each key $x$ in one of the two
+locations $h_1(x)$ or $h_2(x)$.  An insertion may evict the key currently in
+one location and move it to its alternate location.  If a cycle is detected,
+rehash with fresh functions.
+
+The standard random-graph representation has one vertex per table position
+and one edge $(h_1(x),h_2(x))$ per key.  Successful placement corresponds to
+orienting every edge toward a distinct endpoint.  A component with more
+edges than vertices prevents such an orientation.  Below the load threshold,
+the random graph has no complex obstruction with high probability, while
+above the threshold insertion failures become likely.  The exact threshold
+depends on the table layout and load convention, so implementations must
+state their resize policy.
+
+\begin{proposition}[Cuckoo lookup]
+If the table is maintained with two candidate positions, a lookup examines
+at most two locations and therefore takes $O(1)$ worst-case time.  Insertions
+have expected $O(1)$ displacement work when the load is kept below a fixed
+threshold and failed insertions trigger rehashing.
+\end{proposition}
+
+\section{Consistent hashing}
+
+Place both servers and keys on a circular hash space.  A key is assigned to
+the first server encountered clockwise.  Adding or removing one server then
+changes only the keys in its predecessor interval, rather than remapping all
+keys.
+
+With $m$ independently hashed servers and $n$ independently hashed keys, the
+expected fraction of keys moved when one server is added is $1/(m+1)$.
+Virtual replicas reduce load imbalance: with $r$ replicas per server, the
+largest interval decreases as $r$ grows, but the replicas are not magically
+independent if the hash construction correlates them.
+
+\section{Bloom filters}
+
+A Bloom filter uses an $m$-bit array and $k$ independent hash functions.  To
+insert $x$, set the $k$ indexed bits.  A query returns ``absent'' if any of
+the bits is zero and ``possibly present'' otherwise.
+
+There are no false negatives unless deletion is performed incorrectly.  If
+$n$ items have been inserted, the false-positive probability is
+\[
+ \left(1-\left(1-\frac1m\right)^{kn}\right)^k
+ \approx (1-e^{-kn/m})^k.
+\]
+The approximation is minimized near $k=(m/n)\ln 2$, giving roughly
+$(0.6185)^{m/n}$.  Standard Bloom filters do not support deletion; counting
+Bloom filters or cuckoo filters change the space and error analysis.
+
+\section{Count-Min Sketch}
+
+For a turnstile or insertion-only stream, choose $d$ pairwise-independent
+row hashes into $w$ counters.  On update $(x,\Delta)$, increment counter
+$(i,h_i(x))$ by $\Delta$ in every row.  Estimate a point frequency by the
+minimum of its row counters.
+
+\begin{theorem}[Count-Min guarantee]
+For a nonnegative insertion-only stream with total mass $F_1$, choosing
+$w=\lceil e/\varepsilon\rceil$ and
+$d=\lceil\ln(1/\delta)\rceil$ gives, for every fixed query $x$,
+\[
+ f_x\leq\widehat f_x\leq f_x+\varepsilon F_1
+\]
+with probability at least $1-\delta$.
+\end{theorem}
+
+\begin{proof}
+In one row, the expected collision mass added to $x$ is at most
+$(F_1-f_x)/w\leq F_1/w$.  Markov's inequality makes the probability that
+this noise exceeds $\varepsilon F_1$ at most $1/e$.  Taking the minimum of
+$d$ independent rows reduces the failure probability to at most
+$e^{-d}\leq\delta$.
+\end{proof}
+
+The same one-sided guarantee does not hold for arbitrary negative updates;
+the turnstile model needs a different analysis or a signed sketch.
+
+\section{Count-Sketch and signed updates}
+
+Count-Sketch uses a bucket hash $h_i$ and an independent sign hash
+$s_i(x)\in\{-1,+1\}$.  The update adds $s_i(x)\Delta$ to bucket $h_i(x)$,
+and the estimate is the median of $s_i(x)$ times the queried buckets.
+The sign cancellation makes the estimator unbiased under pairwise
+independence.  With suitable width and depth, the error is controlled by the
+$\ell_2$ mass of the frequency vector rather than its $\ell_1$ mass.
+
+\section{Heavy hitters}
+
+An item is an $\alpha$-heavy hitter if $f_x\geq\alpha F_1$.  The Misra--Gries
+algorithm stores $k$ candidate counters and repeatedly decrements all
+counters when the table is full.  At termination, every item with frequency
+greater than $F_1/k$ is present among the candidates; a second pass gives
+exact frequencies for those candidates.
+
+Sketches can identify heavy hitters without a second pass, but the query
+guarantee, update model, and space bound must be stated.  A common mistake is
+to claim exact heavy-hitter identification from a Count-Min Sketch without
+allowing for its additive error.
+
+\section{Frequency moments}
+
+For frequencies $(f_x)$, the $p$th frequency moment is
+$F_p=\sum_x f_x^p$.  $F_1$ is stream length, $F_2$ measures concentration,
+and $F_0$ is the number of distinct items.  The choice of estimator depends
+strongly on whether the stream is insertion-only or allows deletions.
+
+\section{Distinct-element estimation}
+
+Flajolet--Martin stores the maximum trailing-zero statistic of hashed stream
+items.  Repeating with independent hashes and aggregating robustly reduces
+variance.  HyperLogLog refines this idea by keeping many registers and using
+their harmonic-style aggregate.  The practical lesson is that a single
+register is a noisy estimator; claims about relative error must specify the
+number of registers and the aggregation rule.
+
+\section{Network coding and randomized polling}
+
+In randomized network coding, intermediate nodes transmit random linear
+combinations of packets over a finite field.  A sink recovers the original
+packets when a resulting transfer matrix has full rank.  The determinant of a
+nonzero polynomial is nonzero under a random assignment with high probability
+by Schwartz--Zippel, provided the field is sufficiently large.
+
+In polling, sample stream positions or records using a specified sampling
+distribution, then use inverse-probability weighting when estimating totals.
+Uniform sampling without replacement creates dependence; variance estimates
+must use the sampling design rather than incorrectly assuming independent
+observations.
+
+\section{Student checklist}
+
+For each streaming structure, students should record:
+
+\begin{enumerate}
+\item insertion-only or turnstile update model;
+\item query type and whether the guarantee is one-sided;
+\item hash-family independence required;
+\item space, update time, query time, and failure probability;
+\item whether a second pass or rehashing is required;
+\item the adversarial model for stream order and queried items.
+\end{enumerate}
+
+\begin{problem}[Bloom-filter optimization]
+For a target false-positive probability $\delta$, derive the bits-per-item
+needed by a Bloom filter using the optimal number of hash functions.
+\end{problem}
+
+\begin{problem}[Count-Min proof]
+Prove the Count-Min guarantee for a fixed query and explain why a union bound
+is required to guarantee all queries simultaneously.
+\end{problem}
+
+\begin{problem}[Cuckoo obstruction]
+Show that a component with more edges than vertices in the cuckoo graph
+prevents all keys from being assigned to distinct candidate locations.
+\end{problem}
+
+\begin{problem}[Streaming implementation]
+Implement Count-Min, Count-Sketch, and Misra--Gries.  Compare their errors on
+Zipfian, uniform, and adversarial streams.
+\end{problem}
