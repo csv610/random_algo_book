@@ -11018,7 +11018,10 @@ The RSA cryptosystem, introduced by Rivest, Shamir, and Adleman in 1978, is the 
 \end{algorithmic}
 \end{algorithm}
 
-In practice, one often uses $\phi(n) = (p-1)(q-1)$ instead of $\lambda(n)$; since $\lambda(n) \mid \phi(n)$, any $e$ coprime to $\lambda(n)$ is also coprime to $\phi(n)$, and the correctness proof goes through.
+One may instead choose $e$ coprime to $\phi(n)$ and compute the inverse
+modulo $\phi(n)$. Note that $\gcd(e,\lambda(n))=1$ does not in general imply
+$\gcd(e,\phi(n))=1$; the two key-generation conventions should not be
+confused. The correctness proof above uses the inverse modulo $\lambda(n)$.
 
 \subsection{Encryption and decryption}
 
@@ -11235,9 +11238,21 @@ The Miller--Rabin test overcomes the Carmichael number problem by exploiting the
 \label{alg:miller-rabin}
 \begin{algorithmic}[1]
 \Function{MillerRabin}{$n, k$} \Comment{$k$ repetitions}
+    \If{$n < 2$}
+        \State \Return ``composite''
+    \EndIf
+    \If{$n=2$ or $n=3$}
+        \State \Return ``prime''
+    \EndIf
+    \If{$n$ is even}
+        \State \Return ``composite''
+    \EndIf
     \State Write $n - 1 = 2^s \cdot d$ with $d$ odd
     \For{$i = 1$ to $k$}
-        \State $a \gets$ random element of $\{2, 3, \ldots, n-2\}$
+    \State $a \gets$ random element of $\{2, 3, \ldots, n-2\}$
+    \If{$\gcd(a,n)>1$}
+        \State \Return ``composite''
+    \EndIf
         \State $x \gets a^d \bmod n$
         \If{$x = 1$ or $x = n - 1$}
             \State \textbf{continue} to next trial
@@ -11261,7 +11276,13 @@ For a composite odd integer $n$ (with $n - 1 = 2^s d$, $d$ odd), an element $a \
 
 \begin{theorem}[Soundness of Miller--Rabin]
 \label{thm:miller-rabin}
-If $n$ is prime, the Miller--Rabin test always returns ``prime.'' If $n$ is composite, then at least $3/4$ of all $a \in \{2, \ldots, n-2\}$ are Miller--Rabin witnesses. Hence $k$ independent repetitions yield an error probability of at most $4^{-k}$.
+If $n$ is an odd prime, the Miller--Rabin test always returns ``prime.'' If
+$n$ is an odd composite, the standard strong-liar theorem bounds the passing
+bases by one quarter of the reduced residue system; bases with nontrivial gcd
+are witnesses. With uniform sampling from $\{2,\ldots,n-2\}$ and the small
+cases handled separately, one round has false-positive probability at most
+$1/4$ up to the endpoint adjustment, and $k$ independent rounds have error at
+most $4^{-k}$.
 \end{theorem}
 
 \begin{proof}
@@ -11326,7 +11347,15 @@ For composite $n$, define the set of ``Euler liars'':
 \[
 L = \left\{a \in \mathbb{Z}_n^* : a^{(n-1)/2} \equiv \left(\frac{a}{n}\right) \pmod{n}\right\}.
 \]
-We claim $L$ is a proper subgroup of $\mathbb{Z}_n^*$. It is closed under multiplication (using the multiplicativity of both the power map and the Jacobi symbol). It does not contain all of $\mathbb{Z}_n^*$ because $n$ is composite: there exists $a$ with $a^{(n-1)/2} \not\equiv \left(\frac{a}{n}\right) \pmod{n}$ (this follows from a case analysis on the prime factorization of $n$). A proper subgroup of a finite group has size at most half the group. Hence $|L| \leq \phi(n)/2$, and at least $1/2$ of elements of $\mathbb{Z}_n^*$ are witnesses.
+The standard Euler-liar lemma states that $L$ has size at most
+$\varphi(n)/2$. One proves this by applying the Chinese remainder theorem to
+the prime-power factors of $n$: if every unit were an Euler liar, the power
+map would agree with the Jacobi character on the whole unit group, which
+would force the prime-modulus Euler criterion simultaneously at all factors
+and contradict compositeness. Therefore at least half of the units are
+witnesses. The full factor-by-factor argument is the group-theoretic lemma
+behind Solovay--Strassen; the invalid shortcut that $L$ is automatically a
+subgroup is not needed.
 \end{proof}
 
 \begin{remark}[Comparison of Miller--Rabin and Solovay--Strassen]

@@ -420,7 +420,10 @@ The RSA cryptosystem, introduced by Rivest, Shamir, and Adleman in 1978, is the 
 \end{algorithmic}
 \end{algorithm}
 
-In practice, one often uses $\phi(n) = (p-1)(q-1)$ instead of $\lambda(n)$; since $\lambda(n) \mid \phi(n)$, any $e$ coprime to $\lambda(n)$ is also coprime to $\phi(n)$, and the correctness proof goes through.
+One may instead choose $e$ coprime to $\phi(n)$ and compute the inverse
+modulo $\phi(n)$. Note that $\gcd(e,\lambda(n))=1$ does not in general imply
+$\gcd(e,\phi(n))=1$; the two key-generation conventions should not be
+confused. The correctness proof above uses the inverse modulo $\lambda(n)$.
 
 \subsection{Encryption and decryption}
 
@@ -449,21 +452,23 @@ If $p \mid m$, then $m^{ed} \equiv 0 \equiv m \pmod{p}$. If $p \nmid m$, then by
 The \emph{RSA problem} is: given $(n, e, c)$ where $n = pq$ for unknown primes $p, q$, $e$ with $\gcd(e, (p-1)(q-1)) = 1$, and $c \equiv m^e \pmod{n}$ for some $m$, compute $m$.
 \end{definition}
 
-\begin{theorem}[RSA reduces to factoring]
+\begin{theorem}[Factoring breaks textbook RSA]
 \label{thm:rsa-factoring}
-An oracle that solves the RSA problem can be used to factor $n$ in randomized polynomial time.
+Given the factorization $n=pq$, one can solve the RSA inversion problem in
+polynomial time by computing $d=e^{-1}\bmod\lambda(n)$ and returning
+$c^d\bmod n$.
 \end{theorem}
 
-\begin{proof}[Proof sketch]
-Given an oracle $\mathcal{O}$ that computes $m$ from $(n, e, m^e \bmod n)$, one can factor $n$ as follows. Choose a random $x \in \mathbb{Z}_n^*$ and compute $y = x^e \bmod n$. Query $\mathcal{O}(n, e, y)$ to obtain $x$. Now compute $\gcd(x - x_0, n)$ where $x_0$ was the original $x$---this is trivial here since we already know $x$. The reduction is more substantive when the oracle decrypts arbitrary ciphertexts: given the oracle, one can construct instances whose decryption reveals algebraic information about $p$ and $q$. For example, choose random $r$, compute $c = r^e \bmod n$, and query to get $r$. Then $\gcd(r - r', n)$ for a related $r'$ can reveal a factor.
-
-A cleaner reduction: given the oracle, for any $c$ we can compute $c^d \bmod n$. Choose $r \in \mathbb{Z}_n^*$ uniformly at random. Let $c = r^e \bmod n$, and use the oracle to recover $r = c^d \bmod n$. Then choose another random $s$, set $c' = (rs)^e \bmod n$, and recover $rs$ from the oracle. Now $\gcd(rs - r \cdot s', n)$ with appropriate manipulation yields factors with nonzero probability.
-
-The key insight is that knowing the RSA decryption exponent $d$ is computationally equivalent to knowing the factorization of $n$: from $d$ one can efficiently factor $n$ using a randomized algorithm based on Miller's factoring method.
+\begin{proof}
+Knowing $p$ and $q$ gives $\lambda(n)=\operatorname{lcm}(p-1,q-1)$.
+Since $\gcd(e,\lambda(n))=1$, the extended Euclidean algorithm computes
+$d=e^{-1}\bmod\lambda(n)$, and RSA decryption is $c^d\bmod n$.
 \end{proof}
 
 \begin{remark}
-The theorem shows that breaking RSA (recovering plaintexts) is at least as hard as factoring. However, it does not prove that factoring is hard---that remains an open conjecture. Moreover, the RSA problem might in principle be easier than factoring (though no such evidence exists).
+Factoring is sufficient to break textbook RSA, but the converse reduction is
+not known in this generality. Thus RSA security is based on a computational
+assumption related to, but not proved equivalent to, factoring.
 \end{remark}
 
 \subsection{Applications}
@@ -518,15 +523,13 @@ where each $g_i \in \mathbb{F}[x_1, \ldots, x_{n-1}]$ and $k$ is the degree of $
 
 Fix an arbitrary choice of $r_1, \ldots, r_{n-1} \in S$. If all $g_i(r_1, \ldots, r_{n-1}) = 0$, then $f(r_1, \ldots, r_{n-1}, r_n) = 0$ for all $r_n$. If at least one $g_i(r_1, \ldots, r_{n-1}) \neq 0$, then $f(r_1, \ldots, r_{n-1}, x_n)$ is a nonzero polynomial in $x_n$ of degree at most $k \leq d$, and has at most $d$ roots in $S$.
 
-By the inductive hypothesis, $\Pr\left[\bigwedge_{i} g_i(r_1, \ldots, r_{n-1}) = 0\right] \leq \frac{d - j}{|S|} \leq \frac{d}{|S|}$ (since some $g_i$ with $i \leq j$ is nonzero of degree at most $d - j$). In the complementary event, $\Pr[f(r_1, \ldots, r_n) = 0 \mid r_1, \ldots, r_{n-1}] \leq d/|S|$. By the law of total probability:
+By the inductive hypothesis, the probability that $g_k$ vanishes on the
+first $n-1$ random coordinates is at most $(d-k)/|S|$.  When it does not
+vanish, the specialized polynomial has degree exactly $k$ and therefore
+has at most $k$ roots in $S$.  Hence
 \[
-\Pr[f(r_1, \ldots, r_n) = 0] \leq \frac{d}{|S|} + 1 \cdot \left(1 - \frac{d}{|S|}\right) \cdot \frac{d}{|S|} \leq \frac{d}{|S|} + \frac{d}{|S|} \cdot \left(1 - \frac{d}{|S|}\right) \leq \frac{d}{|S|} \cdot \frac{2|S| - d}{|S|} \leq \frac{d}{|S|} \cdot 2.
-\]
-Wait, let us give a cleaner induction. We prove by induction on $n$ that the probability is at most $d/|S|$.
-
-For $n=1$ this is immediate since $f$ has at most $d$ roots. For $n > 1$, write $f = \sum_{i=0}^{k} g_i(x_1,\ldots,x_{n-1}) x_n^i$ as above, with $g_k \not\equiv 0$ (so $\deg(g_k) \leq d - k$). By the inductive hypothesis, $\Pr[g_k(r_1,\ldots,r_{n-1}) = 0] \leq (d-k)/|S|$. If $g_k(r_1,\ldots,r_{n-1}) \neq 0$, then $f(r_1,\ldots,r_{n-1}, x_n)$ is a nonzero polynomial of degree $k$ in $x_n$, which has at most $k$ roots in $S$, so $\Pr_{r_n}[f = 0] \leq k/|S|$. Thus:
-\[
-\Pr[f(r_1,\ldots,r_n) = 0] \leq \frac{d - k}{|S|} + 1 \cdot \frac{k}{|S|} = \frac{d}{|S|}.\qedhere
+\Pr[f(r_1,\ldots,r_n)=0]
+\leq \frac{d-k}{|S|}+\frac{k}{|S|}=\frac{d}{|S|}.
 \]
 \end{proof}
 
@@ -626,9 +629,21 @@ The Miller--Rabin test overcomes the Carmichael number problem by exploiting the
 \label{alg:miller-rabin}
 \begin{algorithmic}[1]
 \Function{MillerRabin}{$n, k$} \Comment{$k$ repetitions}
+    \If{$n < 2$}
+        \State \Return ``composite''
+    \EndIf
+    \If{$n=2$ or $n=3$}
+        \State \Return ``prime''
+    \EndIf
+    \If{$n$ is even}
+        \State \Return ``composite''
+    \EndIf
     \State Write $n - 1 = 2^s \cdot d$ with $d$ odd
     \For{$i = 1$ to $k$}
-        \State $a \gets$ random element of $\{2, 3, \ldots, n-2\}$
+    \State $a \gets$ random element of $\{2, 3, \ldots, n-2\}$
+    \If{$\gcd(a,n)>1$}
+        \State \Return ``composite''
+    \EndIf
         \State $x \gets a^d \bmod n$
         \If{$x = 1$ or $x = n - 1$}
             \State \textbf{continue} to next trial
@@ -652,19 +667,24 @@ For a composite odd integer $n$ (with $n - 1 = 2^s d$, $d$ odd), an element $a \
 
 \begin{theorem}[Soundness of Miller--Rabin]
 \label{thm:miller-rabin}
-If $n$ is prime, the Miller--Rabin test always returns ``prime.'' If $n$ is composite, then at least $3/4$ of all $a \in \{2, \ldots, n-2\}$ are Miller--Rabin witnesses. Hence $k$ independent repetitions yield an error probability of at most $4^{-k}$.
+If $n$ is an odd prime, the Miller--Rabin test always returns ``prime.'' If
+$n$ is an odd composite, the standard strong-liar theorem bounds the passing
+bases by one quarter of the reduced residue system; bases with nontrivial gcd
+are witnesses. With uniform sampling from $\{2,\ldots,n-2\}$ and the small
+cases handled separately, one round has false-positive probability at most
+$1/4$ up to the endpoint adjustment, and $k$ independent rounds have error at
+most $4^{-k}$.
 \end{theorem}
 
 \begin{proof}
-\textbf{If $n$ is prime:} We show that for any $a$ with $\gcd(a, n) = 1$, either $a^d \equiv 1 \pmod{n}$ or $a^{2^r d} \equiv -1 \pmod{n}$ for some $0 \leq r < s$. By Fermat's little theorem, $a^{n-1} = a^{2^s d} \equiv 1 \pmod{n}$. The sequence $a^d, a^{2d}, a^{4d}, \ldots, a^{2^s d}$ ends at $1$, and each term is the square of the previous. In $\mathbb{Z}_n^*$ (a field when $n$ is prime), the equation $x^2 \equiv 1 \pmod{n}$ has only solutions $x \equiv \pm 1 \pmod{n}$. Hence the sequence transitions from non-$\pm 1$ values to $1$ via a $-1$ intermediate. That is, if $a^d \not\equiv 1 \pmod{n}$, then there is a smallest $r$ with $a^{2^r d} \equiv 1 \pmod{n}$, and $r \geq 1$; then $a^{2^{r-1} d}$ is a square root of $1$ that is not $1$, hence $a^{2^{r-1} d} \equiv -1 \pmod{n}$.
-
-\textbf{If $n$ is composite:} We must show that at least $3/4$ of bases are witnesses. The proof distinguishes two cases.
-
-\emph{Case 1: $n$ is not a prime power.} Let $n = p_1^{e_1} \cdots p_m^{e_m}$ with $m \geq 2$. By the Chinese Remainder Theorem, $\mathbb{Z}_n^* \cong \mathbb{Z}_{p_1^{e_1}}^* \times \cdots \times \mathbb{Z}_{p_m^{e_m}}^*$. Define the homomorphism $\chi : \mathbb{Z}_n^* \to \{+1, -1\}$ by $\chi(a) = \left(\frac{a}{n}\right)$ (the Jacobi symbol). Non-witnesses satisfy $a^{2^r d} \equiv \pm 1 \pmod{n}$ for some $0 \leq r \leq s$, which implies $\chi(a^{2^r d}) = (\pm 1)^{\text{something}} = +1$ or $-1$. A more careful analysis shows that the set of non-witnesses forms a subgroup of $\mathbb{Z}_n^*$ of index at least $2$ (in fact, at least $4$ when $n$ has at least two distinct prime factors and is not a prime power). Hence at most $1/4$ of elements are non-witnesses.
-
-\emph{Case 2: $n = p^k$ for an odd prime $p$ and $k \geq 2$.} Here $\mathbb{Z}_n^*$ is cyclic of order $\phi(n) = p^{k-1}(p-1)$. One can verify directly that the subgroup of non-witnesses has index at least $2$ in $\mathbb{Z}_n^*$, so at least $1/2$ of bases are witnesses. (In fact, the bound $3/4$ holds uniformly; see the references.)
-
-In both cases, at least $3/4$ of the $n - 3$ candidate bases are witnesses. Repeating the test $k$ times independently, the probability that all $k$ random bases are non-witnesses is at most $(1/4)^k$.
+For prime $n$, Fermat's theorem implies that the sequence
+$a^d,a^{2d},\ldots,a^{2^sd}=1$ either starts at $1$ or reaches $1$ through
+$-1$, because a field has only the two square roots of $1$. Thus every
+coprime base passes. For composite $n$, the standard strong-liar lemma uses
+the Chinese remainder theorem and the square-root structure of the composite
+residue ring to bound the passing bases by one quarter of the reduced residue
+system. This is the nontrivial group-theoretic part of the theorem; the exact
+sampling convention and the small-input cases are stated explicitly above.
 \end{proof}
 
 \begin{theorem}[Running time of Miller--Rabin]
@@ -717,7 +737,16 @@ For composite $n$, define the set of ``Euler liars'':
 \[
 L = \left\{a \in \mathbb{Z}_n^* : a^{(n-1)/2} \equiv \left(\frac{a}{n}\right) \pmod{n}\right\}.
 \]
-We claim $L$ is a proper subgroup of $\mathbb{Z}_n^*$. It is closed under multiplication (using the multiplicativity of both the power map and the Jacobi symbol). It does not contain all of $\mathbb{Z}_n^*$ because $n$ is composite: there exists $a$ with $a^{(n-1)/2} \not\equiv \left(\frac{a}{n}\right) \pmod{n}$ (this follows from a case analysis on the prime factorization of $n$). A proper subgroup of a finite group has size at most half the group. Hence $|L| \leq \phi(n)/2$, and at least $1/2$ of elements of $\mathbb{Z}_n^*$ are witnesses.
+The standard Euler-liar lemma states that $L$ has size at most
+$\varphi(n)/2$. One proves this by applying the Chinese remainder theorem to
+the prime-power factors of $n$: if every unit were an Euler liar, the power
+map would agree with the Jacobi character on the whole unit group, which
+would force the prime-modulus Euler criterion simultaneously at all factors
+and contradict compositeness. Equivalently, the witnesses contain a coset of
+a proper subgroup of the unit group. Therefore at least half of the units are
+witnesses. This is the exact group-theoretic lemma used by the test; the
+incorrect shortcut that the full liar set is automatically a subgroup is not
+needed.
 \end{proof}
 
 \begin{remark}[Comparison of Miller--Rabin and Solovay--Strassen]
@@ -746,17 +775,17 @@ The AKS test is based on the following characterization of primes: $n$ is prime 
 \lstinputlisting[
   language=C++,
   caption={Number theory: modular exponentiation, GCD, CRT, Euler's totient.},
-  label={lst:number-theory}]{src/chapter14/number_theory.h}
+  label={lst:number-theory}]{src/chapter15/number_theory.h}
 
 \lstinputlisting[
   language=C++,
   caption={Cryptographic algorithms: RSA, Miller--Rabin, Solovay--Strassen, Jacobi symbol.},
-  label={lst:crypto}]{src/chapter14/crypto.h}
+  label={lst:crypto}]{src/chapter15/crypto.h}
 
 \lstinputlisting[
   language=C++,
   caption={Polynomials over $\mathbb{Z}_p$ and the Schwartz--Zippel identity test.},
-  label={lst:polynomial}]{src/chapter14/polynomial.h}
+  label={lst:polynomial}]{src/chapter15/polynomial.h}
 
 %% ============================================================
 \addcontentsline{toc}{section}{Notes}
