@@ -1,0 +1,181 @@
+\chapter{Classical Randomized Algorithms: A Guided Core}
+\label{ch:stage3-classical-randomized}
+
+This supplement gathers the classical algorithms that students should master
+before moving to specialized applications.  The book already develops
+randomized selection, game-tree evaluation, complexity classes, and
+amplification in other chapters; those topics remain in place and are
+cross-referenced here.
+
+\section{Las Vegas and Monte Carlo algorithms}
+
+\begin{definition}
+A Las Vegas algorithm always returns a correct answer and has a random
+running time.  A Monte Carlo algorithm has a bounded running time but may
+return an incorrect answer with a stated probability.
+\end{definition}
+
+For a Las Vegas algorithm, the main guarantee is usually
+$\mathbb{E}[T]\leq t(n)$, together with a tail bound when available.  For a
+Monte Carlo algorithm, the statement must include whether the error is one-
+sided or two-sided and whether the probability is over the algorithm's
+randomness for every fixed input.
+
+\begin{proposition}[Truncation]
+If a Las Vegas algorithm has expected running time at most $T$ on every
+input, stopping it after $T/\delta$ steps and returning ``failure'' gives a
+Monte Carlo algorithm that fails with probability at most $\delta$.
+\end{proposition}
+
+\begin{proof}
+By Markov's inequality, $\Pr[\text{runtime}>T/\delta]\leq\delta$.
+\end{proof}
+
+\section{Randomized Quicksort}
+
+Randomized Quicksort chooses a uniformly random pivot, partitions around it,
+and recursively sorts the two subarrays.
+
+\begin{theorem}[Expected comparisons]
+For $n$ distinct keys, randomized Quicksort performs at most
+$2(n+1)H_n-4n$ expected comparisons, where
+$H_n=\sum_{i=1}^{n}1/i$.  In particular, the expected cost is
+$O(n\log n)$.
+\end{theorem}
+
+\begin{proof}
+Let $X_{ij}$ indicate that the keys of ranks $i<j$ are compared.  They are
+compared exactly when the first pivot chosen from ranks $i,\ldots,j$ is one
+of the endpoints.  That event has probability $2/(j-i+1)$.  Therefore
+\[
+ \mathbb{E}[C_n]=\sum_{1\leq i<j\leq n}\frac{2}{j-i+1}
+ =2(n+1)H_n-4n.
+\]
+\end{proof}
+
+The same argument gives a clean student lesson: the subproblem sizes are
+dependent, but indicator variables and linearity of expectation avoid the
+need to analyze the entire recursion tree jointly.
+
+\section{Randomized FIND}
+
+The randomized FIND algorithm chooses a pivot, partitions the input, and
+recurses only into the side containing the requested order statistic.  With
+uniform random pivots, its expected number of comparisons is $O(n)$.
+
+\begin{theorem}[Expected linear selection]
+For every rank $k$, randomized FIND returns the $k$th smallest of $n$
+distinct keys in expected $O(n)$ comparisons.
+\end{theorem}
+
+\begin{proof}[Proof sketch]
+At each recursive call, the pivot rank is uniform in the current interval.
+The expected size of the next interval is at most a constant fraction of the
+current size after conditioning on whether the pivot falls in the middle
+half.  Equivalently, charging the work at each level to surviving elements
+gives a geometric series $O(n)+O(3n/4)+O((3/4)^2n)+\cdots=O(n)$.
+\end{proof}
+
+The implementation and the more detailed recurrence remain in
+Chapter~\ref{ch:fundamentals}.
+
+\section{Yao's minimax principle}
+
+Let $D$ be a distribution over inputs and let $A$ be a randomized algorithm.
+Yao's principle says that the expected cost of $A$ on the worst input is at
+least the expected cost of the best deterministic algorithm under a suitable
+hard input distribution:
+\[
+ \min_{A\text{ randomized}}\max_x\mathbb{E}[C(A,x)]
+ \;\geq\;
+ \max_D\min_{B\text{ deterministic}}\mathbb{E}_{x\sim D}[C(B,x)].
+\]
+
+\begin{proof}[Proof]
+Fix a randomized algorithm $A$, viewed as a distribution over deterministic
+algorithms $B$.  For every distribution $D$,
+\[
+ \max_x\mathbb{E}_A C(A,x)
+ \geq \mathbb{E}_{x\sim D}\mathbb{E}_A C(A,x)
+ =\mathbb{E}_A\mathbb{E}_{x\sim D}C(A,x)
+ \geq\min_B\mathbb{E}_{x\sim D}C(B,x).
+\]
+Taking the maximum over $D$ proves the claim.
+\end{proof}
+
+To use the principle, students must specify the input distribution, prove a
+lower bound for every deterministic algorithm, and then state exactly which
+randomized guarantee follows.  The principle does not automatically prove a
+worst-case lower bound for every cost notion without these quantifiers.
+
+\section{Amplification}
+
+Suppose a Monte Carlo decision algorithm is correct with probability at least
+$1/2+\gamma$ for every fixed input, where $\gamma>0$.  Run independent copies
+and return the majority answer.  Hoeffding's inequality gives error at most
+$\exp(-2r\gamma^2)$ after $r$ copies.  Thus
+$r\geq(\ln(1/\delta))/(2\gamma^2)$ gives error at most $\delta$.
+
+For one-sided error, repeat until a desired confidence level is reached or
+use the median of independent estimates.  Repetition must use fresh random
+bits; reusing the same random seed does not amplify anything.
+
+\section{Explicit lower-bound examples}
+
+\subsection{Sorting}
+
+For comparison sorting, choose the uniform distribution over all $n!$
+relative orders.  A deterministic comparison tree of height $h$ has at
+most $2^h$ leaves, so its expected depth under the uniform distribution is
+$\Omega(n\log n)$.  Yao's principle transfers this to every Las Vegas
+comparison sort on some input.
+
+\subsection{Randomized search}
+
+For searching an unsorted array for a marked position, choose the marked
+position uniformly.  Every deterministic algorithm has expected
+$(n+1)/2$ probes under this distribution.  Therefore no randomized algorithm
+can have worst-case expected fewer than $(n+1)/2$ probes.
+
+\subsection{Game-tree evaluation}
+
+The game-tree lower-bound arguments in Chapter~\ref{ch:game-theoretic}
+provide a stronger example: an input distribution can force every
+deterministic decision strategy to inspect many leaves, even though a
+randomized strategy performs substantially better on every fixed input.
+
+\section{Student checklist}
+
+For each randomized algorithm, students should answer:
+
+\begin{enumerate}
+\item Is it Las Vegas or Monte Carlo?
+\item What is random: the input, the algorithm, or both?
+\item Is the guarantee pointwise for every input or average-case?
+\item What is the expected and high-probability runtime?
+\item How is error amplified, and are the repetitions independent?
+\item If a lower bound is claimed, what distribution and quantifiers does
+      Yao's principle use?
+\end{enumerate}
+
+\begin{problem}[Quicksort indicators]
+Derive the probability that two fixed ranks are compared by randomized
+Quicksort and sum the resulting indicators.
+\end{problem}
+
+\begin{problem}[Yao distribution]
+Give an input distribution proving an $\Omega(n)$ expected-probe lower bound
+for randomized search in an unsorted array.
+\end{problem}
+
+\begin{problem}[Amplification]
+An algorithm succeeds with probability $0.6$.  How many independent runs are
+needed to reduce the majority-vote error below $10^{-9}$ using a Hoeffding
+bound?
+\end{problem}
+
+\begin{problem}[Implementation]
+Implement randomized Quicksort and randomized FIND.  Compare empirical
+comparison counts with their expected bounds on sorted, reverse-sorted, and
+random inputs.
+\end{problem}
