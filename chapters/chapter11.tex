@@ -81,7 +81,14 @@
 
 In this chapter we study several fundamental optimization problems on graphs: all-pairs shortest paths, minimum cuts, and minimum spanning trees. In each case, deterministic polynomial-time algorithms are known, but the use of randomization yields significantly faster solutions. The randomized algorithms we present exploit random sampling and random contraction to achieve running times that are difficult or impossible to obtain deterministically.
 
-We begin with the all-pairs shortest paths problem, showing that it can be reduced to matrix multiplication via a randomized reduction. We then study the minimum cut problem, presenting Karger's elegant contraction algorithm and its dramatic improvement due to Karger and Stein. Finally, we present the Karger--Klein--Tarjan randomized linear-time algorithm for minimum spanning trees, which combines random sampling with Bor\v{u}vka's algorithm and a linear-time verification procedure.
+We begin with the all-pairs shortest paths problem, relating it to min-plus
+and Boolean matrix multiplication and carefully separating safe baselines from
+specialized faster reductions. We then study the minimum cut problem,
+presenting Karger's elegant contraction algorithm and its dramatic improvement
+due to Karger and Stein. Finally, we present the Karger--Klein--Tarjan
+randomized linear-time algorithm for minimum spanning trees, which combines
+random sampling with Bor\v{u}vka's algorithm and a linear-time verification
+procedure.
 
 %% ============================================================
 \section{All-pairs Shortest Paths}
@@ -124,35 +131,44 @@ By induction on $k$. The matrix $W^{(k)}[i,j]$ gives the shortest path from $i$ 
 
 This gives an $O(n^3 \log n)$ algorithm by computing $\lceil \log_2(n-1) \rceil$ min-plus products, each taking $O(n^3)$ time by brute force. But can we compute the min-plus product faster?
 
-\subsection{The randomized reduction}
+\subsection{Min-plus products and the scope of algebraic reductions}
 
-The remarkable insight is that min-plus products can be \emph{randomly reduced} to standard matrix multiplication. Since fast matrix multiplication algorithms (such as Strassen's $O(n^{2.807})$ algorithm) are available, this yields faster APSP algorithms.
+The min-plus product resembles ordinary matrix multiplication, but the two
+operations are not interchangeable. In particular, the tempting finite-field
+encoding of entries as powers does not compute a min-plus product: a finite
+field has no order with respect to which one summand can ``dominate'' the
+others, and modular cancellation can make a shortest witness disappear.
 
-\begin{theorem}[Randomized reduction: min-plus to standard product]
-\label{thm:min-plus-reduction}
-Given a subroutine that computes the standard matrix product of two $n \times n$ matrices in $T(n)$ time, there is a randomized algorithm that computes the min-plus product of two $n \times n$ matrices in $O(T(n) \log n)$ expected time.
+\begin{theorem}[Safe min-plus baseline]
+\label{thm:min-plus-baseline}
+For arbitrary $n\times n$ matrices over the extended reals, assuming no
+negative cycle is relevant to the requested distances, the min-plus product
+can be computed in $O(n^3)$ time and $O(n^2)$ space. Repeated squaring
+computes APSP in $O(n^3\log n)$ time.
 \end{theorem}
 
 \begin{proof}
-The reduction works by encoding the min-plus computation as a standard matrix product in a clever way. Let $A$ and $B$ be the input matrices with entries in $[0, M]$. Choose a random prime $p$ of size $\Theta(n^c)$ for a suitable constant $c$, and choose random $\alpha, \beta \in \mathbb{F}_p^*$.
-
-Define:
-\[
-\tilde{A}[i, k] = \alpha^{A[i,k]}, \qquad \tilde{B}[k, j] = \beta^{B[k,j]},
-\]
-where the exponentiation is in $\mathbb{F}_p$. Then:
-\[
-(\tilde{A} \cdot \tilde{B})[i, j] = \sum_{k=1}^{n} \alpha^{A[i,k]} \cdot \beta^{B[k,j]}.
-\]
-
-The key observation is that this sum is dominated by the term corresponding to the minimum of $A[i,k] + B[k,j]$, provided we choose $\alpha$ and $\beta$ to be generators of $\mathbb{F}_p^*$ and the prime $p$ is large enough. Specifically, with probability at least $1 - n/p$, the minimum term uniquely dominates, and we can extract $C[i,j] = \min_k(A[i,k] + B[k,j])$ by evaluating the sum modulo $p$ and using discrete logarithm computations.
-
-Repeating with $O(\log n)$ random primes ensures correctness with high probability. Each repetition involves a standard matrix product and $O(n)$ discrete logarithm computations, for a total of $O(T(n) \log n)$ expected time.
+For each pair $(i,j)$, scan all $k\in\{1,\ldots,n\}$ and retain the
+minimum of $A[i,k]+B[k,j]$, treating $\infty$ in the usual way. There are
+$n^2$ outputs and $n$ candidates per output, so the running time is
+$O(n^3)$ and the output requires $O(n^2)$ space. The repeated-squaring
+theorem above requires $\lceil\log_2(n-1)\rceil$ such products.
 \end{proof}
+
+Faster algorithms for restricted integer-weight instances use substantially
+more structure, such as bounded weights, word-level operations, or carefully
+analyzed algebraic encodings. They are not consequences of the invalid
+finite-field dominance argument. The cited Alon--Galil--Margalit work is
+therefore an advanced reference rather than a general black-box reduction in
+this chapter. Whenever a faster min-plus routine is available under stated
+additional assumptions, it may replace the baseline in the APSP framework.
 
 \subsection{Seidel's algorithm for unweighted undirected graphs}
 
-For the special case of \emph{unweighted, undirected} graphs, Seidel gave a particularly elegant randomized algorithm.
+For unweighted, undirected graphs, Seidel's algorithm uses Boolean matrix
+multiplication to reduce the distance scale by a factor of two at each
+recursive level. It is deterministic once the matrix multiplication routine
+is fixed; randomization is not required for the recurrence stated here.
 
 \begin{theorem}[Seidel's APSP]
 \label{thm:seidel-apsp}
@@ -160,35 +176,38 @@ Let $G$ be an unweighted undirected graph on $n$ vertices. The all-pairs shortes
 \end{theorem}
 
 \begin{proof}
-The algorithm is recursive. Let $D_k$ be the boolean adjacency matrix of $G^k$ (the $k$-th power of the adjacency matrix, where entry $(i,j)$ is 1 if there is a path of length exactly $k$ from $i$ to $j$). The APSP problem is equivalent to computing $D^* = \sum_{k=1}^{n-1} D_k$ (the boolean transitive closure) and extracting distances from it.
+Let $A$ be the adjacency matrix of $G$, with Boolean arithmetic, and define
+$B=A\lor(A\cdot A)$. Thus $B[i,j]=1$ exactly when $i$ and $j$ are equal,
+adjacent, or have a common neighbor. Recursing on the graph represented by
+$B$ reduces the relevant distance scale by a factor of two.
 
-The key observation is that $D_{2k}$ can be computed from $D_k$ via boolean matrix multiplication: $D_{2k} = D_k \cdot D_k$ (using boolean arithmetic). This allows repeated squaring.
+For a finite-distance pair $i\ne j$, let $c(i,j)$ be the number of vertices
+$k$ with $A[i,k]=A[k,j]=1$. If $c(i,j)>0$, the original distance is
+$2D'[i,j]$; if $c(i,j)=0$, it is $2D'[i,j]-1$, where $D'$ is the distance
+matrix returned by the recursive call. Adjacent pairs are handled directly,
+and disconnected pairs retain distance $\infty$. These formulas follow by
+comparing whether a shortest path can be decomposed into two-edge segments;
+the absence of a common neighbor is precisely the odd-distance case.
 
-Seidel's algorithm computes the distance matrix recursively:
-\begin{enumerate}[nosep]
-    \item Recursively compute the distance matrix $D'$ for a random sample of vertices $S \subseteq V$ with $|S| = n/2$.
-    \item Use $D'$ to identify ``short'' paths between all pairs.
-    \item For ``long'' paths, use matrix multiplication to compute the transitive closure.
-\end{enumerate}
-
-More precisely, the algorithm:
-\begin{enumerate}[nosep]
-    \item Partition $V$ randomly into $S$ and $V \setminus S$ with $|S| = n/2$.
-    \item Recursively compute shortest paths within $S$ and within $V \setminus S$.
-    \item For paths that cross between $S$ and $V \setminus S$, use the fact that such a path passes through some vertex in $V$, and use matrix multiplication to detect the shortest such crossing paths.
-\end{enumerate}
-
-The expected running time satisfies the recurrence $T(n) = 2T(n/2) + O(M(n))$, which by the Master Theorem gives $T(n) = O(M(n) \log n)$.
+Boolean matrix multiplication computes $A\cdot A$ and all values $c(i,j)$ in
+$O(M(n))$ time, while reconstruction costs $O(n^2)$. There are
+$O(\log n)$ distance scales, so the total running time is
+$O(M(n)\log n)$ and the working space is $O(n^2)$ after matrix reuse.
 \end{proof}
 
 \begin{remark}
-With the best known matrix multiplication exponent $\omega < 2.373$, Seidel's algorithm runs in $O(n^{2.373} \log n)$ time, which is significantly faster than the $O(n^3)$ of Floyd--Warshall. However, for general weighted graphs, no subcubic APSP algorithm is known, and there is evidence that the min-plus product requires $\Omega(n^3)$ time.
+With a matrix multiplication routine of exponent $\omega<2.373$, Seidel's
+algorithm runs in $O(n^{\omega}\log n)$ time, which is significantly faster
+than the $O(n^3)$ Floyd--Warshall baseline. This statement applies to
+unweighted undirected graphs. For general weighted graphs, the safe baseline
+in this chapter remains min-plus repeated squaring; faster results require
+additional assumptions and more specialized algorithms.
 \end{remark}
 
 \lstinputlisting[
   language=C++,
-  caption={All-pairs shortest paths: Floyd--Warshall baseline and randomized reduction.},
-  label={lst:apsp}]{src/chapter10/apsp.h}
+  caption={All-pairs shortest paths: Floyd--Warshall baseline and min-plus methods.},
+  label={lst:apsp}]{src/chapter11/apsp.h}
 
 %% ============================================================
 \section{The Min-Cut Problem}
@@ -260,7 +279,7 @@ By the chain rule for conditional probability:
 \Pr\left[\bigcap_{i=1}^{n-2} E_i\right]
 &= \prod_{i=1}^{n-2} \Pr[E_i \mid E_1 \cap \cdots \cap E_{i-1}] \\
 &\geq \prod_{i=1}^{n-2} \frac{n - i - 1}{n - i + 1} \\
-&= \frac{n-3}{n-1} \cdot \frac{n-4}{n-2} \cdot \frac{n-5}{n-3} \cdots \frac{1}{3} \cdot \frac{0}{2} \\
+&= \frac{n-2}{n} \cdot \frac{n-3}{n-1} \cdot \frac{n-4}{n-2} \cdots \frac{1}{3} \\
 &= \frac{2}{n(n-1)}.
 \end{align*}
 
@@ -368,7 +387,7 @@ The Karger--Stein algorithm is one of the most elegant examples of the ``trade t
 \lstinputlisting[
   language=C++,
   caption={Karger's contraction algorithm and the Karger--Stein recursive variant.},
-  label={lst:mincut}]{src/chapter10/min_cut.h}
+  label={lst:mincut}]{src/chapter11/min_cut.h}
 
 %% ============================================================
 \section{Minimum Spanning Trees}
@@ -487,7 +506,7 @@ The KKT algorithm is remarkable for several reasons:
 \lstinputlisting[
   language=C++,
   caption={Karger--Klein--Tarjan randomized linear-time MST algorithm.},
-  label={lst:mst}]{src/chapter10/mst.h}
+  label={lst:mst}]{src/chapter11/mst.h}
 
 %% ============================================================
 \addcontentsline{toc}{section}{Notes}
@@ -497,7 +516,7 @@ The KKT algorithm is remarkable for several reasons:
 
 The study of randomized graph algorithms has produced some of the most beautiful results in the theory of computation. We highlight the key contributions behind the algorithms in this chapter.
 
-\textbf{All-pairs shortest paths.} The connection between shortest paths and matrix multiplication was observed by several authors, including Shimbel (1955), Bellman (1958), and Leyzorek et al.\ (1957). The randomized reduction from min-plus to standard matrix multiplication is due to Alon, Galil, and Margalit (1992), building on ideas of Fredman (1975). Seidel's $O(M(n) \log n)$ algorithm for unweighted undirected graphs appeared in 1992 and remains the fastest known algorithm for this special case.
+\textbf{All-pairs shortest paths.} The connection between shortest paths and matrix multiplication was observed by several authors, including Shimbel (1955), Bellman (1958), and Leyzorek et al.\ (1957). Specialized algebraic reductions for restricted min-plus instances were developed by Fredman (1975) and Alon, Galil, and Margalit (1992); their hypotheses and encoding details are substantially more delicate than a finite-field ``dominant term'' argument. Seidel's $O(M(n) \log n)$ algorithm for unweighted undirected graphs appeared in 1992 and remains the standard matrix-multiplication-based treatment of this special case.
 
 \textbf{Minimum cuts.} Karger's contraction algorithm was introduced in his 1993 paper ``Global min-cuts in RNC, and other ramifications of a simple min-cut algorithm.'' The analysis via telescoping products is elementary yet powerful. The Karger--Stein improvement appeared in their 1996 paper ``A new approach to the minimum cut problem,'' achieving the $O(n^2 \log^3 n)$ bound. The connection between min-cuts and network reliability, as well as the cactus representation of all minimum cuts, are developed extensively in Karger's subsequent work.
 
