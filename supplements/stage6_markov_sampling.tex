@@ -1,0 +1,181 @@
+\chapter{Markov Chains, Mixing, and Sampling}
+\label{ch:stage6-markov-sampling}
+
+This supplement organizes the Markov-chain tools used throughout the book.
+The existing random-walk, conductance, coupling, approximate-counting, and
+volume-estimation chapters remain in place; this chapter adds the standard
+examples and makes the assumptions behind sampling claims explicit.
+
+\section{Mixing and spectral gap}
+
+For a finite irreducible and aperiodic chain with stationary distribution
+$\pi$, define
+\[
+ \tau_x(\varepsilon)=\min\{t:\|P^t(x,\cdot)-\pi\|_{\mathrm{TV}}\leq\varepsilon\},
+ \qquad \tau(\varepsilon)=\max_x\tau_x(\varepsilon).
+\]
+For a reversible chain, the spectral gap is
+$\gamma=1-\lambda_*$, where $\lambda_*$ is the largest absolute value of a
+nontrivial eigenvalue.  A typical bound has the form
+\[
+ \tau(\varepsilon)\leq
+ \frac{1}{\gamma}\log\frac{1}{\varepsilon\,\pi_{\min}},
+ \qquad \pi_{\min}=\min_x\pi(x).
+\]
+The absolute value and laziness convention matter: a periodic chain can have
+an apparent spectral gap but fail to converge in total variation.
+
+\section{Strong stationary times}
+
+\begin{definition}
+A stopping time $T$ is a strong stationary time if, for every state $y$ and
+every $t$, the event $\{T=t,X_T=y\}$ has probability
+$\Pr[T=t]\pi(y)$.
+\end{definition}
+
+If $T$ is a strong stationary time, then
+\[
+ \|\mathcal{L}(X_t)-\pi\|_{\mathrm{TV}}\leq\Pr[T>t].
+\]
+This is useful when a chain has a natural ``all information has arrived''
+time, even when direct eigenvalue calculations are inconvenient.
+
+\section{Coupling and path coupling}
+
+A coupling runs two copies of the same chain jointly.  Once they meet, force
+them to use identical future randomness.  The coupling inequality gives
+\[
+ \|P^t(x,\cdot)-P^t(y,\cdot)\|_{\mathrm{TV}}
+ \leq\Pr[X_t\neq Y_t].
+\]
+Path coupling reduces the analysis to neighboring states when the state space
+has a metric: if neighboring copies contract in expected distance by a
+factor $\beta<1$ in one step, then arbitrary states contract after extending
+the coupling along a shortest path.
+
+\section{Canonical examples}
+
+\subsection{The lazy hypercube walk}
+
+At each step, choose a coordinate uniformly and flip it with probability
+$1/2$; otherwise stay put.  The uniform distribution on $\{0,1\}^n$ is
+stationary and the chain is reversible.  Its mixing time is
+$O(n\log(n/\varepsilon))$; the coupon-collector intuition explains the
+$n\log n$ term, since every coordinate must be refreshed.
+
+\subsection{Random-transposition shuffle}
+
+Choose two positions uniformly and transpose them, with a laziness step if
+needed.  The uniform distribution on permutations is stationary.  Coupling
+or representation-theoretic methods show a mixing scale of order
+$n\log n$; this is another example where a local random update eventually
+refreshes a global object.
+
+\subsection{Glauber dynamics}
+
+Glauber dynamics updates one local variable at a time according to its
+conditional distribution under a target Gibbs measure.  The chain is useful
+for colorings, independent sets, and spin systems.  Rapid mixing is not
+automatic: it depends on parameters such as temperature, maximum degree, and
+the target measure.  A theorem must state the regime in which conductance,
+coupling, or a spectral argument applies.
+
+\section{Metropolis--Hastings}
+
+Let $q(x,y)$ be a proposal kernel and let $\pi$ be a target distribution.
+From $x$, propose $y\sim q(x,\cdot)$ and accept with probability
+\[
+ a(x,y)=\min\left\{1,\frac{\pi(y)q(y,x)}{\pi(x)q(x,y)}\right\};
+\]
+otherwise remain at $x$.
+
+\begin{theorem}[Metropolis--Hastings reversibility]
+If the proposal ratios are defined whenever a transition is possible, the
+Metropolis--Hastings chain satisfies detailed balance with respect to $\pi$.
+Consequently, $\pi$ is stationary.
+\end{theorem}
+
+\begin{proof}
+For $x\neq y$, the flow in either direction is
+\[
+ \pi(x)q(x,y)a(x,y)
+ =\min\{\pi(x)q(x,y),\pi(y)q(y,x)\},
+\]
+which is symmetric in $x$ and $y$.  The self-loop probability completes the
+transition matrix.
+\end{proof}
+
+Stationarity is not rapid mixing.  Mixing still requires irreducibility,
+aperiodicity, and a quantitative conductance, coupling, or spectral bound.
+
+\section{Randomized 2-SAT and local chains}
+
+The random-walk algorithm for 2-SAT chooses an unsatisfied clause and flips a
+uniformly selected literal.  When a satisfying assignment exists, the Hamming
+distance to a fixed satisfying assignment is a supermartingale with an
+absorbing target, yielding a polynomial expected hitting-time bound after
+appropriate restarts.  This is a hitting-time argument, not a claim that the
+walk has the uniform satisfying-assignment distribution.
+
+\section{Graph-coloring chains}
+
+The single-site coloring chain chooses a vertex and recolors it uniformly
+from available colors.  Proper colorings are stationary under the uniform
+distribution when the chain is irreducible.  Irreducibility can fail when
+there are too few colors, and rapid mixing requires a separate condition,
+typically a sufficiently large multiple of the maximum degree.  This makes
+graph coloring a useful example of the difference between existence,
+stationarity, and efficient sampling.
+
+\section{Sampling and counting}
+
+A rapidly mixing chain can produce approximate samples from a target
+distribution.  To turn samples into a count, one usually needs a known
+reference state, a sequence of overlapping distributions, or a ratio chain.
+The variance of the estimator and the burn-in error must both be included.
+Conversely, an approximate counter can sometimes support almost-uniform
+sampling through self-reduction, but membership testing and conditioning must
+be efficient.
+
+\begin{proposition}[Burn-in plus sampling]
+If the chain is within $\eta$ of stationarity after $T$ steps and an estimator
+based on one stationary sample fails with probability at most $\delta$, then
+the same estimator after $T$ burn-in steps has failure probability at most
+$\delta+\eta$ for any event bounded between zero and one.
+\end{proposition}
+
+This simple accounting prevents a common student error: treating correlated,
+not-yet-mixed samples as independent stationary observations.
+
+\section{Student checklist}
+
+For every MCMC or random-walk claim, students should state:
+
+\begin{enumerate}
+\item the state space and transition rule;
+\item the target stationary distribution;
+\item irreducibility and aperiodicity;
+\item the mixing metric and error parameter;
+\item the proof tool: coupling, conductance, spectral gap, or stopping time;
+\item burn-in, sample correlation, estimator variance, and total runtime.
+\end{enumerate}
+
+\begin{problem}[Hypercube mixing]
+Use a coupon-collector argument to obtain an $O(n\log(n/\varepsilon))$
+upper bound for the lazy hypercube walk.
+\end{problem}
+
+\begin{problem}[Metropolis--Hastings]
+Verify detailed balance for a symmetric proposal kernel and a target Gibbs
+distribution.  Identify when the chain becomes reducible.
+\end{problem}
+
+\begin{problem}[Path coupling]
+Define a distance for a local-update chain and determine a parameter regime in
+which neighboring configurations contract in expectation.
+\end{problem}
+
+\begin{problem}[Counting from sampling]
+Design a ratio estimator using a sequence of nested state spaces.  Bound its
+total relative error when each ratio is estimated independently.
+\end{problem}
