@@ -5964,7 +5964,14 @@ The Karp--Rabin algorithm finds all occurrences of a pattern $P$ of length $m$ i
 \begin{proof}
 The preprocessing to compute the pattern fingerprint and the initial text window fingerprint takes $O(m)$ time. Each subsequent window is updated in $O(1)$ time using the rolling hash, giving $O(n)$ total for all windows.
 
-Each of the $n - m + 1$ windows has a fingerprint collision with the pattern fingerprint with probability at most $m/p$ (by the Schwartz--Zippel lemma applied to the difference polynomial of degree $m-1$). The expected number of spurious matches is $(n - m + 1) \cdot m/p$, which is $O(n)$ when $p = \Theta(m)$. Each spurious match costs $O(m)$ for verification, but the total expected verification cost is $O(n \cdot m / p) = O(n)$ when $p = \Theta(m^2)$.
+Each of the $n - m + 1$ windows has a fingerprint collision with the pattern
+fingerprint with probability at most $m/p$ (by the Schwartz--Zippel lemma
+applied to the difference polynomial of degree $m-1$). Thus the expected
+number of spurious matches is $O(nm/p)$. If a collision is verified by a
+direct $O(m)$ comparison, the expected verification cost is $O(nm^2/p)$;
+choosing $p=\Theta(m^2)$ makes the total expected time $O(n+m)$, while
+$p=\Theta(m)$ only bounds the number of candidate matches, not the cost of
+verifying them.
 
 Combining: $O(m)$ preprocessing $+$ $O(n)$ rolling $+$ $O(n)$ expected verification $= O(n + m)$ expected time.
 \end{proof}
@@ -6274,7 +6281,7 @@ The randomization approach has several advantages:
 \begin{enumerate}[nosep]
     \item \textbf{Simplicity:} No complex rebalancing logic is needed.
     \item \textbf{No worst-case input:} No adversary can consistently force $\Omega(n)$ time on every operation, since the random choices are made at runtime and are hidden from the input.
-    \item \textbf{Worst-case avoidance:} Randomization ``smooths out'' the input distribution, ensuring expected logarithmic performance regardless of the sequence of operations.
+    \item \textbf{Adversary qualification:} For an operation sequence fixed independently of the priorities, the expected cost is logarithmic. An adversary that observes or adapts to the hidden priorities can invalidate this guarantee, so the quantifiers in the model matter.
 \end{enumerate}
 
 The following three sections develop randomized data structures for the dictionary problem: treaps (Section~\ref{sec:treaps}), skip lists (Section~\ref{sec:skip-lists}), and hash tables (Sections~\ref{sec:hash-tables}--\ref{sec:perfect-hashing}).
@@ -6975,6 +6982,12 @@ A system of linear inequalities $Ax \leq b$ in $\mathbb{R}^2$ asks whether the i
 %% ============================================================
 
 The \emph{Delaunay triangulation} of a point set $P$ is one of the most important structures in computational geometry, with applications in mesh generation, interpolation, geographic information systems, and more.
+
+Unless stated otherwise, geometric algorithms in this chapter use the real-RAM
+model with exact orientation and incircle predicates. General position means
+that no three input points are collinear and no four are cocircular; for
+degenerate inputs, a symbolic perturbation or deterministic tie-breaking rule
+must be specified before uniqueness claims are made.
 
 \begin{definition}[Delaunay triangulation]
 The Delaunay triangulation of a point set $P \subset \mathbb{R}^2$ is a triangulation of the convex hull of $P$ such that no point of $P$ lies inside the circumcircle of any triangle. Equivalently, for every edge $e$ that is not on the convex hull boundary, the two triangles sharing $e$ satisfy the \emph{empty circumcircle property}.
@@ -7963,7 +7976,7 @@ Let $\Pi$ be a counting problem. A \emph{polynomial-time approximation scheme} (
 \[
 (1 - \varepsilon) \cdot Z(x) \;\leq\; \hat{Z} \;\leq\; (1 + \varepsilon) \cdot Z(x)
 \]
-with high probability, where $Z(x)$ is the exact answer. A PTAS is a \emph{fully polynomial PTAS} (FPTAS) if its running time is polynomial in both the input size and $1/\varepsilon$.
+always, where $Z(x)$ is the exact answer. A PTAS is a \emph{fully polynomial PTAS} (FPTAS) if its running time is polynomial in both the input size and $1/\varepsilon$.
 \end{definition}
 
 The randomized analogue replaces ``deterministic'' with ``randomized.''
@@ -9319,7 +9332,11 @@ We analyze the number of vertices remaining after each iteration. At the start o
 
 Consider a vertex $v \in V'$ with degree $d_v = \deg_{V'}(v)$ in the induced subgraph on $V'$. Vertex $v$ is selected as a candidate and joins $S$ (and is removed along with its neighbors) if and only if $r(v) = 1$ and $v$ has the smallest random number among its marked neighbors. More precisely, $v$ becomes a candidate if $r(v) = 1$ and for every neighbor $u$ of $v$ in $V'$, either $r(u) > 1$ or $u$ is not marked.
 
-The probability that $v$ is marked (i.e., $r(v) = 1$) is $1/d_v$. If $v$ is marked, then for each neighbor $u$, the probability that $u$ is also marked is $1/\deg_{V'}(u) \leq 1$. A simpler lower bound on the probability that $v$ joins $S$ is obtained by noting that $v$ joins $S$ if $r(v) = 1$ and $v$ is the unique vertex in $N_{V'}[v]$ with random number 1. Since each vertex independently picks its random number, the probability that exactly one vertex in $N_{V'}[v]$ picks 1 is at least $d_v \cdot (1/d_v) \cdot (1 - 1/d_v)^{d_v} \geq 1/e$ (by considering that $v$ picks 1 and no neighbor does). Actually, we can give a cleaner argument.
+The obsolete degree-dependent marking analysis is not used by the priority
+version above. In particular, the probability $1/d_v$ belongs to a different
+variant of Luby's algorithm and should not be mixed with the local-maximum
+priority rule. The standard charging lemma for independent random priorities
+is the analysis used here.
 
 Let us charge the removal of vertices to a subset of ``good'' vertices. A vertex $v \in V'$ is called \emph{good} if it joins the MIS (i.e., becomes a candidate). Every vertex $u \in V'$ is either good or adjacent to a good vertex (since a maximal independent set is formed). Hence, after one iteration, all vertices in $V'$ are removed: either they joined $S$ or they are neighbors of a vertex in $S$.
 
@@ -9462,34 +9479,30 @@ To compute the permanent over a finite field (since the permanent is $\#\mathbf{
 
 \begin{theorem}[Valiant's Reduction]
 \label{thm:valiant-bis}
-For a bipartite graph $G$ with adjacency matrix $A$ and a random matrix $R$ with entries $\pm 1$ chosen uniformly and independently,
-\[
-\Pr_{R}[\text{perm}(A) = \det(A \circ R)] \geq 1/2.
-\]
+For a bipartite graph $G$ with adjacency matrix $A$, replace every nonzero
+entry by an independent variable. The resulting determinant polynomial is
+identically zero if and only if $G$ has no perfect matching. If a perfect
+matching exists, it is a nonzero polynomial of total degree $n$.
 \end{theorem}
 
-The proof uses the fact that $\det(A \circ R) = \sum_{\sigma \in S_n} \text{sgn}(\sigma) \prod_{i=1}^{n} R_{i,\sigma(i)} A_{i,\sigma(i)}$. For a permutation $\sigma$ that is not a perfect matching (i.e., $A_{i,\sigma(i)} = 0$ for some $i$), the corresponding term is zero. For a permutation $\sigma$ that is a perfect matching, $\text{sgn}(\sigma) \prod_{i} R_{i,\sigma(i)} = \text{sgn}(\sigma) \prod_{i} R_{i,\sigma(i)}$, which is a random sign. The leading term (in some ordering) determines the sign, and with probability at least $1/2$, the random signs ``agree'' with the leading term, giving $\det(A \circ R) = \text{perm}(A) \neq 0$.
+\begin{proof}
+Distinct perfect matchings give distinct determinant monomials, so they cannot
+cancel identically. If no perfect matching exists, every determinant term
+contains a zero entry and the polynomial is identically zero.
+\end{proof}
 
 \begin{theorem}[RNC Perfect Matching]
 \label{thm:rnc-pm}
 Let $G = (U, V, E)$ be a bipartite graph with $|U| = |V| = n$. There exists a randomized parallel algorithm that, given $G$, finds a perfect matching (if one exists) in $O(\log^2 n)$ time w.h.p.\ using a polynomial number of processors, or correctly reports that none exists. Hence, bipartite perfect matching is in $\mathbf{RNC}$.
 \end{theorem}
 
-\begin{proof}
-The algorithm is as follows:
-\begin{enumerate}
-\item Assign independent random values from a sufficiently large finite field
-to the nonzero entries of the Tutte/determinant polynomial.
-\item Construct the weighted adjacency matrix $W$.
-\item Compute $\det(W)$ over a suitable field. Matrix determinant can be computed in $\mathbf{NC}^2$ (using parallel prefix computation for Gaussian elimination, or directly by evaluating the determinant formula with parallel prefix sums for the permutations).
-\item By the determinant-polynomial criterion and Schwartz--Zippel, the
-determinant is nonzero with high probability when a perfect matching exists,
-and is identically zero when none exists.  This establishes randomized
-parallel existence testing; recovering the matching requires the standard
-additional self-reduction with repeated determinant tests.
-\item To recover the matching: compute the adjugate matrix (matrix of cofactors) $W^* = \text{adj}(W)$, where $W^*_{ij} = (-1)^{i+j} \det(W^{(ji)})$. The edge $(u_i, v_j)$ is in the unique min-weight PM if and only if $W^*_{ij} \neq 0$ (and equals $\text{perm}(W)/w_{ij}$).
-\end{enumerate}
-All steps can be performed in $O(\log^2 n)$ time using $O(n^\omega)$ processors, where $\omega < 2.373$ is the matrix multiplication exponent. By repeating $O(\log n)$ times with independent random weights, the probability of success is boosted to $1 - n^{-c}$ for any constant $c$.
+\begin{proof}[Proof sketch]
+The determinant oracle is evaluated over a field large enough for
+Schwartz--Zippel to give one-sided false-zero probability at most
+$n/|\mathbb F|$. The standard parallel isolation and self-reduction
+construction combines this oracle with polylogarithmic-depth matching
+recovery. A sequential deletion of edges would only give polynomial depth,
+and an adjugate does not identify a minimum-weight matching; neither is used.
 \end{proof}
 
 \subsection{The Exact Matching Problem}
@@ -9502,8 +9515,13 @@ A natural extension of the matching problem is the \emph{exact matching problem}
 The exact matching problem is in $\mathbf{RNC}$. Specifically, there is a randomized parallel algorithm that finds a perfect matching with exactly $k$ red edges (if one exists) in $O(\log^2 n)$ time w.h.p.
 \end{theorem}
 
-\begin{proof}
-Assign random weights to edges: red edges get weight 1, blue edges get weight 0. Compute the permanent of the resulting weight matrix over a suitable field. The permanent decomposes as $\text{perm}(W) = \sum_{j=0}^{n} p_j z^j$ where $p_j$ is the sum of products of edge weights over all PMs with exactly $j$ red edges, evaluated at $z = 1$. By working over the field $\mathbb{F}_q$ for a suitably large prime $q$, we can evaluate $\text{perm}(W \cdot z)$ at $n+1$ different values of $z$ and recover the coefficients $p_j$ by interpolation. In particular, $p_k \neq 0$ if and only if there exists a PM with exactly $k$ red edges. Each evaluation uses the same $\mathbf{RNC}$ permanent computation, and interpolation can be done in $\mathbf{NC}$.
+\begin{proof}[Proof sketch and attribution]
+The exact-matching result is a standard randomized parallel theorem: encode
+the red-edge count in a polynomial identity, use random evaluations to avoid
+cancellation, and apply the parallel isolation/self-reduction machinery. The
+polynomial has degree at most $n$, so Schwartz--Zippel controls each false
+identity test. This is the Karp--Vazirani--Vazirani construction cited below;
+we do not assume that the permanent itself is in $\mathbf{RNC}$.
 \end{proof}
 
 \section{The Choice Coordination Problem}
@@ -9634,7 +9652,10 @@ For $n \geq 3t + 1$, the following deterministic algorithm achieves Byzantine ag
 \subsection{Randomized Byzantine Agreement}
 \label{subsec:random-byzantine}
 
-Randomized Byzantine agreement can achieve agreement in $O(1)$ rounds (constant time) with high probability, which is impossible deterministically for any fixed number of rounds when $n \leq 3t$.
+Randomized Byzantine agreement is a family of model-dependent protocols.
+Known results can circumvent deterministic fixed-round limitations under
+specified synchrony, authentication, and common-coin assumptions, but no
+round bound follows from random majority voting alone.
 
 \begin{algorithm}[H]
 \caption{Randomized Byzantine Agreement (Constant-Round)}

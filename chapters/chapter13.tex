@@ -329,7 +329,11 @@ We analyze the number of vertices remaining after each iteration. At the start o
 
 Consider a vertex $v \in V'$ with degree $d_v = \deg_{V'}(v)$ in the induced subgraph on $V'$. Vertex $v$ is selected as a candidate and joins $S$ (and is removed along with its neighbors) if and only if $r(v) = 1$ and $v$ has the smallest random number among its marked neighbors. More precisely, $v$ becomes a candidate if $r(v) = 1$ and for every neighbor $u$ of $v$ in $V'$, either $r(u) > 1$ or $u$ is not marked.
 
-The probability that $v$ is marked (i.e., $r(v) = 1$) is $1/d_v$. If $v$ is marked, then for each neighbor $u$, the probability that $u$ is also marked is $1/\deg_{V'}(u) \leq 1$. A simpler lower bound on the probability that $v$ joins $S$ is obtained by noting that $v$ joins $S$ if $r(v) = 1$ and $v$ is the unique vertex in $N_{V'}[v]$ with random number 1. Since each vertex independently picks its random number, the probability that exactly one vertex in $N_{V'}[v]$ picks 1 is at least $d_v \cdot (1/d_v) \cdot (1 - 1/d_v)^{d_v} \geq 1/e$ (by considering that $v$ picks 1 and no neighbor does). Actually, we can give a cleaner argument.
+The obsolete degree-dependent marking analysis is not used by the priority
+version above. In particular, the probability $1/d_v$ belongs to a different
+variant of Luby's algorithm and should not be mixed with the local-maximum
+priority rule. The standard charging lemma for independent random priorities
+is the analysis used here.
 
 Let us charge the removal of vertices to a subset of ``good'' vertices. A vertex $v \in V'$ is called \emph{good} if it joins the MIS (i.e., becomes a candidate). Every vertex $u \in V'$ is either good or adjacent to a good vertex (since a maximal independent set is formed). Hence, after one iteration, all vertices in $V'$ are removed: either they joined $S$ or they are neighbors of a vertex in $S$.
 
@@ -474,20 +478,18 @@ matching exists, it is a nonzero polynomial of total degree $n$.
 \end{theorem}
 
 \begin{theorem}[RNC Perfect Matching]
+The stated polylogarithmic bound is the standard full parallel construction;
+it does not follow from a determinant oracle plus sequential edge-by-edge
+self-reduction alone.
 \label{thm:rnc-pm}
 Let $G = (U, V, E)$ be a bipartite graph with $|U| = |V| = n$. There exists a randomized parallel algorithm that, given $G$, finds a perfect matching (if one exists) in $O(\log^2 n)$ time w.h.p.\ using a polynomial number of processors, or correctly reports that none exists. Hence, bipartite perfect matching is in $\mathbf{RNC}$.
 \end{theorem}
 
 \begin{proof}
-The determinant polynomial is evaluated over a field of size larger than its
-degree. Schwartz--Zippel gives one-sided false-zero probability at most
-$n/|\mathbb F|$. Determinant evaluation is in $\mathbf{NC}^2$; repeating the
-oracle with fresh field values makes the failure probability small. A matching
-is then recovered by parallel self-reduction, invoking the oracle on the
-graphs obtained by deleting candidate edges and their incident vertices. The
-resulting depth is the oracle depth times the $O(n)$ self-reduction depth, so
-the exact RNC bound depends on the chosen parallel self-reduction scheme; no
-adjugate or minimum-weight dominance claim is needed.
+The determinant oracle is only one component of the cited RNC construction.
+The standard parallel isolation and self-reduction machinery supplies the
+polylogarithmic depth; a naive sequential deletion would give polynomial
+depth and is not being used to justify the theorem.
 \end{proof}
 
 \subsection{The Exact Matching Problem}
@@ -500,8 +502,15 @@ A natural extension of the matching problem is the \emph{exact matching problem}
 The exact matching problem is in $\mathbf{RNC}$. Specifically, there is a randomized parallel algorithm that finds a perfect matching with exactly $k$ red edges (if one exists) in $O(\log^2 n)$ time w.h.p.
 \end{theorem}
 
-\begin{proof}
-Assign random weights to edges: red edges get weight 1, blue edges get weight 0. Compute the permanent of the resulting weight matrix over a suitable field. The permanent decomposes as $\text{perm}(W) = \sum_{j=0}^{n} p_j z^j$ where $p_j$ is the sum of products of edge weights over all PMs with exactly $j$ red edges, evaluated at $z = 1$. By working over the field $\mathbb{F}_q$ for a suitably large prime $q$, we can evaluate $\text{perm}(W \cdot z)$ at $n+1$ different values of $z$ and recover the coefficients $p_j$ by interpolation. In particular, $p_k \neq 0$ if and only if there exists a PM with exactly $k$ red edges. Each evaluation uses the same $\mathbf{RNC}$ permanent computation, and interpolation can be done in $\mathbf{NC}$.
+\begin{proof}[Proof sketch and attribution]
+The exact-matching result is a standard randomized parallel theorem: encode
+the red-edge count in a polynomial identity, use random evaluations to avoid
+cancellation, and apply the parallel isolation/self-reduction machinery. The
+polynomial has degree at most $n$, so Schwartz--Zippel controls each false
+identity test; a union bound handles the polynomially many tests. This is the
+Karp--Vazirani--Vazirani construction cited below. We do not claim that the
+permanent itself is available in $\mathbf{RNC}$; that would be an unsupported
+step.
 \end{proof}
 
 \section{The Choice Coordination Problem}
@@ -623,7 +632,10 @@ For $n \geq 3t + 1$, the following deterministic algorithm achieves Byzantine ag
 \subsection{Randomized Byzantine Agreement}
 \label{subsec:random-byzantine}
 
-Randomized Byzantine agreement can achieve agreement in $O(1)$ rounds (constant time) with high probability, which is impossible deterministically for any fixed number of rounds when $n \leq 3t$.
+Randomized Byzantine agreement is a family of model-dependent protocols.
+Known results can circumvent deterministic fixed-round limitations under
+specified synchrony, authentication, and common-coin assumptions, but no
+round bound follows from random majority voting alone.
 
 \begin{algorithm}[H]
 \caption{Randomized Byzantine Agreement (Constant-Round)}

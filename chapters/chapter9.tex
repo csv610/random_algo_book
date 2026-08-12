@@ -116,7 +116,7 @@ The randomization approach has several advantages:
 \begin{enumerate}[nosep]
     \item \textbf{Simplicity:} No complex rebalancing logic is needed.
     \item \textbf{No worst-case input:} No adversary can consistently force $\Omega(n)$ time on every operation, since the random choices are made at runtime and are hidden from the input.
-    \item \textbf{Worst-case avoidance:} Randomization ``smooths out'' the input distribution, ensuring expected logarithmic performance regardless of the sequence of operations.
+    \item \textbf{Adversary qualification:} For an operation sequence fixed independently of the priorities, the expected cost is logarithmic. An adversary that observes or adapts to the hidden priorities can invalidate this guarantee, so the quantifiers in the model matter.
 \end{enumerate}
 
 The following three sections develop randomized data structures for the dictionary problem: treaps (Section~\ref{sec:treaps}), skip lists (Section~\ref{sec:skip-lists}), and hash tables (Sections~\ref{sec:hash-tables}--\ref{sec:perfect-hashing}).
@@ -229,7 +229,7 @@ Each operation traverses a single root-to-leaf path (for search, split) or perfo
 \end{proof}
 
 \begin{cpplisting}
-\textbf{C++ implementation:} See \texttt{src/chapter8/treap.h} for a complete implementation
+\textbf{C++ implementation:} See \texttt{src/chapter9/treap.h} for a complete implementation
 of a treap supporting insert, search, remove, and height measurement.
 \end{cpplisting}
 
@@ -335,7 +335,7 @@ Cache performance & Moderate & Good & Moderate \\
 \end{table}
 
 \begin{cpplisting}
-\textbf{C++ implementation:} See \texttt{src/chapter8/skip\_list.h} for a complete
+\textbf{C++ implementation:} See \texttt{src/chapter9/skip\_list.h} for a complete
 implementation of a skip list with configurable maximum level and geometric promotion.
 \end{cpplisting}
 
@@ -369,11 +369,15 @@ A family $\mathcal{H}$ is \emph{pairwise independent} (or \emph{2-universal}) if
 \]
 \end{definition}
 
-A standard universal hash family is the \emph{multiply-shift} family. Let $p$ be a prime larger than $|\mathcal{U}|$. For $a \in \{1, \ldots, p-1\}$ and $b \in \{0, \ldots, p-1\}$, define:
-\[
-h_{a,b}(x) = ((ax + b) \bmod p) \bmod m.
-\]
-The family $\mathcal{H} = \{h_{a,b} : a \in \{1, \ldots, p-1\}, b \in \{0, \ldots, p-1\}\}$ is universal.
+A standard affine family is obtained by choosing $a\neq0$ and $b$ uniformly
+modulo a prime $p>|\mathcal U|$ and defining the intermediate hash
+$g_{a,b}(x)=(ax+b)\bmod p$.  Mapping this value to $m$ slots by quotienting
+can introduce a rounding factor; the resulting family is $2/m$-universal in
+general, not exactly $1/m$-universal.  Exact $1/m$ universality requires a
+construction whose range has the desired size (or a standard rejection step).
+The family $\mathcal{H}$ is therefore suitable for expected constant-time
+chaining when $m=\Theta(n)$, with the constant adjusted for the $2/m$
+collision bound.
 
 \begin{theorem}\label{thm:universal-hash}
 If $\mathcal{H}$ is a universal hash family and $n$ elements are hashed into an array of size $m$ using a randomly chosen $h \in \mathcal{H}$, then the expected number of collisions is at most $n^2/(2m)$.
@@ -430,7 +434,7 @@ and for an unsuccessful search:
 These bounds hold under the \emph{simple uniform hashing} assumption: each key is equally likely to hash to any slot, independently of other keys.
 
 \begin{cpplisting}
-\textbf{C++ implementation:} See \texttt{src/chapter8/hash\_table.h} for a complete
+\textbf{C++ implementation:} See \texttt{src/chapter9/hash\_table.h} for a complete
 implementation of a universal hash table with chaining and the multiply-shift hash family.
 \end{cpplisting}
 
@@ -484,22 +488,29 @@ A limitation of FKS hashing is that it requires rebuilding when the number of el
     \item When the number of elements drops below $n/4$, rebuild with a table of size $\Theta(n)$ using a new primary hash function, then rehash all elements.
 \end{itemize}
 
-The amortized cost of each insert or delete is $O(1)$, and search is always $O(1)$ worst-case.
+Standard dynamic perfect-hashing schemes use incremental rebuilding; a
+full-table rebuild after a load change does not by itself give a worst-case
+update bound.
 
 \begin{theorem}\label{thm:dynamic-perfect}
-Dynamic perfect hashing achieves $O(1)$ worst-case search time and $O(1)$ amortized expected time per insertion and deletion, using $O(n)$ space.
+There are dynamic perfect-hashing schemes with $O(1)$ worst-case search,
+$O(1)$ amortized expected update time, and $O(n)$ space, provided that
+rebuilding is scheduled incrementally.
 \end{theorem}
 
 \begin{proof}
-The rebuild cost when expanding from $n$ elements to $2n$ elements is $O(n^2)$ (the secondary table size). Amortized over $n$ insertions, this gives $O(n)$ per element, which is not $O(1)$.
-
-To fix this, we use a more careful analysis. When we have $n$ elements and the table size is $m = \Theta(n^2)$, we rebuild when $n$ exceeds $m$. The rebuild cost is $O(n^2)$. We can charge this cost to the $n/2$ elements that were inserted since the last rebuild, giving an amortized cost of $O(n)$ per element, which is too high.
-
-The correct approach uses a different table size strategy. Set the table size to $m = c \cdot n$ for a suitable constant $c$. Then the secondary table sizes satisfy $\sum n_i^2 = O(n)$ by the FKS analysis, and the rebuild cost is $O(n)$, giving $O(1)$ amortized cost.
+The claim is not proved by a full-table rebuild: that rebuild can take
+$\Theta(n)$ time.  The standard construction maintains an old and a new
+table simultaneously, performs a constant amount of rebuilding work at each
+update, and switches tables only after the new structure is complete.  The
+FKS space bound applies to each completed table, while load-factor
+thresholds ensure that the rebuilding work finishes before another rebuild
+is required.  The details depend on the particular dynamic perfect-hashing
+construction.
 \end{proof}
 
 \begin{cpplisting}
-\textbf{C++ implementation:} See \texttt{src/chapter8/hash\_table.h} for an implementation
+\textbf{C++ implementation:} See \texttt{src/chapter9/hash\_table.h} for an implementation
 of FKS-style two-level perfect hashing with dynamic resizing.
 \end{cpplisting}
 

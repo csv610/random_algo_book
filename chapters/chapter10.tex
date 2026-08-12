@@ -251,6 +251,14 @@ A system of linear inequalities $Ax \leq b$ in $\mathbb{R}^2$ asks whether the i
 
 The \emph{Delaunay triangulation} of a point set $P$ is one of the most important structures in computational geometry, with applications in mesh generation, interpolation, geographic information systems, and more.
 
+Unless stated otherwise, geometric algorithms in this chapter use the real-RAM
+model with exact orientation and incircle predicates. General position means
+that no three input points are collinear and no four are cocircular; these
+assumptions make triangulations and their local flips unambiguous. For
+degenerate inputs, a symbolic perturbation or a deterministic tie-breaking
+rule must be specified, and statements involving uniqueness or strict
+inequalities should not be read as applying without that convention.
+
 \begin{definition}[Delaunay triangulation]
 The Delaunay triangulation of a point set $P \subset \mathbb{R}^2$ is a triangulation of the convex hull of $P$ such that no point of $P$ lies inside the circumcircle of any triangle. Equivalently, for every edge $e$ that is not on the convex hull boundary, the two triangles sharing $e$ satisfy the \emph{empty circumcircle property}.
 \end{definition}
@@ -427,24 +435,17 @@ The diameter of $P$ equals the diameter of $\operatorname{conv}(P)$, and can be 
 If $p$ and $q$ are not both hull vertices, then one of them lies inside the convex hull of $P$, and the distance can be increased by moving to a hull vertex.
 \end{proof}
 
-\begin{theorem}[Randomized diameter]
+\begin{theorem}[Linear-time diameter after the hull]
 \label{thm:diameter-rand}
-The diameter of $n$ points in $\mathbb{R}^2$ can be computed in expected $O(n)$ time after computing the convex hull, using a prune-and-search approach based on random sampling.
+After the convex hull has been computed, the diameter of $n$ points in
+$\mathbb{R}^2$ can be computed in deterministic $O(n)$ time.
 \end{theorem}
 
 \begin{proof}
-We use the following \emph{prune-and-search} paradigm:
-
-\begin{enumerate}[nosep]
-    \item Compute a random sample $R \subseteq P$ of size $r = \Theta(\sqrt{n})$.
-    \item Compute the diameter of $R$ by brute force: $O(r^2)$ time.
-    \item Use the diameter of $R$ to ``prune'' points of $P$ that cannot be diameter endpoints.
-    \item Recurse on the remaining candidate points.
-\end{enumerate}
-
-The pruning step uses the following observation: if the diameter of $R$ is $\delta$, then any point $p$ with $\|p - q\| < \delta/2$ for all $q \in R$ cannot be a diameter endpoint of $P$ (since the diameter of $P$ is at least $\delta$, and $p$ is too close to all of $R$).
-
-By choosing $r = \Theta(\sqrt{n})$, each level of the recursion removes a constant fraction of points, giving a total expected time of $O(n)$ after the convex hull is computed.
+The diameter of a planar point set is realized by two convex-hull vertices.
+Apply the rotating-calipers algorithm to the cyclically ordered hull vertices.
+Each caliper advances at most once around the hull, so the number of
+antipodal pairs examined is linear in the hull size and hence $O(n)$.
 \end{proof}
 
 \begin{remark}
@@ -479,15 +480,14 @@ is an $\varepsilon$-net for $\mathcal{R}$ with probability at least $1 - \delta$
 \end{theorem}
 
 \begin{proof}
-We use the probabilistic method. Fix a range $R$ with $|R|/|X| \geq \varepsilon$. The probability that $S$ misses $R$ entirely is:
-\[
-\Pr[S \cap R = \emptyset] = \prod_{i=0}^{|S|-1} \left(1 - \frac{|R|}{|X| - i}\right) \leq \left(1 - \varepsilon\right)^{|S|} \leq e^{-\varepsilon |S|}.
-\]
-By the VC dimension bound, the number of distinct ranges is at most $O(|X|^d)$ (using Sauer's lemma). By a union bound over all ranges of size $\geq \varepsilon |X|$, the probability that any such range is missed is at most:
-\[
-O(|X|^d) \cdot e^{-\varepsilon |S|}.
-\]
-Setting this to $\leq \delta$ and solving for $|S|$ gives $|S| = O(\frac{1}{\varepsilon}(d \log |X| + \log \frac{1}{\delta}))$. For uniform distributions, this simplifies to $O(\frac{1}{\varepsilon} \log \frac{1}{\delta})$.
+This is the standard VC-dimension $\varepsilon$-net theorem. The proof uses
+double sampling: a random sample that misses a range of measure at least
+$\varepsilon$ is witnessed, with constant probability, by a discrepancy
+between two independent samples. Sauer's lemma bounds the number of traces of
+the range space on the combined sample by
+$O((s/d)^d)$, where $s$ is the sample size. A union bound over these traces
+gives failure probability at most $\delta$ when
+$s=O(\varepsilon^{-1}(d\log(1/\varepsilon)+\log(1/\delta)))$.
 \end{proof}
 
 \begin{theorem}[Random sampling: $\varepsilon$-approximation]
@@ -566,7 +566,11 @@ This gives the recurrence:
 \[
 T(n, d) \leq T(n-1, d) + O(d) + \frac{d}{n} \cdot T(n-1, d-1).
 \]
-By induction, $T(n, d) \leq c_d \cdot n$ where $c_d$ satisfies $c_d = c_d + d \cdot c_{d-1} + O(d)$, giving $c_d = O(d \cdot c_{d-1}) = O(d!)$.
+For fixed $d$, an induction on $d$ gives $T(n,d)=O(c_d n)$.
+Substituting the inductive bound for dimension $d-1$ and summing the
+resulting $O(d c_{d-1}/n)$ contribution over all recursion levels gives
+$c_d=O(d c_{d-1}+d)$, with $c_0=O(1)$.  Thus $c_d=O(d!)$ and
+$T(n,d)=O(d!\,n)$.
 \end{proof}
 
 \begin{corollary}

@@ -127,7 +127,10 @@ After $t$ independent rounds, the probability of a false positive is at most $2^
 \begin{proof}
 Let $D = AB - C \neq \mathbf{0}$. There exists some row $i$ such that row $i$ of $D$ is nonzero. Let $d_i$ denote this row. Then $\Pr[d_i \cdot \mathbf{r} = 0]$ where the sum is over entries of $d_i$ and $\mathbf{r}$. Since $\mathbf{r}$ is uniform over $\{0,1\}^n$, at least one entry $d_{ij} \neq 0$, and the sum $d_i \cdot \mathbf{r}$ takes at least two distinct values with equal probability as $r_j$ flips. Therefore $\Pr[d_i \cdot \mathbf{r} = 0] \leq 1/2$.
 
-Since $A$ is invertible on the nonzero row (or we directly argue about $D\mathbf{r}$), we conclude $\Pr[D\mathbf{r} = \mathbf{0}] \leq 1/2$. The probability that all $t$ rounds agree is at most $(1/2)^t$.
+Conditioning on all coordinates except one nonzero coefficient shows that
+the row equation holds for at most one of the two possible values of that
+coordinate. Thus $\Pr[D\mathbf r=\mathbf 0]\leq 1/2$, and independence gives
+a false-positive probability at most $2^{-t}$ after $t$ rounds.
 \end{proof}
 
 \begin{example}
@@ -140,7 +143,7 @@ The generalization to arbitrary fields is straightforward: choose $\mathbf{r}$ f
 \subsection*{Implementation}
 
 \begin{cpplisting}
-\begin{lstlisting}[title={Freivalds' algorithm --- \texttt{src/chapter7/freivalds.h}}]
+\begin{lstlisting}[title={Freivalds' algorithm --- \texttt{src/chapter8/freivalds.h}}]
 bool freivalds_verify(const vector<vector<long long>>& A,
                       const vector<vector<long long>>& B,
                       const vector<vector<long long>>& C,
@@ -195,7 +198,7 @@ The Schwartz--Zippel lemma is the workhorse behind algebraic fingerprinting. It 
 \subsection*{Implementation}
 
 \begin{cpplisting}
-\begin{lstlisting}[title={Polynomial identity testing --- \texttt{src/chapter7/polynomial.h}}]
+\begin{lstlisting}[title={Polynomial identity testing --- \texttt{src/chapter8/polynomial.h}}]
 bool polynomial_identity_test(const vector<int>& p_coeffs,
                               const vector<int>& q_coeffs,
                               int field_size, int rounds, mt19937& rng);
@@ -354,7 +357,14 @@ The Karp--Rabin algorithm finds all occurrences of a pattern $P$ of length $m$ i
 \begin{proof}
 The preprocessing to compute the pattern fingerprint and the initial text window fingerprint takes $O(m)$ time. Each subsequent window is updated in $O(1)$ time using the rolling hash, giving $O(n)$ total for all windows.
 
-Each of the $n - m + 1$ windows has a fingerprint collision with the pattern fingerprint with probability at most $m/p$ (by the Schwartz--Zippel lemma applied to the difference polynomial of degree $m-1$). The expected number of spurious matches is $(n - m + 1) \cdot m/p$, which is $O(n)$ when $p = \Theta(m)$. Each spurious match costs $O(m)$ for verification, but the total expected verification cost is $O(n \cdot m / p) = O(n)$ when $p = \Theta(m^2)$.
+Each of the $n - m + 1$ windows has a fingerprint collision with the pattern
+fingerprint with probability at most $m/p$ (by the Schwartz--Zippel lemma
+applied to the difference polynomial of degree $m-1$). Thus the expected
+number of spurious matches is $O(nm/p)$. If a collision is verified by a
+direct $O(m)$ comparison, the expected verification cost is $O(nm^2/p)$;
+choosing $p=\Theta(m^2)$ makes the total expected time $O(n+m)$, while
+$p=\Theta(m)$ only bounds the number of candidate matches, not the cost of
+verifying them.
 
 Combining: $O(m)$ preprocessing $+$ $O(n)$ rolling $+$ $O(n)$ expected verification $= O(n + m)$ expected time.
 \end{proof}
@@ -366,7 +376,7 @@ The Karp--Rabin algorithm is particularly well-suited for the \emph{multiple pat
 \subsection*{Implementation}
 
 \begin{cpplisting}
-\begin{lstlisting}[title={Rabin--Karp search --- \texttt{src/chapter7/rabin\_karp.h}}]
+\begin{lstlisting}[title={Rabin--Karp search --- \texttt{src/chapter8/rabin\_karp.h}}]
 vector<int> rabin_karp_search(const string& text, const string& pattern);
 long long string_fingerprint(const string& s, long long base, long long mod);
 \end{lstlisting}
