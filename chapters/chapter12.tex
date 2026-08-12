@@ -113,11 +113,15 @@ The confidence parameter $3/4$ can be amplified to $1 - \delta$ for any $\delta 
 \end{remark}
 
 \begin{definition}[FPAUS]
-A \emph{fully polynomial almost-uniform sampler} (FPAUS) for a finite set $\Omega$ is a randomized algorithm that, given an error parameter $\varepsilon > 0$, outputs a sample from a distribution $\hat{D}$ on $\Omega$ satisfying
+A \emph{fully polynomial almost-uniform sampler} (FPAUS) for a succinctly
+represented finite set $\Omega$ is a randomized algorithm that, given an error
+parameter $\varepsilon > 0$, outputs a sample from a distribution $\hat{D}$
+on $\Omega$ satisfying
 \[
 \bigl\| \hat{D} - \text{Unif}(\Omega) \bigr\|_{\mathrm{TV}} \;\leq\; \varepsilon,
 \]
-where $\|\cdot\|_{\mathrm{TV}}$ denotes total variation distance, and whose running time is polynomial in $|\Omega|$ and $1/\varepsilon$.
+where $\|\cdot\|_{\mathrm{TV}}$ denotes total variation distance, and whose
+running time is polynomial in the input length and $1/\varepsilon$.
 \end{definition}
 
 The total variation distance between two distributions $P$ and $Q$ on a finite set $\Omega$ is
@@ -127,19 +131,35 @@ The total variation distance between two distributions $P$ and $Q$ on a finite s
 
 \subsection{The counting--sampling connection}
 
-The fundamental relationship between counting and sampling is captured by the following observation.
+Counting and sampling are related, but neither task implies the other for an
+arbitrary implicitly represented family. The standard equivalence requires
+self-reducibility and efficient access to conditional subinstances.
 
-\begin{proposition}
+\begin{proposition}[Conditional counting--sampling connection]
 \label{prop:count-sampling}
-An FPRAS for a counting problem $\Pi$ can be used to construct an FPAUS for the uniform distribution on the solution space of $\Pi$, and vice versa, provided certain technical conditions (such as efficient verification of membership in the solution space) are met.
+Let $\Omega(x)$ be a self-reducible solution family: fixing a prefix of a
+solution produces a smaller instance, membership of a completed solution is
+efficiently testable, and the number of branches at every decomposition step
+is polynomially bounded. Under these conditions, an FPRAS for the associated
+conditional counts yields an FPAUS by choosing each next branch with
+probability proportional to its estimated conditional count. Conversely, an
+FPAUS together with a polynomial-length sequence of overlapping, efficiently
+samplable conditional distributions yields an FPRAS by estimating the
+successive ratios. Without these conditions, no general equivalence is
+claimed.
 \end{proposition}
 
 \begin{proof}[Proof sketch]
-Given an FPAUS for $\Omega$, we can estimate $|\Omega|$ by running the sampler to produce an approximate uniform element $x \in \Omega$. By the coupon collector argument, $O(|\Omega| \log |\Omega|)$ samples suffice to estimate $|\Omega|$ within a constant factor---but $|\Omega|$ may be exponentially large, so this direct approach is inefficient.
-
-The more useful direction uses \emph{importance sampling}. Suppose we can sample from a distribution $D_1$ on $\Omega$ that is ``not too far'' from uniform, meaning $\Pr_{D_1}[\omega] \leq c/|\Omega|$ for all $\omega$ for some reasonably small constant $c$. Then $\mathbb{E}_{D_1}[|\Omega| / (|\Omega| \cdot \Pr_{D_1}[\omega])] = |\Omega|$, and the estimator $|\Omega| / (|\Omega| \cdot \Pr_{D_1}[\omega]) = 1/\Pr_{D_1}[\omega]$ has bounded variance. This leads to an FPRAS.
-
-Conversely, an FPRAS can be used to construct an FPAUS via the technique of \emph{sequential importance sampling} or through Markov chain methods.
+For the FPRAS-to-sampler direction, at a partial assignment $u$ let
+$Z(u0)$ and $Z(u1)$ be the two conditional counts. Approximate both counts
+to sufficiently small relative error and choose the next bit using the
+estimated ratio. A union bound over the polynomially many levels controls
+the accumulated total-variation error. The reverse direction is not obtained
+by a coupon-collector argument: that would require time proportional to
+$|\Omega|$. Instead, the assumed overlapping sequence makes each ratio a
+bounded-variance importance-sampling estimate, and the product of the estimates
+recovers the total count. The overlap and error-allocation hypotheses are
+essential.
 \end{proof}
 
 \subsection{Markov chain methods}
@@ -181,7 +201,7 @@ Let $(X_t, Y_t)$ be a coupling of an ergodic Markov chain with transition matrix
 \end{theorem}
 
 \begin{proof}
-Let $Y_0$ be drawn from $\pi$. Then $Y_t$ has distribution $\pi$ for all $t$ (since $\pi$ is stationary). By the coupling definition, $\Pr[X_t \neq Y_t] = \Pr[X_t \neq Y_t]$. The total variation distance is:
+Let $Y_0$ be drawn from $\pi$. Then $Y_t$ has distribution $\pi$ for all $t$ (since $\pi$ is stationary). By the coupling inequality, the total variation distance between the two marginal distributions is at most $\Pr[X_t\neq Y_t]$. The total variation distance is:
 \[
 \bigl\| P^t(\omega, \cdot) - \pi \bigr\|_{\mathrm{TV}} = \frac{1}{2} \sum_{\omega'} \bigl| \Pr[X_t = \omega'] - \Pr[Y_t = \omega'] \bigr| \leq \Pr[X_t \neq Y_t] \leq \varepsilon.
 \]
@@ -196,7 +216,13 @@ The \emph{conductance} of an ergodic Markov chain with transition matrix $P$ and
 
 \begin{theorem}[Conductance bound]
 \label{thm:conductance}
-The mixing time of an ergodic Markov chain satisfies $\tau_{\mathrm{mix}}(1/4) \leq O\!\left(\frac{\log |\Omega|}{\Phi^2}\right)$.
+For a finite, lazy, reversible Markov chain with stationary distribution
+$\pi$, conductance $\Phi>0$, and minimum stationary mass
+$\pi_{\min}=\min_{\omega}\pi(\omega)$,
+\[
+\tau_{\mathrm{mix}}(\varepsilon)
+ =O\!\left(\frac{\log(1/(\varepsilon\pi_{\min}))}{\Phi^2}\right).
+\]
 \end{theorem}
 
 High conductance means that the chain cannot be ``bottlenecked'' by any subset of the state space, ensuring rapid exploration of the entire state space. The Jerrum--Sinclair--Vazirani approach for approximating the permanent, discussed in Section~\ref{sec:permanent}, is the paradigmatic application of the conductance method.
@@ -255,14 +281,14 @@ Observe that $|A_j| = 2^{n - |S_j|}$ for each clause $C_j$ (fix the variables in
 \Function{DNFCount}{$\phi = C_1 \lor \cdots \lor C_m$, error $\varepsilon$, confidence $\delta$}
     \State Compute $|A_j| = 2^{n - |S_j|}$ for each $j = 1, \ldots, m$
     \State $Z \gets \sum_{j=1}^m |A_j|$
-    \State $N \gets \lceil \frac{2m}{\varepsilon^2} \ln(2/\delta) \rceil$ \Comment{number of samples}
+    \State $N \gets \lceil \frac{2m^2}{\varepsilon^2\delta} \rceil$ \Comment{number of samples}
     \For{$i = 1$ \textbf{to} $N$}
         \State Sample clause index $j$ with probability $|A_j|/Z$
         \State Sample $\sigma_i$ uniformly from $A_j$ \Comment{satisfying assignment for $C_j$}
         \State Compute $C(\sigma_i) \gets |\{k : C_k(\sigma_i) = 1\}|$ \Comment{number of clauses satisfied}
-        \State Set estimator $\hat{X}_i \gets Z \cdot C(\sigma_i)$
+    \State Set estimator $\hat{Y}_i \gets Z / C(\sigma_i)$
     \EndFor
-    \State \Return $\bar{X} = \frac{1}{N} \sum_{i=1}^N \hat{X}_i$
+    \State \Return $\bar{Y} = \frac{1}{N} \sum_{i=1}^N \hat{Y}_i$
 \EndFunction
 \end{algorithmic}
 \end{algorithm}
@@ -277,11 +303,32 @@ The Karp--Luby algorithm is an FPRAS for DNF counting. Given a DNF formula $\phi
 \[
 \Pr\!\bigl[(1 - \varepsilon) \cdot \text{sat}(\phi) \leq \hat{Z} \leq (1 + \varepsilon) \cdot \text{sat}(\phi)\bigr] \geq 1 - \delta
 \]
-in running time $O\!\left(\frac{mn}{\varepsilon^2} \log \frac{1}{\delta}\right)$.
+in running time $O\!\left(\frac{m^2 n}{\varepsilon^2\delta}\right)$ for the
+straightforward implementation.
 \end{theorem}
 
 \begin{proof}
-We analyze the estimator $\hat{X}_i = Z \cdot C(\sigma_i)$. We show it is an \emph{unbiased estimator} for $\text{sat}(\phi)$, and its variance is bounded, so concentration inequalities yield the desired accuracy.
+The sampling distribution satisfies
+\[
+ \Pr[\sigma]=\frac{\rho(\sigma)}{Z},
+ \qquad \rho(\sigma)=|\{j:\sigma\in A_j\}|,
+\]
+for every satisfying assignment.  Therefore the estimator
+$Y=Z/\rho(\sigma)$ is unbiased:
+\[
+ \mathbb{E}[Y]=\sum_{\sigma\in\cup_j A_j}
+ \frac{Z}{\rho(\sigma)}\frac{\rho(\sigma)}{Z}
+ =|\cup_j A_j|=\operatorname{sat}(\phi).
+\]
+Moreover, $Z/m\leq Y\leq Z$ and $Z\leq m\operatorname{sat}(\phi)$.
+Thus $\operatorname{Var}(Y)\leq m^2\operatorname{sat}(\phi)^2$.
+Chebyshev's inequality gives failure probability at most
+$m^2/(N\varepsilon^2)$.  Taking
+$N=\lceil m^2/(\varepsilon^2\delta)\rceil$ proves the stated FPRAS
+bound (with the straightforward implementation running in
+$O(mnN)$ time).
+
+\iffalse
 
 \textbf{Step 1: Unbiasedness.} We claim $\mathbb{E}[\hat{X}_i] = \text{sat}(\phi)$.
 
@@ -398,7 +445,9 @@ We have $\mathbb{E}[\hat{Y}_i] = \text{sat}(\phi)$ (unbiased), $1 \leq \rho(\sig
 
 Thus $N = O(m/\varepsilon^2)$ independent samples give an $(\varepsilon, \delta)$-approximation. Each sample takes $O(mn)$ time (to check all clauses), giving total time $O(m^2 n / \varepsilon^2)$, which can be improved to $O(mn/\varepsilon^2)$ by checking only the clauses in the chosen sample clause and clauses sharing variables with it.
 
-\textbf{Running time:} Computing $Z$ takes $O(m)$ time. Each sample takes $O(m + n)$ time (choose clause $j$ in $O(m)$ time via cumulative sums, then generate assignment in $O(n)$ time, then count satisfied clauses in $O(mn)$ time naively, or $O(m)$ time if we only check the selected clause and its ``neighbors''). With $N = O(m/\varepsilon^2)$ samples, the total time is $O(m^2/\varepsilon^2)$ or better.
+\textbf{Running time:} Computing $Z$ takes $O(m)$ time. Each sample takes $O(m+n)$ time to generate and inspect the assignment.
+\end{proof}
+\fi
 \end{proof}
 
 We can now state the corrected version of the algorithm and its analysis more cleanly.
@@ -410,7 +459,7 @@ We can now state the corrected version of the algorithm and its analysis more cl
 \Function{DNFCount}{$\phi = C_1 \lor \cdots \lor C_m$, error $\varepsilon$}
     \State Compute $|A_j| = 2^{n - |S_j|}$ for each $j$
     \State $Z \gets \sum_{j=1}^m |A_j|$
-    \State $N \gets \lceil 2m / \varepsilon^2 \rceil$
+    \State $N \gets \lceil 2m^2 / \varepsilon^2 \rceil$
     \For{$i = 1$ \textbf{to} $N$}
         \State Sample $j$ with probability $|A_j|/Z$
         \State Sample $\sigma_i$ uniformly from $A_j$: set $x_r$ for $r \in S_j$ per $C_j$, set remaining variables uniformly at random
@@ -424,22 +473,29 @@ We can now state the corrected version of the algorithm and its analysis more cl
 
 \begin{theorem}[Karp--Luby FPRAS, restated]
 \label{thm:karpluby2}
-Algorithm~\ref{alg:karpluby-correct} is an FPRAS for DNF counting. It runs in time $O(mn + m^2/\varepsilon^2)$ and outputs $\hat{Y}$ satisfying
+Algorithm~\ref{alg:karpluby-correct} is an FPRAS for DNF counting. With the
+straightforward clause scan, it runs in time
+$O(mn\,m^2/\varepsilon^2)$ and outputs $\hat{Y}$ satisfying
 \[
 \Pr\!\bigl[(1 - \varepsilon) \cdot \text{sat}(\phi) \leq \hat{Y} \leq (1 + \varepsilon) \cdot \text{sat}(\phi)\bigr] \geq \frac{3}{4}.
 \]
 \end{theorem}
 
 \begin{proof}
-The unbiasedness argument shows $\mathbb{E}[\hat{Y}_i] = \text{sat}(\phi)$. For the variance bound, we use the fact that $\rho(\sigma) \geq 1$ for all $\sigma \in A_1 \cup \cdots \cup A_m$, which gives $\hat{Y}_i \leq Z$. Also $\hat{Y}_i \geq Z/m$ since $\rho(\sigma) \leq m$. Therefore $\hat{Y}_i \leq m \cdot \text{sat}(\phi)$ (since $\text{sat}(\phi) \geq Z/m$). The variance of the sample mean $\bar{Y}$ of $N$ independent copies is $\mathrm{Var}(\hat{Y}_i)/N$.
-
-By Chebyshev's inequality:
+The sampling distribution is $\Pr[\sigma]=\rho(\sigma)/Z$, so
+$\mathbb{E}[\hat{Y}_i]=\operatorname{sat}(\phi)$. Also
+$0\leq\hat{Y}_i\leq Z\leq m\operatorname{sat}(\phi)$. Hence
+$\operatorname{Var}(\hat{Y}_i)\leq m^2\operatorname{sat}(\phi)^2$, and the
+variance of the mean of $N$ independent samples is smaller by a factor $N$.
+Chebyshev's inequality gives
 \[
 \Pr\!\left[\left|\bar{Y} - \text{sat}(\phi)\right| \geq \varepsilon \cdot \text{sat}(\phi)\right] \leq \frac{\mathrm{Var}(\hat{Y}_i)}{N \varepsilon^2 \text{sat}(\phi)^2} \leq \frac{m^2 \cdot \text{sat}(\phi)^2}{N \varepsilon^2 \text{sat}(\phi)^2} = \frac{m^2}{N \varepsilon^2}.
 \]
-Setting $N = 4m^2 / \varepsilon^2$ gives failure probability at most $1/4$. The running time is $O(mn)$ for setup plus $O(mn + m) \cdot N = O(m^2 n / \varepsilon^2)$... Actually, the running time per sample is $O(m)$ to count clauses (scan the formula), plus $O(n)$ to generate the assignment, giving $O(mn)$ per sample. Total: $O(m^2 n / \varepsilon^2)$.
-
-To improve the dependence on $m$ to $m^1$ (instead of $m^2$), note that we can bound the variance more tightly. We have $\mathrm{Var}(\hat{Y}_i) = \mathbb{E}[\hat{Y}_i^2] - \text{sat}(\phi)^2$. Since $\hat{Y}_i = Z/\rho(\sigma_i)$ and $\rho(\sigma_i) \geq 1$, we get $\hat{Y}_i^2 \leq Z^2$, so $\mathrm{Var}(\hat{Y}_i) \leq Z^2$. But we also know $\text{sat}(\phi) \geq Z/m$, so $Z \leq m \cdot \text{sat}(\phi)$, and $\mathrm{Var}(\hat{Y}_i) \leq m^2 \text{sat}(\phi)^2$. The tighter bound uses the fact that $\mathrm{Var}(\hat{Y}_i) \leq m \cdot Z - Z^2/m \leq m \cdot Z \leq m^2 \text{sat}(\phi)$... In any case, $O(m^2/\varepsilon^2)$ samples suffice, giving an FPRAS.
+With $N=4m^2/\varepsilon^2$, the failure probability is at most $1/4$.
+Generating an assignment costs $O(n)$ and scanning all clauses costs $O(mn)$
+under the direct representation, giving the stated runtime. The analysis makes
+no claim of the sharper implementation bound sometimes obtained with
+additional indexing of clauses.
 \end{proof}
 
 \begin{remark}
@@ -485,28 +541,45 @@ This hardness result motivates the search for approximation algorithms.
 
 Before describing the approximation algorithm, we reduce the permanent of an arbitrary non-negative matrix to the permanent of a biadjacency matrix of a bipartite graph.
 
-\begin{lemma}
+\begin{lemma}[Integer-weight reduction]
 \label{lem:perm-reduction}
-Let $A$ be an $n \times n$ non-negative integer matrix with entries at most $c$. We can construct a bipartite graph $G$ in polynomial time such that $\operatorname{perm}(A) = $ (number of perfect matchings in $G$) times a known factor.
+Let $A$ be an $n \times n$ non-negative integer matrix with entries at most
+$c$. In time polynomial in $n$ and $c$, one can construct a bipartite
+multigraph whose number of perfect matchings is exactly $\operatorname{perm}(A)$.
 \end{lemma}
 
 \begin{proof}
-We use the ``blowup'' construction. Replace each entry $a_{ij}$ by a $a_{ij} \times a_{ij}$ block in the biadjacency matrix, using a suitable bipartite graph. Alternatively, replace each edge $(i,j)$ with multiplicity $a_{ij}$ by $a_{ij}$ parallel edges (i.e., create $a_{ij}$ distinct middle vertices). A perfect matching in the resulting graph chooses exactly one of the $a_{ij}$ parallel edges for each $i$, giving a contribution of $a_{ij}$ to the permanent, and the total count is exactly $\operatorname{perm}(A)$.
+Use $a_{ij}$ parallel copies of the edge $(u_i,v_j)$. A perfect matching
+chooses a permutation of the right vertices and, for every selected pair,
+one of the $a_{ij}$ parallel edge copies. Hence each permutation contributes
+$\prod_i a_{i,\sigma(i)}$, and summing over permutations gives exactly
+$\operatorname{perm}(A)$. Selector gadgets can replace parallel copies when a
+simple graph is required, at polynomial size cost when $c$ is polynomially
+bounded.
 \end{proof}
 
 \subsection{The Jerrum--Sinclair--Vazirani Markov chain}
 
-The breakthrough result of Jerrum, Sinclair, and Vazirani (2004) constructs an FPRAS for the permanent of any non-negative matrix.
+The breakthrough result of Jerrum, Sinclair, and Vigoda constructs an FPRAS
+for the permanent of every non-negative matrix. The full proof is a
+research-level result; this chapter states the interface precisely and
+isolates the Markov-chain ideas used by the theorem.
 
 \begin{definition}[$k$-matchings]
 Let $G = (U, V, E)$ be a bipartite graph with $|U| = |V| = n$. A \emph{$k$-matching} is a set of $k$ vertex-disjoint edges in $G$. Let $M_k$ denote the set of $k$-matchings, and let $m_k = |M_k|$ be the number of $k$-matchings. Note that $m_n = \operatorname{perm}(A)$.
 \end{definition}
 
-The key insight is to define a Markov chain on the state space $\Omega = M_n \cup M_{n-1}$, the union of all perfect matchings and $(n-1)$-matchings. The chain is designed so that its stationary distribution assigns probability proportional to $m_{n-1}$ to states in $M_{n-1}$ and proportional to $m_n$ to states in $M_n$.
+The key insight is to use a sequence of carefully weighted matching chains,
+with state spaces containing matchings of adjacent cardinalities. The weights
+are chosen so that the stationary mass of each level is known; ratios of the
+level masses then reveal the desired count. A naive uniform chain on
+$M_n\cup M_{n-1}$ is not enough.
 
 \begin{definition}[JSV Markov chain]
 \label{def:jsv-chain}
-The state space is $\Omega = M_n \cup M_{n-1}$, a set of size $m_n + m_{n-1}$. The transitions from a state $M$ (a matching of size $n$ or $n-1$) are defined as follows:
+The illustrative state space is $\Omega = M_n \cup M_{n-1}$. The transitions
+below describe the underlying adjacency relation; the actual chain must add
+laziness and the normalization factors required for detailed balance:
 \begin{enumerate}[nosep]
     \item \textbf{Reduce:} If $|M| = n$, choose a random edge $e \in M$ and remove it, yielding a state in $M_{n-1}$. (Deterministic on the choice of matching plus random edge removal.)
     \item \textbf{Rotate:} If $|M| = n-1$, choose a random unmatched vertex $u \in U$ (the unique vertex in $U$ not covered by $M$) and a random vertex $v \in V$. If $v$ is matched to some edge $e$ in $M$, replace $e$ with the edge $(u, v)$, yielding a different $(n-1)$-matching. (If $(u, v)$ is already an edge and $v$ is unmatched, this is an augmentation attempt.)
@@ -523,25 +596,31 @@ More precisely, the transition from a state $M \in M_{n-1}$:
 
 From a state $M \in M_n$ (a perfect matching): choose a random edge $e \in M$ and remove it to get an $(n-1)$-matching (a \emph{reduce} move).
 
-\begin{definition}[Detailed balance]
-The chain satisfies \emph{detailed balance} with respect to a stationary distribution $\pi$ satisfying $\pi(M) = C \cdot (m_n + m_{n-1})^{-1}$ for $M \in M_n$ and $\pi(M) = C \cdot (m_n + m_{n-1})^{-1}$ for $M \in M_{n-1}$. Actually, since $M_n$ and $M_{n-1}$ have different sizes, the stationary distribution is:
-\[
-\pi(M) = \begin{cases} 1/(m_n + m_{n-1}) & \text{if } M \in M_n \cup M_{n-1}. \end{cases}
-\]
-That is, $\pi$ is the uniform distribution on $\Omega = M_n \cup M_{n-1}$.
-\end{definition}
+\begin{remark}[Stationary distribution]
+The transition probabilities above are only schematic. They are not symmetric
+when the numbers of neighboring matchings differ, so uniformity does not
+follow from the displayed moves. The Jerrum--Sinclair--Vigoda chain uses
+carefully normalized transition probabilities and a weighted state space to
+obtain the required stationary distribution. Those factors must be included
+in a complete proof or implementation.
+\end{remark}
 
-The chain is symmetric: for each transition from $M$ to $M'$, the reverse transition from $M'$ to $M$ has the same probability. This guarantees that the uniform distribution on $\Omega$ is stationary.
+The correctly normalized JSV chain satisfies detailed balance with respect to
+its explicitly defined weighted stationary distribution; the schematic chain
+above is not, by itself, a proof of that fact.
 
-\begin{theorem}[Rapid mixing of the JSV chain]
+\begin{theorem}[Permanent FPRAS interface]
 \label{thm:jsv-mixing}
-The JSV Markov chain on $\Omega = M_n \cup M_{n-1}$ is rapidly mixing: its mixing time is at most $O(n^4 \log n)$.
+For a non-negative matrix $A$, the weighted matching-chain construction of
+Jerrum--Sinclair--Vigoda supplies polynomial-time approximate sampling and
+ratio estimation, and therefore an FPRAS for $\operatorname{perm}(A)$.
 \end{theorem}
 
-The proof proceeds via the conductance method (Theorem~\ref{thm:conductance}). We need to show that the chain has large conductance.
+The proof proceeds via the conductance method (Theorem~\ref{thm:conductance})
+for the weighted, lazy chains in the annealing sequence.
 
 \begin{proof}[Proof sketch]
-The conductance $\Phi$ of the chain is defined as:
+For a reversible chain, the conductance is
 \[
 \Phi = \min_{\substack{S \subseteq \Omega \\ 0 < |S| \leq |\Omega|/2}} \frac{Q(S, \bar{S})}{\pi(S)},
 \]
@@ -551,31 +630,28 @@ The analysis uses a potential function argument. For a matching $M \in M_{n-1}$,
 
 The key lemma in the conductance analysis is:
 
-\begin{lemma}[Conductance lower bound]
-\label{lem:conductance-jsv}
-The conductance of the JSV chain satisfies $\Phi \geq \Omega(1/n^4)$.
-\end{lemma}
-
-This is proved by showing that for any subset $S$ with $\pi(S) \leq 1/2$, there is a significant probability flow from $S$ to $\bar{S}$. The argument involves two cases: (a) $S$ contains many elements from $M_n$, in which case reduce moves provide the flow; (b) $S$ contains many elements from $M_{n-1}$, in which case rotate and augment moves provide the flow.
-
-By Theorem~\ref{thm:conductance}, the mixing time is $\tau_{\mathrm{mix}}(1/4) \leq O(|\Omega| \cdot \log |\Omega| / \Phi^2)$. Since $|\Omega| = m_n + m_{n-1} \leq n! + (n-1)! = O(n!)$, we have $\log |\Omega| = O(n \log n)$ and $\Phi^2 = \Omega(1/n^8)$. This gives $\tau_{\mathrm{mix}} = O(n! \cdot n^8 \cdot n \log n)$, which is exponential in $n$---far from polynomial.
-
-The improvement in the Jerrum--Sinclair--Vazirani result uses a more refined analysis based on a sequence of conductance arguments (the ``intermediate matchings'' technique). Specifically, they consider the chain restricted to $M_k \cup M_{k-1}$ for each $k$ and argue that each such restricted chain is rapidly mixing. The overall mixing time is then obtained by a ``doubling trick'' or ``annealing'' argument across the levels.
-
-The refined mixing time bound is:
-\[
-\tau_{\mathrm{mix}} = O(n^4 \log n),
-\]
-which is polynomial in $n$.
+The technical JSV theorem supplies a polynomial lower bound on conductance for
+each weighted chain. Its proof uses canonical paths and alternating-path
+structure; it is not obtained by applying a state-space-size bound to the
+naive chain. The conductance theorem then gives polynomial burn-in because
+$\pi_{\min}$ and the conductance bound are controlled by the encoded input,
+not by enumerating the exponentially large state space. An annealing sequence
+with polynomial overlap estimates successive ratios, and a union bound over
+its levels gives the stated FPRAS. The complete canonical-path construction
+is cited as the JSV result rather than reproduced here.
 \end{proof}
 
 \begin{remark}
-The chain's mixing time of $O(n^4 \log n)$ is a remarkable achievement: the state space has size $m_n + m_{n-1}$, which can be as large as $n!$, yet the chain reaches stationarity in polynomial time.
+The achievement is that the weighted chains mix in time polynomial in the
+encoded matrix size even though their state spaces may be exponentially large.
 \end{remark}
 
 \subsection{Estimating the permanent from the chain}
 
-The ratio $m_n / m_{n-1}$ can be estimated from the stationary distribution of the chain: in the uniform distribution on $\Omega$, the fraction of states in $M_n$ is $m_n / (m_n + m_{n-1})$. By running the chain for $O(n^4 \log n)$ steps and counting the fraction of visited states in $M_n$, we estimate this ratio.
+For an exactly uniform chain on $M_n\cup M_{n-1}$, the fraction of states in
+$M_n$ would be $m_n/(m_n+m_{n-1})$. In the actual weighted chain, the known
+stationary weights and the burn-in and dependence corrections must be used;
+the displayed ratio is intuition, not an implementation recipe.
 
 \begin{algorithm}
 \caption{Karp--Luby Estimation of $m_n / m_{n-1}$}
@@ -592,28 +668,29 @@ The ratio $m_n / m_{n-1}$ can be estimated from the stationary distribution of t
 
 \begin{theorem}[FPRAS for the permanent]
 \label{thm:perm-fpras}
-There is an FPRAS for the permanent of non-negative matrices. Given an $n \times n$ non-negative matrix $A$ and an error parameter $\varepsilon$, the algorithm computes $\hat{P}$ satisfying
+There is an FPRAS for the permanent of non-negative matrices. Given an
+$n \times n$ non-negative matrix $A$ and an error parameter $\varepsilon$,
+the algorithm computes $\hat{P}$ satisfying
 \[
 \Pr\!\bigl[(1 - \varepsilon) \operatorname{perm}(A) \leq \hat{P} \leq (1 + \varepsilon) \operatorname{perm}(A)\bigr] \geq \frac{3}{4}
 \]
-in time $O(n^{10} / \varepsilon^2)$.
+in time polynomial in the encoded input length and $1/\varepsilon$.
 \end{theorem}
 
 \begin{proof}
-The proof combines several ingredients:
-
-\textbf{Reduction to bipartite case.} By Lemma~\ref{lem:perm-reduction}, we reduce the permanent of a general non-negative matrix to the number of perfect matchings in a bipartite graph $G$ with biadjacency matrix $B$. The number of perfect matchings is $m_n = \operatorname{perm}(B)$.
-
-\textbf{The ratio chain.} We run the JSV Markov chain on $M_n \cup M_{n-1}$ for $O(n^4 \log n)$ mixing steps, then collect $N = O(n/\varepsilon^2)$ samples to estimate $\alpha = m_n / (m_n + m_{n-1})$ within additive error $O(\varepsilon/n)$. The estimate $\hat{\alpha}$ gives $\hat{r} = \hat{\alpha}/(1 - \hat{\alpha}) \approx m_n/m_{n-1}$ with relative error $O(\varepsilon)$.
-
-\textbf{Recursion.} We apply the same procedure to estimate $m_{n-1}/m_{n-2}$, $m_{n-2}/m_{n-3}$, and so on down to $m_1/m_0 = m_1$. Since $m_0 = 1$ (the empty matching) and $m_1 = |E|$ (the number of edges), we can compute $m_1$ directly. Then:
-\[
-m_n = m_0 \cdot \frac{m_1}{m_0} \cdot \frac{m_2}{m_1} \cdots \frac{m_n}{m_{n-1}}.
-\]
-
-Each ratio $m_k/m_{k-1}$ is estimated within relative error $\varepsilon/n$ using the JSV chain on $M_k \cup M_{k-1}$. Since there are $n$ ratios and each has relative error $\varepsilon/n$, the product has relative error at most $n \cdot \varepsilon/n = \varepsilon$ (by the union bound and the fact that for small relative errors, the relative error of a product is approximately the sum of the relative errors).
-
-\textbf{Running time.} For each level $k$ from 1 to $n$, the JSV chain on $M_k \cup M_{k-1}$ runs for $O(k^4 \log k)$ mixing steps plus $O(k/\varepsilon^2)$ sampling steps, for a total of $O(k^4 \log k + k/\varepsilon^2)$ per level. The total over all $n$ levels is $O(n^5 \log n + n^2/\varepsilon^2) = O(n^5 \log n)$, which is polynomial.
+The proof is the Jerrum--Sinclair--Vigoda theorem. Its input contract is a
+non-negative matrix represented with polynomially bounded precision. The
+algorithm constructs an annealing sequence of weighted matching distributions;
+each adjacent ratio is estimated by a lazy, rapidly mixing chain. If the $i$th
+ratio is estimated within relative error $\eta_i$ and the estimates all
+succeed, then the product has relative error at most
+$(\prod_i(1+\eta_i))-1$ on the upper side and the analogous lower-side product.
+Choosing $\eta_i=\Theta(\varepsilon/L)$ for $L$ levels and assigning failure
+probability $\delta/L$ to each estimate gives total error at most
+$\varepsilon$ and failure at most $\delta$. Polynomial overlap and mixing
+bounds make the total running time polynomial. The canonical-path and
+annealing proofs are part of the cited result and are not replaced by the
+naive unweighted-chain argument.
 \end{proof}
 
 \begin{remark}
@@ -781,12 +858,12 @@ Subsequent work has improved the running time. Lov\'{a}sz and Vempala (2003) ach
 \lstinputlisting[
   language=C++,
   caption={DNF counting using the Karp--Luby algorithm.},
-  label={lst:dnf-counting}]{src/chapter11/dnf_counting.h}
+  label={lst:dnf-counting}]{src/chapter12/dnf_counting.h}
 
 \lstinputlisting[
   language=C++,
   caption={Volume estimation via hit-and-run and DFK annealing.},
-  label={lst:volume}]{src/chapter11/volume.h}
+  label={lst:volume}]{src/chapter12/volume.h}
 
 %% ============================================================
 \addcontentsline{toc}{section}{Notes}
