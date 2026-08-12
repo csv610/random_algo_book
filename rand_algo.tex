@@ -9296,11 +9296,9 @@ Luby's landmark 1986 algorithm finds an MIS of an $n$-vertex graph in $O(\log n)
 \State $V' \leftarrow V$ \Comment{active vertices}
 \While{$V' \neq \emptyset$}
 \State \textit{// Stage 1: Random marking}
-\State Each vertex $v \in V'$ picks a random number $r(v) \in \{1, 2, \ldots, \deg_{V'}(v)\}$
-\State Mark vertex $v$ if $r(v) = 1$
-\State \textit{// Stage 2: Eliminate conflicts}
-\State For each marked vertex $v$, let $M(v)$ be the set of marked neighbors of $v$ (including $v$ itself)
-\State $v$ is a \emph{candidate} if $r(v) = \min_{u \in M(v)} r(u)$
+\State Each vertex $v \in V'$ picks an independent priority $r(v)$ uniformly from $\{1,\ldots,n^3\}$
+\State \textit{// Stage 2: Select local maxima}
+\State Vertex $v$ is a \emph{candidate} if $r(v)>r(u)$ for every neighbor $u\in N_{V'}(v)$
 \State Each candidate $v$ joins $S$: $S \leftarrow S \cup \{v\}$
 \State Remove $v$ and all neighbors of $v$ from $V'$: $V' \leftarrow V' \setminus (N[v])$
 \EndWhile
@@ -9440,24 +9438,25 @@ The Isolating Lemma immediately yields an $\mathbf{RNC}$ algorithm for finding a
 \label{alg:bipartite-pm}
 \begin{algorithmic}[1]
 \Procedure{RandBipartitePM}{$G = (U, V, E)$ with $|U| = |V| = n$}
-\State Assign each edge $e \in E$ a random weight $w(e) \in \{1, \ldots, 2n\}$
-\State Construct the weighted adjacency matrix $W$ where $W_{ij} = w(i, v_j)$ if $(i, v_j) \in E$ and $W_{ij} = 0$ otherwise
-\State Compute $\det(I + W)$ or the determinant of the Tutte matrix over a suitable field
-\State \Comment{The determinant over $\mathbb{Z}$ equals $\sum_{M} \text{sgn}(\pi_M) \prod_{e \in M} w(e)$ summed over all perfect matchings $M$}
-\State By the Isolating Lemma, w.h.p.\ the min-weight PM is unique, so the determinant has a unique dominant term
-\State \Comment{To recover the matching: compute the matrix of cofactors (adjugate matrix), which identifies the edges of the unique min-weight PM}
-\State Recover the matching from the cofactor matrix
+\State Assign independent random values in a sufficiently large field to the nonzero entries of the Tutte matrix
+\State Evaluate the determinant polynomial; a nonzero value certifies a perfect matching
+\State Repeat with fresh values to reduce the one-sided error
+\State Recover a matching by self-reduction: for each edge, test whether deleting it preserves a perfect matching
+\State Return the retained edges
 \EndProcedure
 \end{algorithmic}
 \end{algorithm}
 
-More precisely, consider the \emph{Tutte matrix} $T$ of a bipartite graph $G = (U, V, E)$ with $|U| = |V| = n$. Define $T$ as the $n \times n$ matrix with $T_{ij} = w_{ij} x_{ij}$ if $(u_i, v_j) \in E$ and $T_{ij} = 0$ otherwise, where $x_{ij}$ are formal variables. The permanent of $T$ equals $\sum_{M \in \text{PM}} \prod_{e \in M} w(e) x(e)$ where the sum is over all perfect matchings. For bipartite graphs, the permanent can be computed as the determinant of a related matrix over an extension field (by using random signs to ``orient'' the matching). 
+For a bipartite graph, the symbolic biadjacency determinant is a polynomial of
+degree $n$. Distinct perfect matchings give distinct monomials, so this
+polynomial is identically zero exactly when no perfect matching exists.
 
-Actually, for bipartite graphs, the approach is simpler. The permanent of the $0$-$1$ adjacency matrix $A$ of $G$ equals the number of perfect matchings. To find a specific perfect matching, assign random weights and compute:
-\[
-Z_{ij} = \det(M^{(ij)})
-\]
-where $M^{(ij)}$ is the matrix $M$ with row $i$ and column $j$ removed. If the min-weight perfect matching is $M^*$, then the matrix $W$ (the adjacency matrix with random weights) satisfies $\text{perm}(W) = \sum_M \prod_{e \in M} w(e)$. By the Isolating Lemma, this sum is dominated by the unique minimum-weight PM, so $\text{perm}(W) \neq 0$ and the matching can be recovered.
+The determinant is used only as a randomized existence oracle. To recover an
+actual matching, use self-reduction: for each candidate edge, test whether the
+remaining graph still has a perfect matching, retain the edge when the answer
+is yes, and delete its two incident vertices. At most $n$ stages are needed,
+and the oracle error is amplified so that the union of all false-positive
+probabilities is at most the requested failure probability.
 
 To compute the permanent over a finite field (since the permanent is $\#\mathbf{P}$-hard in general), we use the following trick. For bipartite graphs, $\text{perm}(A) = \det(A \circ R)$ for a suitably chosen random sign matrix $R$ (where $\circ$ denotes the Hadamard product), with probability at least $1/2$. More precisely, we use:
 
