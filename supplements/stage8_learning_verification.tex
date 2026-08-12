@@ -1,0 +1,180 @@
+% Stage 8 supplement: learning, implementation, and verification layer.
+% This is additive: it audits and connects the preceding modules.
+\chapter{Learning and Verification Layer}
+\label{ch:stage8-learning-verification}
+
+This chapter turns the preceding supplements into a student-facing course
+path.  It does not replace any topic.  Instead, it supplies worked examples,
+proof and implementation tasks, source-course tags, research directions, and
+an assessment rubric.  A complete solution is expected to state the input
+model, random choices, invariant, guarantee, error probability, runtime, and
+space usage.
+
+\section{Worked example: amplifying a randomized decision algorithm}
+
+Suppose an algorithm returns the correct answer with probability at least
+$2/3$, independently on each run.  Run it $r$ times and return the majority.
+If each run is a Bernoulli trial with success probability $p\geq2/3$, then
+Hoeffding's inequality gives
+\[
+ \Pr[\text{majority is wrong}]
+ \leq \exp\left(-2r(p-1/2)^2\right)\leq e^{-r/18}.
+\]
+Thus $r\geq18\ln(1/\delta)$ gives failure probability at most $\delta$.
+The independence assumption is part of the theorem: reusing the same random
+seed or correlated sketches does not justify this calculation.  For a
+one-sided Monte Carlo algorithm, repetition can instead return the best
+candidate or the logical OR/AND appropriate to its one-sided error.
+
+\paragraph{Student check.}
+Write down which output rule is valid for (i) a verifier with false positives,
+(ii) a verifier with false negatives, and (iii) a two-sided estimator.  Give a
+counterexample to blindly taking a majority in case (iii).
+
+\section{Worked example: a streaming heavy hitter}
+
+Let $f_i$ be the frequency of item $i$ in a stream of length $m$.  A Count-Min
+Sketch with $d$ independent hash rows and width $w$ stores counters.  Query
+item $i$ by the minimum counter among its $d$ hashed locations.  Since each
+collision contribution is nonnegative, the estimate never underestimates.
+For a fixed query, choosing $w\geq e/\varepsilon$ makes a row's collision
+noise exceed $\varepsilon m$ with probability at most $1/e$ by Markov's
+inequality.  Choosing $d\geq\ln(1/\delta)$ makes the minimum exceed that
+threshold with probability at most $\delta$.
+
+The contract is therefore an additive bound
+\[
+ f_i\leq\widehat f_i\leq f_i+\varepsilon m
+\]
+for one fixed query, using $O(\varepsilon^{-1}\log(1/\delta))$ counters.
+To guarantee all queries simultaneously, the hash width or failure budget
+must be adjusted with a union bound.  This distinction is a common source of
+incorrect student claims.
+
+\section{Worked example: sampling, burn-in, and effective samples}
+
+For a Markov chain with stationary distribution $\pi$, let $X_t$ be the state
+after burn-in and let $g$ be bounded in $[0,1]$.  If the total-variation
+distance of $X_t$ from $\pi$ is at most $\eta$, then
+\[
+ |\mathbb E[g(X_t)]-\mathbb E_\pi[g]|\leq\eta.
+\]
+This is a bias statement, not a variance statement.  Consecutive samples are
+correlated; collecting $N$ states does not automatically give variance
+$1/(4N)$.  A valid report must state a mixing or autocorrelation bound, a
+burn-in length, and a thinning or batch-means method if an error bar is
+claimed.  The same checklist applies to Metropolis sampling, Glauber dynamics,
+randomized 2-SAT, and graph-coloring chains.
+
+\section{Proof laboratory}
+
+The following exercises form a proof progression.
+
+\begin{problem}[Second moment]
+Let $X$ count objects surviving a random construction.  Prove the
+Paley--Zygmund lower bound
+\[
+ \Pr[X\geq\theta\mathbb EX]\geq
+ (1-\theta)^2\frac{(\mathbb EX)^2}{\mathbb E[X^2]}
+\]
+for $0\leq\theta<1$, and apply it to a random graph property.
+\end{problem}
+
+\begin{problem}[Coupling]
+Construct a coupling for two lazy random walks on the hypercube and use the
+expected Hamming distance to derive an explicit total-variation upper bound.
+Identify the step at which a union bound is used.
+\end{problem}
+
+\begin{problem}[Derandomization]
+Given a randomized algorithm whose conditional expected cost can be computed
+after each exposed bit, prove that choosing the next bit with no larger
+conditional expectation yields a deterministic outcome no worse than the
+initial expectation.
+\end{problem}
+
+\begin{problem}[Geometry]
+Use backward analysis to bound the expected number of conflict updates in a
+randomized incremental construction when each partial structure has at most
+$b$ boundary features.  State which assumptions fail in the presence of
+degenerate input and how symbolic perturbation repairs them.
+\end{problem}
+
+\section{Implementation laboratory}
+
+Each task should include a deterministic seed option, input validation, a
+counter of random draws, and a test comparing empirical behavior with the
+proved bound.
+
+\begin{enumerate}
+\item Implement amplification for a noisy decision oracle and plot failure
+      probability against the number of repetitions.
+\item Implement Count-Min Sketch and verify the one-sided additive guarantee
+      on adversarial collision-heavy streams.
+\item Implement Wilson's uniform-spanning-tree sampler and compare edge
+      frequencies with effective-resistance predictions.
+\item Implement a lazy Metropolis chain on a small state space; estimate
+      burn-in using total variation against an exactly computed stationary law.
+\item Implement Karger's contraction algorithm with multiedge support and
+      compare independent repetition with recursive contraction.
+\item Implement randomized distance-to-subset coordinates and report observed
+      embedding distortion, dimension, and construction time.
+\end{enumerate}
+
+\section{Research extensions}
+
+The following are deliberately open-ended extensions rather than missing
+prerequisites: limited-independence generators for streaming, spectral
+independence for spin systems, concentration for dependent random variables,
+near-linear-time Laplacian solvers, variance-optimal rare-event proposals,
+oblivious routing, differential privacy, and randomized numerical linear
+algebra.  A research report should distinguish a theorem proved in the book,
+a theorem cited from the literature, and an empirical conjecture.
+
+\section{Course-source tags and reading map}
+
+The tags below identify the expected course family, not exclusive ownership.
+\begin{center}
+\begin{tabular}{p{0.27\textwidth}p{0.25\textwidth}p{0.38\textwidth}}
+\textbf{Module} & \textbf{Tags} & \textbf{Student outcome}\\
+Probability and concentration & MIT / Stanford / Berkeley & derive bounds and audit independence\\
+Classical algorithms & MIT / Stanford & design, amplify, and analyze randomized algorithms\\
+Hashing and streaming & Stanford / Berkeley & give space, error, and failure guarantees\\
+Graphs and derandomization & MIT / Berkeley & use probabilistic existence and constructive choices\\
+Markov chains and sampling & MIT / Stanford / Berkeley & separate stationarity, mixing, bias, and variance\\
+Geometry and counting & Stanford / Berkeley & connect sampling, embeddings, and estimators\\
+\end{tabular}
+\end{center}
+The course map is a guide for review: MIT emphasizes probabilistic methods,
+Markov chains, and advanced algorithmic analysis; Stanford emphasizes the
+randomized-algorithm toolkit and applications; Berkeley emphasizes probability,
+graph processes, and algorithmic problem solving.  The book preserves the
+overlap as a coherent path rather than splitting it into incompatible tracks.
+
+\section{Assessment rubric}
+
+A satisfactory solution earns credit only when all of the following are
+visible: (1) a precise random experiment; (2) a correctness argument; (3) a
+quantitative probability or approximation guarantee; (4) runtime and memory
+complexity; (5) handling of edge cases and degeneracies; and (6) a reproducible
+experiment or test when implementation is requested.  A polished capstone
+should compare two methods on the same inputs and explain where the theorem's
+assumptions do and do not match the experiment.
+
+\section{Final verification checklist}
+
+Before considering the book complete, a student or instructor should verify:
+\begin{enumerate}
+\item every chapter compiles from its LaTeX source;
+\item every new supplement is included exactly once in the full book;
+\item each algorithm states its model, guarantee, error, runtime, and space;
+\item exercises include probability, proof, implementation, and extension work;
+\item experiments use reproducible seeds and report uncertainty;
+\item no existing chapter or topic was removed during expansion.
+\end{enumerate}
+
+\paragraph{Completion criterion.}
+The expansion is educationally complete when a student can move from a
+problem statement to a random experiment, proof, implementation, and
+empirical audit, while knowing precisely which claim is theoretical and which
+is experimental.
